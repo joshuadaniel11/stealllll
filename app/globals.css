@@ -4,29 +4,37 @@
 
 :root {
   color-scheme: light;
-  --surface: #f4f7fb;
-  --card: rgba(255, 255, 255, 0.8);
-  --stroke: rgba(15, 23, 42, 0.08);
-  --text: #101828;
-  --muted: #667085;
-  --accent: #5b8eff;
-  --accent-soft: rgba(91, 142, 255, 0.12);
+  --surface: #f3f6fb;
+  --card: rgba(255, 255, 255, 0.72);
+  --card-strong: rgba(255, 255, 255, 0.92);
+  --stroke: rgba(15, 23, 42, 0.07);
+  --text: #0f1728;
+  --muted: #5f6c80;
+  --accent: #5f8fff;
+  --accent-soft: rgba(95, 143, 255, 0.13);
   --success: #1f9c6b;
   --warning: #c98327;
+  --shadow-card: 0 24px 60px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.06);
+  --shadow-glow: 0 18px 44px rgba(95, 143, 255, 0.24);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --surface: #08111f;
-    --card: rgba(16, 24, 40, 0.78);
-    --stroke: rgba(255, 255, 255, 0.08);
-    --text: #f2f4f7;
-    --muted: #98a2b3;
-    --accent: #86a9ff;
-    --accent-soft: rgba(134, 169, 255, 0.14);
+    --surface: #08111d;
+    --card: rgba(13, 20, 34, 0.72);
+    --card-strong: rgba(13, 20, 34, 0.9);
+    --stroke: rgba(255, 255, 255, 0.07);
+    --text: #f5f7fb;
+    --muted: #9ba7ba;
+    --accent: #8aacff;
+    --accent-soft: rgba(138, 172, 255, 0.15);
     --success: #43c993;
     --warning: #f5b04a;
+    --shadow-card: 0 26px 64px rgba(0, 0, 0, 0.34);
+    --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.24);
+    --shadow-glow: 0 20px 46px rgba(138, 172, 255, 0.22);
   }
 }
 
@@ -42,7 +50,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.65), transparent 32%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.76), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(95, 143, 255, 0.12), transparent 24%),
     var(--surface);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
@@ -60,19 +69,23 @@ body {
 @media (prefers-color-scheme: dark) {
   body {
     background:
-      radial-gradient(circle at top, rgba(95, 123, 255, 0.18), transparent 28%),
+      radial-gradient(circle at top, rgba(95, 123, 255, 0.18), transparent 24%),
+      radial-gradient(circle at 100% 0%, rgba(122, 151, 255, 0.1), transparent 20%),
       var(--surface);
   }
 }
 
 .glass {
-  background: var(--card);
-  backdrop-filter: blur(20px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent),
+    var(--card);
+  backdrop-filter: blur(24px) saturate(140%);
   transition:
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 360ms cubic-bezier(0.22, 1, 0.36, 1),
     background-color 320ms ease,
-    border-color 320ms ease;
+    border-color 320ms ease,
+    opacity 240ms ease;
 }
 
 .hairline {
@@ -98,22 +111,33 @@ textarea,
 select {
   font: inherit;
   transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease,
-    background-color 220ms ease,
-    border-color 220ms ease,
-    color 220ms ease,
-    box-shadow 220ms ease;
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease,
+    background-color 240ms ease,
+    border-color 240ms ease,
+    color 240ms ease,
+    box-shadow 260ms ease,
+    filter 260ms ease;
 }
 
 button:active {
-  transform: scale(0.985);
+  transform: scale(0.98);
 }
 
 h1,
 h2,
 h3 {
   letter-spacing: -0.04em;
+}
+
+input,
+textarea,
+select {
+  appearance: none;
+}
+
+::selection {
+  background: var(--accent-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {

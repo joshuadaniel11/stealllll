@@ -64,8 +64,9 @@ export function HomeScreen({
 
   return (
     <>
-      <Card>
-        <div className="flex items-center justify-between gap-4">
+      <Card className="overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_right,_rgba(95,143,255,0.12),_transparent_34%)]" />
+        <div className="relative z-10 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm text-muted">Today</p>
             <h2 className="mt-1 text-[30px] font-bold tracking-[-0.05em]">
@@ -75,22 +76,22 @@ export function HomeScreen({
               {activeWorkoutName ? "Workout in progress" : todaysWorkout.focus}
             </p>
           </div>
-          <div className="rounded-[24px] bg-accentSoft px-3 py-2 text-right text-accent">
+          <div className="rounded-[24px] border border-white/40 bg-accentSoft px-3 py-2 text-right text-accent shadow-[var(--shadow-soft)] dark:border-white/10">
             <p className="text-xs uppercase tracking-[0.18em]">Plan</p>
             <p className="text-sm font-medium">
               {activeWorkoutName ? `${todaysWorkout.exercises.length} exercises` : `${todaysWorkout.durationMinutes} min`}
             </p>
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-3">
+        <div className="relative z-10 mt-5 flex items-center gap-3">
           <button
-            className="flex-1 rounded-[22px] bg-accent px-5 py-4 text-base font-bold text-white shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:opacity-95"
+            className="flex-1 rounded-[24px] bg-accent px-5 py-4 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-all duration-300 hover:-translate-y-0.5 hover:opacity-95"
             onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
           >
             {activeWorkoutName ? "Resume Workout" : "Start Workout"}
           </button>
           <button
-            className="rounded-[22px] border border-stroke px-4 py-4 text-sm font-semibold text-muted transition-all duration-300 hover:-translate-y-0.5"
+            className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-4 text-sm font-semibold text-muted shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-0.5"
             onClick={onBrowse}
           >
             Browse
@@ -132,7 +133,7 @@ export function HomeScreen({
             <p className="text-sm text-muted">Shared dashboard</p>
             <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Couple summary</h3>
           </div>
-          <div className="rounded-full bg-white/60 px-3 py-1 text-xs text-muted dark:bg-white/5">
+          <div className="rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-xs text-muted shadow-[var(--shadow-soft)]">
             Team streak {sharedSummary.teamStreak} days
           </div>
         </div>
@@ -145,7 +146,7 @@ export function HomeScreen({
           {sharedSummary.recentMilestones.map((milestone) => (
             <div
               key={milestone}
-              className="rounded-[20px] border border-stroke bg-white/50 px-4 py-3 text-sm text-muted dark:bg-white/5"
+              className="rounded-[22px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-3 text-sm text-muted shadow-[var(--shadow-soft)]"
             >
               {milestone}
             </div>
@@ -159,7 +160,7 @@ export function HomeScreen({
             <p className="text-sm text-muted">Recent</p>
             <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Completed workouts</h3>
           </div>
-          <div className="rounded-[24px] bg-accentSoft p-3 text-accent">
+          <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-soft)]">
             <HeartHandshake className="h-5 w-5" />
           </div>
         </div>
@@ -167,7 +168,7 @@ export function HomeScreen({
           {recentWorkouts.map((session) => (
             <button
               key={session.id}
-              className="w-full rounded-[24px] border border-stroke bg-white/50 px-4 py-4 text-left dark:bg-white/5"
+              className="w-full rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-left shadow-[var(--shadow-soft)]"
               onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
             >
               <div className="flex items-center justify-between">

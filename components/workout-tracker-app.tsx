@@ -588,13 +588,16 @@ export function WorkoutTrackerApp() {
   };
 
   return (
-    <main className="min-h-screen bg-app-light px-4 pb-28 pt-6 text-text transition-colors duration-500 dark:bg-app-dark sm:px-6">
+    <main className="min-h-screen bg-app-light px-4 pb-32 pt-5 text-text transition-colors duration-500 dark:bg-app-dark sm:px-6">
       <div className="mx-auto flex max-w-md flex-col gap-5">
-        <Card className="animate-fade-up">
+        <Card className="animate-fade-up overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_right,_rgba(95,143,255,0.14),_transparent_34%)]" />
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted">STEALLLLL</p>
-              <h1 className="balanced-text mt-1 text-[30px] font-semibold tracking-[-0.04em]">Calm progress for two.</h1>
+            <div className="relative z-10">
+              <div className="inline-flex items-center rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                STEALLLLL
+              </div>
+              <h1 className="balanced-text mt-3 text-[32px] font-semibold tracking-[-0.06em]">Calm progress for two.</h1>
               <p className="mt-2 text-sm leading-6 text-muted">
                 Preset gym workouts, elegant logging, and a shared rhythm for Joshua and Natasha.
               </p>
@@ -602,25 +605,27 @@ export function WorkoutTrackerApp() {
                 <DateTimeChip />
               </div>
             </div>
-              <div className="flex items-center gap-2">
+              <div className="relative z-10 flex items-center gap-2">
                 <button
-                  className="rounded-[24px] bg-white/70 p-3 text-muted shadow-card dark:bg-white/10"
+                  className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/70 p-3 text-muted shadow-[var(--shadow-soft)]"
                   onClick={() => setShowSettings(true)}
                 >
                   <Settings className="h-5 w-5" />
                 </button>
-                <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-glow">
+                <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-glow)]">
                   <HeartHandshake className="h-6 w-6" />
                 </div>
               </div>
             </div>
-          <div className="mt-5 grid grid-cols-2 gap-2 rounded-[24px] bg-black/5 p-1 dark:bg-white/5">
+          <div className="relative z-10 mt-5 grid grid-cols-2 gap-2 rounded-[26px] border border-stroke bg-[var(--card-strong)]/60 p-1.5 shadow-[var(--shadow-soft)]">
             {state.profiles.map((profile) => (
               <button
                 key={profile.id}
                 className={clsx(
-                  "rounded-[20px] px-4 py-3 text-left transition",
-                  profile.id === selectedProfile.id ? "bg-white text-text shadow-card dark:bg-white/10" : "text-muted",
+                  "rounded-[22px] px-4 py-3 text-left transition duration-300",
+                  profile.id === selectedProfile.id
+                    ? "bg-[var(--card-strong)] text-text shadow-[var(--shadow-soft)]"
+                    : "text-muted opacity-85",
                 )}
                 onClick={() => {
                   setSelectedExerciseId(null);
@@ -776,7 +781,7 @@ export function WorkoutTrackerApp() {
         onSetPreset={triggerTimer}
       />
 
-      <nav className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[28px] border border-stroke bg-[var(--card)] px-3 py-3 shadow-card backdrop-blur-2xl">
+      <nav className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] border border-stroke bg-[var(--card-strong)]/78 px-3 py-3 shadow-[var(--shadow-card)] backdrop-blur-2xl">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -784,8 +789,8 @@ export function WorkoutTrackerApp() {
             <button
               key={item.id}
               className={clsx(
-                "flex min-w-[72px] flex-col items-center gap-1 rounded-[20px] px-3 py-2 text-xs transition",
-                isActive ? "bg-accentSoft text-accent" : "text-muted",
+                "flex min-w-[72px] flex-col items-center gap-1 rounded-[22px] px-3 py-2 text-xs font-medium transition duration-300",
+                isActive ? "bg-accentSoft text-accent shadow-[var(--shadow-soft)]" : "text-muted opacity-85",
               )}
               onClick={() => setActiveTab(item.id)}
             >
