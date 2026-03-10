@@ -43,6 +43,7 @@ export function ProgressScreen({
     .map((entry) => ({
       date: new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(entry.date)),
       bodyweight: entry.bodyweightKg,
+      bodyFat: entry.bodyFatPercent,
     }));
 
   const weekStart = new Date();
@@ -52,8 +53,6 @@ export function ProgressScreen({
   const weeklyStretchCount = stretchCompletions.filter(
     (entry) => new Date(entry.date) >= weekStart,
   ).length;
-  const latestMeasurement = measurements[0];
-  const previousMeasurement = measurements[1];
   const goalCards =
     profile.id === "natasha"
       ? [
@@ -64,10 +63,7 @@ export function ProgressScreen({
           },
           {
             title: "Glute Focus",
-            value:
-              latestMeasurement?.glutesCm != null && previousMeasurement?.glutesCm != null
-                ? `${latestMeasurement.glutesCm - previousMeasurement.glutesCm > 0 ? "+" : ""}${Math.round((latestMeasurement.glutesCm - previousMeasurement.glutesCm) * 10) / 10} cm`
-                : `${userSessions.filter((session) => /glutes/i.test(session.workoutName)).length} sessions`,
+            value: `${userSessions.filter((session) => /glutes/i.test(session.workoutName)).length} sessions`,
             detail: "Weekly lower-body emphasis stays high.",
           },
           {
@@ -177,7 +173,6 @@ export function ProgressScreen({
       </Card>
 
       <MeasurementCard
-        profile={profile}
         measurements={measurements}
         onSave={onSaveMeasurement}
       />
@@ -186,7 +181,7 @@ export function ProgressScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted">Check-in trend</p>
-            <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Bodyweight</h3>
+            <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Body metrics</h3>
           </div>
           <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
             {bodyweightTrend.length ? `${bodyweightTrend.length} entries` : "No entries yet"}
@@ -208,6 +203,7 @@ export function ProgressScreen({
                   }}
                 />
                 <Line type="monotone" dataKey="bodyweight" stroke="var(--accent)" strokeWidth={3} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="bodyFat" stroke="var(--muted)" strokeWidth={2} dot={{ r: 2 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           ) : (

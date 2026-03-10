@@ -333,6 +333,23 @@ export function WorkoutTrackerApp() {
     setShowWorkoutFeelingPrompt(true);
   };
 
+  const cancelWorkout = () => {
+    if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      activeWorkout:
+        current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
+    }));
+    setTimerRunning(false);
+    setTimerSeconds(0);
+    setShowWorkoutFeelingPrompt(false);
+    setCompletionMessage(`${selectedProfile.name}'s workout was cancelled.`);
+    setShowCompletionCelebration(true);
+    startTransition(() => setActiveTab("home"));
+  };
+
   const completeWorkout = (feeling: WorkoutSession["feeling"]) => {
     if (!state.activeWorkout) {
       return;
@@ -688,6 +705,7 @@ export function WorkoutTrackerApp() {
             }}
             onTriggerTimer={triggerTimer}
             onCompleteWorkout={openWorkoutCompletionPrompt}
+            onCancelWorkout={cancelWorkout}
           />
         )}
 

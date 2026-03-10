@@ -9,6 +9,20 @@ import type { BibleVerse, Profile, SharedSummary, StretchRecommendation, Workout
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
 
+const getDailyMotivation = (lines: string[] | undefined) => {
+  if (!lines?.length) {
+    return null;
+  }
+
+  const now = new Date();
+  const dayOfYear = Math.floor(
+    (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 0)) /
+      86_400_000,
+  );
+
+  return lines[dayOfYear % lines.length];
+};
+
 export function HomeScreen({
   profile,
   todaysWorkout,
@@ -46,6 +60,8 @@ export function HomeScreen({
   onBrowse: () => void;
   onOpenExercise: (id: string | null) => void;
 }) {
+  const dailyMotivation = getDailyMotivation(profile.motivationLines);
+
   return (
     <>
       <Card>
@@ -95,6 +111,18 @@ export function HomeScreen({
         completed={stretchCompletedToday}
         onComplete={onCompleteStretch}
       />
+
+      {dailyMotivation ? (
+        <Card className="overflow-hidden">
+          <div className="rounded-[26px] border border-white/60 bg-[radial-gradient(circle_at_top,_rgba(242,143,178,0.16),_transparent_60%)] p-1 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top,_rgba(242,143,178,0.2),_transparent_60%)]">
+            <p className="text-sm text-muted">Motivation</p>
+            <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">For {profile.name}</h3>
+            <p className="mt-3 max-w-[26ch] text-base font-semibold leading-7 text-foreground">
+              {dailyMotivation}
+            </p>
+          </div>
+        </Card>
+      ) : null}
 
       <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 

@@ -3,51 +3,43 @@
 import { useEffect, useState } from "react";
 
 import { Card, MiniMetric } from "@/components/ui";
-import type { MeasurementEntry, Profile } from "@/lib/types";
+import type { MeasurementEntry } from "@/lib/types";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
 
 type DraftMeasurement = {
   bodyweightKg: string;
-  waistCm: string;
-  hipsCm: string;
-  glutesCm: string;
-  chestCm: string;
-  armsCm: string;
-  thighCm: string;
+  bodyFatPercent: string;
 };
 
 function toDraft(entry?: MeasurementEntry): DraftMeasurement {
   return {
     bodyweightKg: entry?.bodyweightKg?.toString() ?? "",
-    waistCm: entry?.waistCm?.toString() ?? "",
-    hipsCm: entry?.hipsCm?.toString() ?? "",
-    glutesCm: entry?.glutesCm?.toString() ?? "",
-    chestCm: entry?.chestCm?.toString() ?? "",
-    armsCm: entry?.armsCm?.toString() ?? "",
-    thighCm: entry?.thighCm?.toString() ?? "",
+    bodyFatPercent: entry?.bodyFatPercent?.toString() ?? "",
   };
 }
 
-function metricValue(current?: number, previous?: number, unit = "cm") {
+function metricValue(current?: number, previous?: number, suffix = "") {
   if (current == null) {
     return "Not set";
   }
+
+  const roundedCurrent = Math.round(current * 10) / 10;
+
   if (previous == null) {
-    return `${current}${unit}`;
+    return `${roundedCurrent}${suffix}`;
   }
+
   const change = Math.round((current - previous) * 10) / 10;
   const prefix = change > 0 ? "+" : "";
-  return `${current}${unit} (${prefix}${change}${unit})`;
+  return `${roundedCurrent}${suffix} (${prefix}${change}${suffix})`;
 }
 
 export function MeasurementCard({
-  profile,
   measurements,
   onSave,
 }: {
-  profile: Profile;
   measurements: MeasurementEntry[];
   onSave: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
 }) {
@@ -62,22 +54,10 @@ export function MeasurementCard({
     setDraft(toDraft(latest));
   }, [latest?.id]);
 
-  const fields =
-    profile.id === "natasha"
-      ? [
-          { key: "bodyweightKg", label: "Bodyweight", unit: "kg" },
-          { key: "waistCm", label: "Waist", unit: "cm" },
-          { key: "glutesCm", label: "Glutes", unit: "cm" },
-          { key: "hipsCm", label: "Hips", unit: "cm" },
-          { key: "armsCm", label: "Arms", unit: "cm" },
-        ]
-      : [
-          { key: "bodyweightKg", label: "Bodyweight", unit: "kg" },
-          { key: "waistCm", label: "Waist", unit: "cm" },
-          { key: "chestCm", label: "Chest", unit: "cm" },
-          { key: "armsCm", label: "Arms", unit: "cm" },
-          { key: "thighCm", label: "Thigh", unit: "cm" },
-        ];
+  const fields = [
+    { key: "bodyweightKg", label: "Body Weight", unit: "kg" },
+    { key: "bodyFatPercent", label: "Body Fat", unit: "%" },
+  ] as const;
 
   return (
     <Card>
@@ -92,11 +72,14 @@ export function MeasurementCard({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        {fields.slice(0, 4).map((field) => {
-          const current = latest?.[field.key as keyof MeasurementEntry] as number | undefined;
-          const previousValue = previous?.[field.key as keyof MeasurementEntry] as number | undefined;
-          return <MiniMetric key={field.key} label={field.label} value={metricValue(current, previousValue, field.unit)} />;
-        })}
+        <MiniMetric
+          label="Body Weight"
+          value={metricValue(latest?.bodyweightKg, previous?.bodyweightKg, "kg")}
+        />
+        <MiniMetric
+          label="Body Fat"
+          value={metricValue(latest?.bodyFatPercent, previous?.bodyFatPercent, "%")}
+        />
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
@@ -110,7 +93,9 @@ export function MeasurementCard({
               className="mt-2 w-full bg-transparent text-base font-medium outline-none"
               inputMode="decimal"
               type="number"
-              value={draft[field.key as keyof DraftMeasurement]}
+              step="0.1"
+              placeholder={field.unit}
+              value={draft[field.key]}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -127,12 +112,7 @@ export function MeasurementCard({
         onClick={() =>
           onSave({
             bodyweightKg: Number(draft.bodyweightKg || 0),
-            waistCm: draft.waistCm ? Number(draft.waistCm) : undefined,
-            hipsCm: draft.hipsCm ? Number(draft.hipsCm) : undefined,
-            glutesCm: draft.glutesCm ? Number(draft.glutesCm) : undefined,
-            chestCm: draft.chestCm ? Number(draft.chestCm) : undefined,
-            armsCm: draft.armsCm ? Number(draft.armsCm) : undefined,
-            thighCm: draft.thighCm ? Number(draft.thighCm) : undefined,
+            bodyFatPercent: draft.bodyFatPercent ? Number(draft.bodyFatPercent) : undefined,
           })
         }
       >

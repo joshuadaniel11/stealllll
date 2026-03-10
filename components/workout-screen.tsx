@@ -26,6 +26,7 @@ export function WorkoutScreen({
   onSwapExercise,
   onTriggerTimer,
   onCompleteWorkout,
+  onCancelWorkout,
 }: {
   profile: Profile;
   todaysWorkoutId: string;
@@ -46,6 +47,7 @@ export function WorkoutScreen({
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
   onTriggerTimer: (seconds: number) => void;
   onCompleteWorkout: () => void;
+  onCancelWorkout: () => void;
 }) {
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     return (
@@ -273,12 +275,20 @@ export function WorkoutScreen({
               {completedSets} sets done
             </div>
           </div>
-          <button
-            className="w-full rounded-[24px] bg-accent px-5 py-4 text-base font-bold text-white shadow-glow"
-            onClick={onCompleteWorkout}
-          >
-            Complete Workout
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              className="rounded-[24px] border border-stroke bg-white/60 px-4 py-4 text-sm font-semibold text-muted dark:bg-white/5"
+              onClick={onCancelWorkout}
+            >
+              Cancel Workout
+            </button>
+            <button
+              className="rounded-[24px] bg-accent px-5 py-4 text-base font-bold text-white shadow-glow"
+              onClick={onCompleteWorkout}
+            >
+              Complete Workout
+            </button>
+          </div>
         </div>
       </div>
     </>

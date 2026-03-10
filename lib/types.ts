@@ -91,6 +91,7 @@ export type Profile = {
   goalSummary: string;
   goals: Goal[];
   notes: string[];
+  motivationLines?: string[];
   workoutPlan: WorkoutPlanDay[];
   stretchPlan: StretchRecommendation[];
   favoriteExerciseIds: string[];
@@ -135,12 +136,7 @@ export type MeasurementEntry = {
   id: string;
   date: string;
   bodyweightKg: number;
-  waistCm?: number;
-  hipsCm?: number;
-  glutesCm?: number;
-  chestCm?: number;
-  armsCm?: number;
-  thighCm?: number;
+  bodyFatPercent?: number;
 };
 
 export type StretchCompletion = {

@@ -2,11 +2,42 @@ import type {
   AppState,
   BibleVerse,
   ExerciseLibraryItem,
+  ExerciseTemplate,
   Profile,
   WeeklySummary,
   WorkoutPlanDay,
   WorkoutSession,
 } from "@/lib/types";
+
+const targetLabels: Record<string, string> = {
+  Chest: "Targets chest strength and fullness.",
+  Back: "Targets back width, posture, and definition.",
+  Shoulders: "Targets shoulder shape and upper-body width.",
+  Biceps: "Targets biceps size and arm definition.",
+  Triceps: "Targets triceps tone and arm shape.",
+  Legs: "Targets lower-body strength and athletic power.",
+  Glutes: "Targets glute growth and lower-body shape.",
+  Hamstrings: "Targets hamstrings and posterior-chain control.",
+  Quads: "Targets quad strength and leg shape.",
+  Core: "Targets core control and trunk definition.",
+  "Full Body": "Targets full-body power and coordination.",
+};
+
+function withTargetNotes(exercises: ExerciseTemplate[]) {
+  return exercises.map((exercise) => ({
+    ...exercise,
+    note: exercise.note
+      ? `${targetLabels[exercise.muscleGroup]} ${exercise.note}`
+      : targetLabels[exercise.muscleGroup],
+  }));
+}
+
+function withWorkoutNotes(plan: WorkoutPlanDay[]) {
+  return plan.map((day) => ({
+    ...day,
+    exercises: withTargetNotes(day.exercises),
+  }));
+}
 
 const natashaPlan: WorkoutPlanDay[] = [
   {
@@ -186,7 +217,14 @@ const profiles: Profile[] = [
       { id: "n4", title: "Flatter Stomach", focus: "Core", target: "Stay consistent with core work", progress: 58 },
     ],
     notes: ["Keep hip thrust reps smooth at lockout.", "Use straps for rows if grip starts to limit back work.", "Core work stays crisp and controlled, not rushed."],
-    workoutPlan: natashaPlan,
+    motivationLines: [
+      "Shape that sexy back for Joshua with every clean pull.",
+      "Build those round glutes and own the room.",
+      "Keep carving that hourglass look, one strong session at a time.",
+      "Strong shoulders, tight waist, confident energy.",
+      "Train with intention and let the results speak for themselves.",
+    ],
+    workoutPlan: withWorkoutNotes(natashaPlan),
     stretchPlan: [
       { dayLabel: "Sunday", title: "Lower Body Reset", focus: "Hips and hamstrings", durationMinutes: 10, bendSearch: "hips hamstrings", note: "Open Bend and choose a gentle hips and hamstrings flow." },
       { dayLabel: "Monday", title: "Glute Day Mobility", focus: "Hip flexors and glutes", durationMinutes: 8, bendSearch: "hip flexor glute", note: "Use Bend after training to loosen hips and support glute work." },
@@ -212,7 +250,14 @@ const profiles: Profile[] = [
       { id: "j4", title: "Visible Abs", focus: "Core", target: "Train abs 2 to 3 times weekly", progress: 56 },
     ],
     notes: ["Keep bench press reps powerful with consistent pauses.", "No deadlifts or dips in the rotation.", "Ab sessions should stay challenging but quick."],
-    workoutPlan: joshuaPlan,
+    motivationLines: [
+      "Build that broad chest and make Natasha look twice.",
+      "Train those arms until the shirt fit feels different.",
+      "Strong legs, tighter waist, more confident presence.",
+      "Show up sharp and let Natasha see the work.",
+      "Every clean rep is building a stronger, more attractive version of you.",
+    ],
+    workoutPlan: withWorkoutNotes(joshuaPlan),
     stretchPlan: [
       { dayLabel: "Sunday", title: "Athletic Reset", focus: "Ankles, hips, and spine", durationMinutes: 10, bendSearch: "athletic recovery", note: "Open Bend and run an athletic recovery flow to stay loose for the week." },
       { dayLabel: "Monday", title: "Chest Opener", focus: "Chest and triceps", durationMinutes: 8, bendSearch: "chest opener", note: "Use Bend after pressing to open the chest and front delts." },
