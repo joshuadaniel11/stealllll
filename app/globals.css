@@ -34,10 +34,15 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.82)),
     var(--page-glow-top),
     var(--page-glow-corner),
     var(--page-glow-bottom),
+    url("/couple-background.jpeg"),
     var(--surface);
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
@@ -66,10 +71,15 @@ body {
 
 .theme-shell {
   background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.76)),
     var(--page-glow-top),
     var(--page-glow-corner),
     var(--page-glow-bottom),
+    url("/couple-background.jpeg"),
     var(--surface);
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
 }
 
 .theme-joshua {
