@@ -102,7 +102,7 @@ export function HomeScreen({
             className="flex-1 rounded-[24px] bg-accent px-5 py-4 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-all duration-300 hover:-translate-y-0.5 hover:opacity-95"
             onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
           >
-            {activeWorkoutName ? "Resume Workout" : "Start Workout"}
+            {activeWorkoutName ? "Resume Session" : "Begin Session"}
           </button>
           <button
             className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-4 text-sm font-semibold text-muted shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-0.5"

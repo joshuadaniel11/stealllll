@@ -468,9 +468,24 @@ export function WorkoutTrackerApp() {
       }
       const targetSet = next.activeWorkout.exercises[exerciseIndex].sets[setIndex];
       targetSet[field] = Number.isNaN(value) ? 0 : value;
-      if (targetSet.weight > 0 || targetSet.reps > 0) {
-        targetSet.completed = true;
+      return next;
+    });
+  };
+
+  const completeSet = (exerciseIndex: number, setIndex: number) => {
+    setState((current) => {
+      if (!current.activeWorkout) {
+        return current;
       }
+      const next = structuredClone(current);
+      if (!next.activeWorkout) {
+        return current;
+      }
+      const targetSet = next.activeWorkout.exercises[exerciseIndex].sets[setIndex];
+      if (targetSet.weight <= 0 && targetSet.reps <= 0) {
+        return current;
+      }
+      targetSet.completed = true;
       return next;
     });
   };
@@ -708,42 +723,9 @@ export function WorkoutTrackerApp() {
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
               userSessions={userSessions}
-              exerciseLibrary={state.exerciseLibrary}
               onStartWorkout={startWorkout}
               onUpdateSet={updateSet}
-              onDuplicateLastSet={duplicateLastSet}
-              onUpdateExerciseNote={updateExerciseNote}
-              onOpenExercise={setSelectedExerciseId}
-              onSwapExercise={(exerciseIndex, exerciseId) => {
-                setState((current) => {
-                  if (!current.activeWorkout) {
-                    return current;
-                  }
-                  const replacement = current.exerciseLibrary.find((item) => item.id === exerciseId);
-                  if (!replacement) {
-                    return current;
-                  }
-                  const next = structuredClone(current);
-                  if (!next.activeWorkout) {
-                    return current;
-                  }
-                  const existing = next.activeWorkout.exercises[exerciseIndex];
-                  next.activeWorkout.exercises[exerciseIndex] = {
-                    ...existing,
-                    exerciseId: replacement.id,
-                    exerciseName: replacement.name,
-                    muscleGroup: replacement.muscleGroup,
-                    note: replacement.cues[0] ?? "",
-                    sets: existing.sets.map((_, setIndex) => ({
-                      id: `${replacement.id}-${setIndex}-${Date.now()}`,
-                      weight: 0,
-                      reps: 0,
-                      completed: false,
-                    })),
-                  };
-                  return next;
-                });
-              }}
+              onCompleteSet={completeSet}
               onCompleteWorkout={openWorkoutCompletionPrompt}
               onCancelWorkout={cancelWorkout}
             />
