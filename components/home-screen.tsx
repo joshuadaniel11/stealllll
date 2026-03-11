@@ -7,7 +7,7 @@ import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
-import { Card, StatCard } from "@/components/ui";
+import { Card, MiniMetric } from "@/components/ui";
 import type {
   BibleVerse,
   Profile,
@@ -40,23 +40,23 @@ const workoutMotivationByProfile: Record<string, Record<string, { preview: strin
     },
   },
   joshua: {
-      "joshua-chest-triceps": {
-        preview: "😈💪 Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
-      },
-      "joshua-back-biceps": {
-        preview: "🖤💪 Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
-      },
-      "joshua-legs": {
-        preview: "🔥🦵 Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
-      },
-      "joshua-shoulders-arms": {
-        preview: "💪😏 Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
-      },
-      "joshua-upper-strength": {
-        preview: "🖤🔥 Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
-      },
+    "joshua-chest-triceps": {
+      preview: "😈💪 Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
     },
-  };
+    "joshua-back-biceps": {
+      preview: "🖤💪 Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
+    },
+    "joshua-legs": {
+      preview: "🔥🦵 Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
+    },
+    "joshua-shoulders-arms": {
+      preview: "💪😏 Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
+    },
+    "joshua-upper-strength": {
+      preview: "🖤🔥 Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
+    },
+  },
+};
 
 function getWorkoutMotivation(profileId: string, workoutId: string) {
   return workoutMotivationByProfile[profileId]?.[workoutId] ?? null;
@@ -75,8 +75,8 @@ export function HomeScreen({
   dailyStretch,
   stretchCompletedToday,
   sharedSummary,
-    recentWorkouts,
-    onOpenDailyVerse,
+  recentWorkouts,
+  onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
   onResumeWorkout,
@@ -96,9 +96,9 @@ export function HomeScreen({
   dailyVerse: BibleVerse;
   dailyStretch: StretchRecommendation;
   stretchCompletedToday: boolean;
-    sharedSummary: SharedSummary;
-    recentWorkouts: WorkoutSession[];
-    onOpenDailyVerse: () => void;
+  sharedSummary: SharedSummary;
+  recentWorkouts: WorkoutSession[];
+  onOpenDailyVerse: () => void;
   onToggleStretch: () => void;
   onStartWorkout: () => void;
   onResumeWorkout: () => void;
@@ -113,162 +113,159 @@ export function HomeScreen({
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
   return (
-    <div className="space-y-4 animate-page-in">
-      <ScrollReveal delay={0}>
+    <div className="space-y-3">
+      <ScrollReveal delay={0} y={14} scale={0.995}>
         <Card className="px-5 py-5">
           <p className="text-sm text-muted">{profile.name}</p>
-          <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>
-          {dailyMotivation ? (
-            <p className="caption-text mt-4 text-muted">Private note for today's session.</p>
-          ) : (
-            <p className="caption-text mt-4 text-muted">Daily verse available below.</p>
-          )}
+          <p className="medium-label mt-3 max-w-[29ch] font-medium text-text">{smallDailyMessage}</p>
+          <p className="caption-text mt-3 text-muted">
+            {dailyMotivation ? "Private note for today's session." : "Daily verse available below."}
+          </p>
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={80}>
-        <Card className="px-5 py-5">
-          <p className="text-sm text-muted">Today's workout</p>
+      <ScrollReveal delay={40} y={14} scale={0.995}>
+        <Card className="px-5 py-6">
+          <p className="text-sm text-muted">Today</p>
           <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
           <p className="medium-label mt-2 text-muted">
             {activeWorkoutName
-              ? "Session in progress. Jump back in when you are ready."
-              : `${todaysWorkout.focus} | ${todaysWorkout.exercises.length} exercises | ${todaysWorkout.durationMinutes} min`}
+              ? "Session in progress. Jump back in when you're ready."
+              : `${todaysWorkout.focus} • ${todaysWorkout.exercises.length} exercises • ${todaysWorkout.durationMinutes} min`}
           </p>
           {workoutRhythmNote ? <p className="caption-text mt-3 text-muted">{workoutRhythmNote}</p> : null}
-          <div className="mt-5 flex gap-3">
+
+          <div className="mt-6">
             <button
-              className="flex-1 rounded-[28px] bg-accent px-5 py-4 text-base font-semibold text-white shadow-[var(--shadow-glow)]"
+              className="w-full rounded-[30px] bg-white px-5 py-5 text-base font-semibold text-black shadow-[var(--shadow-soft)]"
               onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
             >
-              {activeWorkoutName ? "Resume Session" : "Begin Session"}
+              {activeWorkoutName ? "Resume Workout Mode" : "Begin Session"}
             </button>
-            <button
-              className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-              onClick={onPreviewWorkout}
-            >
-              Preview
-            </button>
-          </div>
-          {!activeWorkoutName ? (
-            <>
-              <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <button
+                className="text-sm font-medium text-muted transition-colors hover:text-text"
+                onClick={onPreviewWorkout}
+              >
+                Preview workout
+              </button>
+              {!activeWorkoutName ? (
                 <button
-                  className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
+                  className="text-sm font-medium text-muted transition-colors hover:text-text"
+                  onClick={() => setShowMoveChoices((current) => !current)}
+                >
+                  {showMoveChoices ? "Close options" : "Move or skip"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {!activeWorkoutName && showMoveChoices ? (
+            <div className="mt-4 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
                   onClick={onSkipWorkout}
                 >
                   Skip for now
                 </button>
                 <button
-                  className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
-                  onClick={() => setShowMoveChoices((current) => !current)}
+                  className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
+                  onClick={() => setShowMoveChoices(false)}
                 >
-                  {showMoveChoices ? "Close move" : "Move workout"}
+                  Keep today
                 </button>
               </div>
-              {showMoveChoices ? (
-                <div className="mt-3 grid grid-cols-1 gap-2 animate-soft-in">
-                  {profile.workoutPlan.map((workout) => (
-                    <button
-                      key={workout.id}
-                      className={`rounded-[22px] px-4 py-3 text-left text-sm font-medium ${
-                        workout.id === todaysWorkout.id
-                          ? "bg-accentSoft text-text"
-                          : "bg-[var(--card-strong)] text-muted"
-                      }`}
-                      onClick={() => {
-                        onMoveWorkout(workout.id);
-                        setShowMoveChoices(false);
-                      }}
-                    >
-                      {workout.dayLabel} | {workout.name}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </>
+              <div className="grid grid-cols-1 gap-2">
+                {profile.workoutPlan.map((workout) => (
+                  <button
+                    key={workout.id}
+                    className={`rounded-[22px] px-4 py-3 text-left text-sm font-medium ${
+                      workout.id === todaysWorkout.id ? "bg-accentSoft text-text" : "bg-[var(--card-strong)] text-muted"
+                    }`}
+                    onClick={() => {
+                      onMoveWorkout(workout.id);
+                      setShowMoveChoices(false);
+                    }}
+                  >
+                    {workout.dayLabel} • {workout.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : null}
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={130}>
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="This week" value={`${weeklyCount}`} sublabel="workouts" />
-        <StatCard label="Streak" value={`${streak}`} sublabel="days" />
-        <StatCard label="Last PR" value={`${pbCount}`} sublabel="saved" />
-      </div>
+      <ScrollReveal delay={70} y={12} scale={0.996}>
+        <div className="grid grid-cols-3 gap-2.5">
+          <MiniMetric label="This week" value={`${weeklyCount}`} />
+          <MiniMetric label="Streak" value={`${streak}`} />
+          <MiniMetric label="Last PR" value={`${pbCount}`} />
+        </div>
       </ScrollReveal>
 
-      <ScrollReveal delay={170}>
-        <DailyStretchCard
-          stretch={dailyStretch}
-          completed={stretchCompletedToday}
-          onToggle={onToggleStretch}
-        />
+      <ScrollReveal delay={100} y={12} scale={0.996}>
+        <DailyStretchCard stretch={dailyStretch} completed={stretchCompletedToday} onToggle={onToggleStretch} />
       </ScrollReveal>
 
-      <ScrollReveal delay={220}>
-      <Card className="px-5 py-5">
-        <button
-          className="flex w-full items-center justify-between text-left"
-          onClick={() => setShowDetails((current) => !current)}
-        >
-          <div>
-            <p className="text-sm text-muted">More</p>
-            <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-text">Open extra details</h3>
-          </div>
-          <ChevronDown
-            className={`h-5 w-5 text-muted transition-transform duration-300 ${showDetails ? "rotate-180" : ""}`}
-          />
-        </button>
+      <ScrollReveal delay={130} y={12} scale={0.996}>
+        <Card className="px-5 py-4">
+          <button
+            className="flex w-full items-center justify-between text-left"
+            onClick={() => setShowDetails((current) => !current)}
+          >
+            <div>
+              <p className="text-sm text-muted">More</p>
+              <p className="medium-label mt-2 text-text">
+                Open secondary details only when you want them.
+              </p>
+            </div>
+            <ChevronDown
+              className={`h-5 w-5 text-muted transition-transform duration-300 ${showDetails ? "rotate-180" : ""}`}
+            />
+          </button>
 
-        {showDetails ? (
-          <div className="mt-5 space-y-4 animate-soft-in">
-            <StrengthPredictionCard predictions={strengthPredictions} />
-            <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
+          {showDetails ? (
+            <div className="mt-4 space-y-3">
+              <StrengthPredictionCard predictions={strengthPredictions} />
+              <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 
-            <Card className="px-5 py-5">
-              <p className="text-sm text-muted">Shared progress</p>
-              <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-text">Couple summary</h3>
-              <p className="medium-label mt-3 text-muted">{sharedSummary.weeklyHighlight}</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
-                  <p className="text-sm text-muted">Combined workouts</p>
-                  <p className="mt-2 text-lg font-semibold text-text">{sharedSummary.combinedWorkouts}</p>
+              <Card className="px-5 py-5">
+                <p className="text-sm text-muted">Couple summary</p>
+                <p className="medium-label mt-3 text-text">{sharedSummary.weeklyHighlight}</p>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <MiniMetric label="Together" value={`${sharedSummary.combinedWorkouts}`} />
+                  <MiniMetric label="Team streak" value={`${sharedSummary.teamStreak}d`} />
                 </div>
-                <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
-                  <p className="text-sm text-muted">Team streak</p>
-                  <p className="mt-2 text-lg font-semibold text-text">{sharedSummary.teamStreak} days</p>
-                </div>
-              </div>
-            </Card>
+              </Card>
 
-            <Card className="px-5 py-5">
-              <p className="text-sm text-muted">Recent workouts</p>
-              <div className="mt-4 space-y-3">
-                {recentWorkouts.length ? (
-                  recentWorkouts.map((session) => (
-                    <button
-                      key={session.id}
-                      className="w-full rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-left"
-                      onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
-                    >
-                      <p className="text-base font-medium text-text">{session.workoutName}</p>
-                      <p className="caption-text mt-1 text-muted">
-                        {formatDate(session.performedAt)} | {session.exercises.length} exercises
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm text-muted">
-                    No workouts logged yet. Your history will show here after your first session.
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        ) : null}
-      </Card>
+              <Card className="px-5 py-5">
+                <p className="text-sm text-muted">Recent workouts</p>
+                <div className="mt-3 space-y-2">
+                  {recentWorkouts.length ? (
+                    recentWorkouts.slice(0, 2).map((session) => (
+                      <button
+                        key={session.id}
+                        className="w-full rounded-[24px] bg-[var(--card-strong)] px-4 py-4 text-left"
+                        onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
+                      >
+                        <p className="text-sm font-medium text-text">{session.workoutName}</p>
+                        <p className="caption-text mt-1 text-muted">
+                          {formatDate(session.performedAt)} • {session.exercises.length} exercises
+                        </p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4 text-sm text-muted">
+                      Your first logged session will appear here.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          ) : null}
+        </Card>
       </ScrollReveal>
     </div>
   );

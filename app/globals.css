@@ -64,12 +64,12 @@ body {
   position: relative;
   overflow: hidden;
   transition:
-    transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 420ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 300ms ease,
-    border-color 300ms ease,
-    opacity 260ms ease,
-    filter 320ms ease;
+    transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    box-shadow 280ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    background-color 220ms ease,
+    border-color 220ms ease,
+    opacity 220ms ease,
+    filter 240ms ease;
 }
 
 .glass::before {
@@ -102,15 +102,15 @@ body {
 }
 
 .animate-soft-in {
-  animation: soft-in 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: soft-in 320ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 .animate-page-in {
-  animation: page-in 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: page-in 340ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 .animate-sheet-up {
-  animation: sheet-up 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sheet-up 360ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 .content-stack > * {
@@ -228,7 +228,7 @@ select {
 }
 
 button:active {
-  transform: scale(0.985) translateY(1px);
+  transform: scale(0.992);
 }
 
 h1,
@@ -238,19 +238,19 @@ h3 {
 }
 
 .large-title {
-  font-size: 1.95rem;
-  line-height: 1.04;
-  letter-spacing: -0.055em;
+  font-size: 1.88rem;
+  line-height: 1.06;
+  letter-spacing: -0.05em;
 }
 
 .medium-label {
-  font-size: 0.95rem;
-  line-height: 1.45;
+  font-size: 0.94rem;
+  line-height: 1.55;
 }
 
 .caption-text {
   font-size: 0.82rem;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .sheet-backdrop {
@@ -410,11 +410,11 @@ h3 {
 
 .scroll-reveal {
   opacity: 0.001;
-  transform: translateY(var(--reveal-y, 28px)) scale(var(--reveal-scale, 0.985));
+  transform: translateY(var(--reveal-y, 18px)) scale(var(--reveal-scale, 0.992));
   transition:
-    opacity 900ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
-    transform 1100ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
-    filter 900ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+    opacity 420ms cubic-bezier(0.2, 0.9, 0.2, 1) var(--reveal-delay, 0ms),
+    transform 520ms cubic-bezier(0.2, 0.9, 0.2, 1) var(--reveal-delay, 0ms),
+    filter 420ms cubic-bezier(0.2, 0.9, 0.2, 1) var(--reveal-delay, 0ms);
   filter: saturate(0.96);
   will-change: transform, opacity;
 }
@@ -439,7 +439,7 @@ h3 {
 .tabbar-button {
   min-width: 76px;
   border-radius: 24px;
-  padding: 0.75rem 0.9rem;
+  padding: 0.7rem 0.9rem;
 }
 
 .tabbar-button-active {
@@ -474,7 +474,7 @@ select {
 @keyframes soft-in {
   from {
     opacity: 0;
-    transform: scale(0.975);
+    transform: scale(0.988);
   }
 
   to {
@@ -486,7 +486,7 @@ select {
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
 
   to {
@@ -498,7 +498,7 @@ select {
 @keyframes sheet-up {
   from {
     opacity: 0;
-    transform: translateY(38px) scale(0.972);
+    transform: translateY(26px) scale(0.988);
   }
 
   to {
@@ -532,8 +532,8 @@ select {
 @media (hover: hover) and (pointer: fine) {
   .glass:hover {
     transform: translateY(-1px);
-    box-shadow: 0 22px 54px rgba(0, 0, 0, 0.34);
-    filter: saturate(1.04);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+    filter: saturate(1.02);
   }
 
   .glass:hover::before {

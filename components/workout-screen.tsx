@@ -130,8 +130,8 @@ export function WorkoutScreen({
 
     return (
       <>
-        <ScrollReveal delay={0}>
-        <Card className="animate-page-in">
+        <ScrollReveal delay={0} y={14} scale={0.996}>
+        <Card>
           <p className="text-sm text-muted">Workout plan</p>
           <h2 className="large-title mt-2 font-semibold text-text">Choose a day</h2>
           <div className="mt-4 space-y-3">
@@ -146,7 +146,7 @@ export function WorkoutScreen({
                   <div>
                     <p className="text-base font-medium">{workout.name}</p>
                     <p className="caption-text mt-1 text-muted">
-                      {workout.dayLabel} | {workout.exercises.length} exercises
+                      {workout.dayLabel} • {workout.exercises.length} exercises
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -253,10 +253,10 @@ export function WorkoutScreen({
 
   return (
     <div className="space-y-4">
-      <ScrollReveal delay={0}>
-      <Card className="animate-page-in bg-[rgba(5,6,8,0.92)] px-5 py-6 shadow-[var(--shadow-card)]">
-        <p className="text-sm text-muted">Current exercise</p>
-        <h1 className="large-title mt-3 font-semibold text-text">{currentExercise.exerciseName}</h1>
+      <ScrollReveal delay={0} y={12} scale={0.996}>
+      <Card className="bg-[rgba(4,5,7,0.94)] px-5 py-6 shadow-[var(--shadow-card)]">
+        <p className="text-sm text-muted">Workout mode</p>
+        <h1 className="mt-3 text-[2.2rem] font-semibold leading-[0.98] tracking-[-0.06em] text-text">{currentExercise.exerciseName}</h1>
         {nextExerciseName ? (
           <p className="caption-text mt-3 text-muted">
             Next up: <span className="text-text">{nextExerciseName}</span>
@@ -279,10 +279,10 @@ export function WorkoutScreen({
         </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+            <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-5">
             <span className="text-sm text-muted">Weight</span>
             <input
-              className="mt-3 w-full bg-transparent text-[36px] font-semibold text-text outline-none"
+              className="mt-3 w-full bg-transparent text-[38px] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="decimal"
               type="number"
               value={currentSet?.weight || ""}
@@ -292,10 +292,10 @@ export function WorkoutScreen({
               }
             />
           </label>
-          <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+          <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-5">
             <span className="text-sm text-muted">Reps</span>
             <input
-              className="mt-3 w-full bg-transparent text-[36px] font-semibold text-text outline-none"
+              className="mt-3 w-full bg-transparent text-[38px] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="numeric"
               type="number"
               value={currentSet?.reps || ""}
@@ -362,8 +362,8 @@ export function WorkoutScreen({
         </div>
 
         <button
-          className={`mt-6 w-full rounded-[28px] px-5 py-5 text-base font-semibold ${
-            canCompleteSet ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
+          className={`mt-6 w-full rounded-[30px] px-5 py-5 text-base font-semibold ${
+            canCompleteSet ? "bg-white text-black shadow-[var(--shadow-soft)]" : "bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canCompleteSet}
           onClick={handleCompleteSet}
@@ -373,8 +373,8 @@ export function WorkoutScreen({
       </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={90}>
-      <div className="grid grid-cols-3 gap-3 animate-soft-in">
+      <ScrollReveal delay={50} y={10} scale={0.998}>
+      <div className="grid grid-cols-3 gap-3">
         <button
           className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
           onClick={() => setShowExitConfirmation(true)}
