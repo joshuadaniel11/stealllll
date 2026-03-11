@@ -9,16 +9,16 @@
   --card-strong: rgba(18, 20, 27, 0.82);
   --stroke: rgba(255, 255, 255, 0.08);
   --text: #f6f7fb;
-  --muted: #a2acbb;
-  --accent: #8aacff;
-  --accent-soft: rgba(138, 172, 255, 0.12);
-  --success: #1f9c6b;
-  --warning: #c98327;
+  --muted: #b1b8c5;
+  --accent: #e6a2bb;
+  --accent-soft: rgba(230, 162, 187, 0.12);
+  --success: #5f9b82;
+  --warning: #b88a59;
   --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.32);
   --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 12px 28px rgba(138, 172, 255, 0.1);
-  --page-glow-top: radial-gradient(circle at top, rgba(106, 133, 255, 0.08), transparent 18%);
-  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(138, 172, 255, 0.05), transparent 14%);
+  --shadow-glow: 0 12px 28px rgba(230, 162, 187, 0.08);
+  --page-glow-top: radial-gradient(circle at top, rgba(230, 162, 187, 0.08), transparent 18%);
+  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(230, 162, 187, 0.05), transparent 14%);
   --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.02), transparent 28%);
 }
 
@@ -160,6 +160,17 @@ body {
   --page-glow-top: radial-gradient(circle at top, rgba(255, 255, 255, 0.03), transparent 16%);
   --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.02), transparent 14%);
   --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.02), transparent 30%);
+}
+
+.theme-natasha {
+  --muted: #b8b1bc;
+  --accent: #ec9fba;
+  --accent-soft: rgba(236, 159, 186, 0.12);
+  --success: #6a9d87;
+  --warning: #b48b63;
+  --shadow-glow: 0 12px 28px rgba(236, 159, 186, 0.08);
+  --page-glow-top: radial-gradient(circle at top, rgba(236, 159, 186, 0.08), transparent 18%);
+  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(236, 159, 186, 0.05), transparent 14%);
 }
 
 .theme-joshua .glass {

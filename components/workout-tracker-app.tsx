@@ -918,6 +918,7 @@ export function WorkoutTrackerApp() {
   };
 
   const isJoshuaTheme = selectedProfile.id === "joshua";
+  const isNatashaTheme = selectedProfile.id === "natasha";
   const immersiveWorkoutMode = activeTab === "workout" && state.activeWorkout?.userId === selectedProfile.id;
   const compactHeader = scrollY > 18 && !immersiveWorkoutMode;
   const handleToastAction = () => {
@@ -944,6 +945,7 @@ export function WorkoutTrackerApp() {
       className={clsx(
         "theme-shell min-h-screen px-4 pb-32 pt-5 text-text transition-colors duration-500 sm:px-6",
         isJoshuaTheme ? "theme-joshua" : "",
+        isNatashaTheme ? "theme-natasha" : "",
       )}
     >
       <div className="mx-auto flex max-w-md flex-col gap-5">
