@@ -58,7 +58,7 @@ function getWeekStart(date = new Date()) {
   return next;
 }
 
-function getTodayWorkout(profile: Profile, sessions: WorkoutSession[]) {
+function getNextWorkoutFromSessions(profile: Profile, sessions: WorkoutSession[]) {
   if (!sessions.length) {
     return profile.workoutPlan[0];
   }
@@ -71,6 +71,26 @@ function getTodayWorkout(profile: Profile, sessions: WorkoutSession[]) {
   }
 
   return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
+}
+
+function getTodayWorkout(profile: Profile, sessions: WorkoutSession[], overrideWorkoutId: string | null) {
+  if (overrideWorkoutId) {
+    return profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ?? getNextWorkoutFromSessions(profile, sessions);
+  }
+
+  return getNextWorkoutFromSessions(profile, sessions);
+}
+
+function getDaysSinceLastWorkout(sessions: WorkoutSession[]) {
+  if (!sessions.length) {
+    return null;
+  }
+
+  const lastSessionDate = new Date(sessions[0].performedAt);
+  const today = new Date();
+  lastSessionDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - lastSessionDate.getTime()) / 86400000);
 }
 
 function getTodayStretch(profile: Profile) {
@@ -163,20 +183,35 @@ function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = [])
   }));
 }
 
-function toActiveWorkout(userId: UserId, workout: WorkoutPlanDay, sessions: WorkoutSession[]): ActiveWorkout {
+function toActiveWorkout(
+  userId: UserId,
+  workout: WorkoutPlanDay,
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  exerciseSwapMemory: Record<string, string>,
+): ActiveWorkout {
   return {
     id: `active-${Date.now()}`,
     userId,
     startedAt: new Date().toISOString(),
     workoutDayId: workout.id,
     workoutName: workout.name,
-    exercises: workout.exercises.map((exercise) => ({
-      exerciseId: exercise.id,
-      exerciseName: exercise.name,
-      muscleGroup: exercise.muscleGroup,
-      note: "",
-      sets: buildEmptySets(exercise, getLastExerciseSets(exercise.name, sessions)),
-    })),
+    exercises: workout.exercises.map((exercise) => {
+      const rememberedSwapId = exerciseSwapMemory[exercise.id];
+      const rememberedSwap = rememberedSwapId
+        ? exerciseLibrary.find((item) => item.id === rememberedSwapId)
+        : null;
+      const activeExerciseName = rememberedSwap?.name ?? exercise.name;
+      const activeMuscleGroup = rememberedSwap?.muscleGroup ?? exercise.muscleGroup;
+
+      return {
+        exerciseId: rememberedSwap?.id ?? exercise.id,
+        exerciseName: activeExerciseName,
+        muscleGroup: activeMuscleGroup,
+        note: rememberedSwap?.cues[0] ?? "",
+        sets: buildEmptySets(exercise, getLastExerciseSets(activeExerciseName, sessions)),
+      };
+    }),
   };
 }
 
@@ -198,6 +233,14 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
     stretchCompletions: {
       ...seed.stretchCompletions,
       ...(incoming.stretchCompletions ?? {}),
+    },
+    workoutOverrides: {
+      ...seed.workoutOverrides,
+      ...(incoming.workoutOverrides ?? {}),
+    },
+    exerciseSwapMemory: {
+      ...seed.exerciseSwapMemory,
+      ...(incoming.exerciseSwapMemory ?? {}),
     },
     bibleVerses: incoming.bibleVerses?.length ? incoming.bibleVerses : seed.bibleVerses,
     activeWorkout: null,
@@ -260,7 +303,11 @@ export function WorkoutTrackerApp() {
   );
 
   const userSessions = useMemo(() => getUserSessions(state, selectedProfile.id), [state, selectedProfile.id]);
-  const todaysWorkout = useMemo(() => getTodayWorkout(selectedProfile, userSessions), [selectedProfile, userSessions]);
+  const workoutOverride = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
+  const todaysWorkout = useMemo(
+    () => getTodayWorkout(selectedProfile, userSessions, workoutOverride),
+    [selectedProfile, userSessions, workoutOverride],
+  );
   const todaysStretch = useMemo(() => getTodayStretch(selectedProfile), [selectedProfile]);
   const strengthPredictions = useMemo(
     () => getStrengthPredictions(selectedProfile.id, userSessions),
@@ -273,6 +320,14 @@ export function WorkoutTrackerApp() {
   );
   const streak = getStreak(userSessions);
   const recentWorkouts = userSessions.slice(0, 3);
+  const workoutRhythmNote = useMemo(() => {
+    const gapDays = getDaysSinceLastWorkout(userSessions);
+    if (gapDays === null || gapDays < 3) {
+      return workoutOverride ? `Moved into place. Pick up with ${todaysWorkout.dayLabel} when ready.` : null;
+    }
+
+    return `It has been ${gapDays} days. Pick up with ${todaysWorkout.dayLabel} when ready.`;
+  }, [todaysWorkout.dayLabel, userSessions, workoutOverride]);
   const activeWorkoutTemplate = selectedProfile.workoutPlan.find(
     (workout) => workout.id === state.activeWorkout?.workoutDayId,
   );
@@ -329,11 +384,48 @@ export function WorkoutTrackerApp() {
   const startWorkout = (workout: WorkoutPlanDay) => {
     setState((current) => ({
       ...current,
-      activeWorkout: toActiveWorkout(selectedProfile.id, workout, userSessions),
+      activeWorkout: toActiveWorkout(
+        selectedProfile.id,
+        workout,
+        userSessions,
+        current.exerciseLibrary,
+        current.exerciseSwapMemory[selectedProfile.id],
+      ),
     }));
     setWorkoutPreviewId(null);
     softHaptic(10);
     startTransition(() => setActiveTab("workout"));
+  };
+
+  const skipWorkout = () => {
+    const currentIndex = selectedProfile.workoutPlan.findIndex((workout) => workout.id === todaysWorkout.id);
+    const nextWorkout = selectedProfile.workoutPlan[(currentIndex + 1) % selectedProfile.workoutPlan.length];
+
+    setState((current) => ({
+      ...current,
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [selectedProfile.id]: {
+          nextWorkoutId: nextWorkout.id,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    setCompletionMessage(`${todaysWorkout.dayLabel} was skipped. ${nextWorkout.dayLabel} is queued up next.`);
+    setShowCompletionCelebration(true);
+  };
+
+  const moveWorkout = (workoutId: string) => {
+    setState((current) => ({
+      ...current,
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [selectedProfile.id]: {
+          nextWorkoutId: workoutId,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
   };
 
   const openWorkoutCompletionPrompt = () => {
@@ -391,6 +483,13 @@ export function WorkoutTrackerApp() {
       ...current,
       sessions: [completedSession, ...current.sessions],
       activeWorkout: null,
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [selectedProfile.id]: {
+          nextWorkoutId: null,
+          updatedAt: new Date().toISOString(),
+        },
+      },
       sharedSummary: {
         ...current.sharedSummary,
         combinedWorkouts: current.sharedSummary.combinedWorkouts + 1,
@@ -536,6 +635,7 @@ export function WorkoutTrackerApp() {
         ?.exercises[exerciseIndex];
       const setCount = templateForSlot?.sets ?? existing.sets.length;
       const previousSets = getLastExerciseSets(replacement.name, targetSessions);
+      const memoryKey = templateForSlot?.id ?? existing.exerciseId;
 
       next.activeWorkout.exercises[exerciseIndex] = {
         ...existing,
@@ -549,6 +649,10 @@ export function WorkoutTrackerApp() {
           reps: 0,
           completed: false,
         })),
+      };
+      next.exerciseSwapMemory[next.activeWorkout.userId] = {
+        ...next.exerciseSwapMemory[next.activeWorkout.userId],
+        [memoryKey]: replacement.id,
       };
       return next;
     });
@@ -641,6 +745,14 @@ export function WorkoutTrackerApp() {
         ...current.stretchCompletions,
         [selectedProfile.id]: [],
       },
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [selectedProfile.id]: seed.workoutOverrides[selectedProfile.id],
+      },
+      exerciseSwapMemory: {
+        ...current.exerciseSwapMemory,
+        [selectedProfile.id]: {},
+      },
       activeWorkout:
         current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
     }));
@@ -718,6 +830,7 @@ export function WorkoutTrackerApp() {
               profile={selectedProfile}
               todaysWorkout={todaysWorkout}
               activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
+              workoutRhythmNote={workoutRhythmNote}
               weeklyCount={weeklyCount}
               streak={streak}
               pbCount={state.personalBests[selectedProfile.id].length}
@@ -735,6 +848,8 @@ export function WorkoutTrackerApp() {
                 setWorkoutPreviewId(todaysWorkout.id);
                 startTransition(() => setActiveTab("workout"));
               }}
+              onSkipWorkout={skipWorkout}
+              onMoveWorkout={moveWorkout}
               onOpenExercise={setSelectedExerciseId}
             />
           )}

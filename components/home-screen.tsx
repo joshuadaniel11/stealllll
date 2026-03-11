@@ -75,6 +75,7 @@ export function HomeScreen({
   profile,
   todaysWorkout,
   activeWorkoutName,
+  workoutRhythmNote,
   weeklyCount,
   streak,
   pbCount,
@@ -85,15 +86,18 @@ export function HomeScreen({
   sharedSummary,
     recentWorkouts,
     onOpenDailyVerse,
-    onToggleStretch,
-    onStartWorkout,
-    onResumeWorkout,
-    onPreviewWorkout,
+  onToggleStretch,
+  onStartWorkout,
+  onResumeWorkout,
+  onPreviewWorkout,
+  onSkipWorkout,
+  onMoveWorkout,
   onOpenExercise,
 }: {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
   activeWorkoutName: string | null;
+  workoutRhythmNote: string | null;
   weeklyCount: number;
   streak: number;
   pbCount: number;
@@ -104,13 +108,16 @@ export function HomeScreen({
     sharedSummary: SharedSummary;
     recentWorkouts: WorkoutSession[];
     onOpenDailyVerse: () => void;
-    onToggleStretch: () => void;
-    onStartWorkout: () => void;
-    onResumeWorkout: () => void;
-    onPreviewWorkout: () => void;
+  onToggleStretch: () => void;
+  onStartWorkout: () => void;
+  onResumeWorkout: () => void;
+  onPreviewWorkout: () => void;
+  onSkipWorkout: () => void;
+  onMoveWorkout: (workoutId: string) => void;
   onOpenExercise: (id: string | null) => void;
-  }) {
+}) {
   const [showDetails, setShowDetails] = useState(false);
+  const [showMoveChoices, setShowMoveChoices] = useState(false);
   const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
@@ -126,17 +133,18 @@ export function HomeScreen({
           )}
         </Card>
 
-      <Card className="px-5 py-5">
-        <p className="text-sm text-muted">Today's workout</p>
-        <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
-        <p className="medium-label mt-2 text-muted">
-          {activeWorkoutName
-            ? "Session in progress. Jump back in when you are ready."
-            : `${todaysWorkout.focus} | ${todaysWorkout.exercises.length} exercises | ${todaysWorkout.durationMinutes} min`}
-        </p>
-        <div className="mt-5 flex gap-3">
-          <button
-            className="flex-1 rounded-[28px] bg-accent px-5 py-4 text-base font-semibold text-white shadow-[var(--shadow-glow)]"
+        <Card className="px-5 py-5">
+          <p className="text-sm text-muted">Today's workout</p>
+          <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
+          <p className="medium-label mt-2 text-muted">
+            {activeWorkoutName
+              ? "Session in progress. Jump back in when you are ready."
+              : `${todaysWorkout.focus} | ${todaysWorkout.exercises.length} exercises | ${todaysWorkout.durationMinutes} min`}
+          </p>
+          {workoutRhythmNote ? <p className="caption-text mt-3 text-muted">{workoutRhythmNote}</p> : null}
+          <div className="mt-5 flex gap-3">
+            <button
+              className="flex-1 rounded-[28px] bg-accent px-5 py-4 text-base font-semibold text-white shadow-[var(--shadow-glow)]"
             onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
           >
             {activeWorkoutName ? "Resume Session" : "Begin Session"}
@@ -145,10 +153,48 @@ export function HomeScreen({
             className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
             onClick={onPreviewWorkout}
           >
-            Preview
-          </button>
-        </div>
-      </Card>
+              Preview
+            </button>
+          </div>
+          {!activeWorkoutName ? (
+            <>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                  className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
+                  onClick={onSkipWorkout}
+                >
+                  Skip for now
+                </button>
+                <button
+                  className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
+                  onClick={() => setShowMoveChoices((current) => !current)}
+                >
+                  {showMoveChoices ? "Close move" : "Move workout"}
+                </button>
+              </div>
+              {showMoveChoices ? (
+                <div className="mt-3 grid grid-cols-1 gap-2 animate-soft-in">
+                  {profile.workoutPlan.map((workout) => (
+                    <button
+                      key={workout.id}
+                      className={`rounded-[22px] px-4 py-3 text-left text-sm font-medium ${
+                        workout.id === todaysWorkout.id
+                          ? "bg-accentSoft text-text"
+                          : "bg-[var(--card-strong)] text-muted"
+                      }`}
+                      onClick={() => {
+                        onMoveWorkout(workout.id);
+                        setShowMoveChoices(false);
+                      }}
+                    >
+                      {workout.dayLabel} | {workout.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </Card>
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="This week" value={`${weeklyCount}`} sublabel="workouts" />

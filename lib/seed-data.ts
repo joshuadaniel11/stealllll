@@ -403,11 +403,19 @@ export function createSeedState(): AppState {
       natasha: [],
       joshua: [],
     },
-    stretchCompletions: {
-      natasha: [],
-      joshua: [],
-    },
-    exerciseLibrary,
-    activeWorkout: null,
-  };
-}
+      stretchCompletions: {
+        natasha: [],
+        joshua: [],
+      },
+      workoutOverrides: {
+        natasha: { nextWorkoutId: null, updatedAt: null },
+        joshua: { nextWorkoutId: null, updatedAt: null },
+      },
+      exerciseSwapMemory: {
+        natasha: {},
+        joshua: {},
+      },
+      exerciseLibrary,
+      activeWorkout: null,
+    };
+  }

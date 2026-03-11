@@ -161,6 +161,11 @@ export type ActiveWorkout = {
   exercises: WorkoutSessionExercise[];
 };
 
+export type WorkoutOverride = {
+  nextWorkoutId: string | null;
+  updatedAt: string | null;
+};
+
 export type AppState = {
   selectedUserId: UserId;
   profiles: Profile[];
@@ -171,6 +176,8 @@ export type AppState = {
   bibleVerses: BibleVerse[];
   measurements: Record<UserId, MeasurementEntry[]>;
   stretchCompletions: Record<UserId, StretchCompletion[]>;
+  workoutOverrides: Record<UserId, WorkoutOverride>;
+  exerciseSwapMemory: Record<UserId, Record<string, string>>;
   exerciseLibrary: ExerciseLibraryItem[];
   activeWorkout: ActiveWorkout | null;
 };
