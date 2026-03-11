@@ -23,24 +23,24 @@ const formatDate = (value: string) =>
 const workoutMotivationByProfile: Record<string, Record<string, { preview: string; full: string }>> = {
   natasha: {
     "natasha-glutes-hams": {
-      preview: "Build those round, juicy glutes and give Joshua something sinful to think about later.",
-      full: "Build those round, juicy glutes until Joshua is distracted by the thought of pulling you close and not letting go.",
+      preview: "Build those round, juicy glutes and give Joshua something filthy to think about later.",
+      full: "Build those round, juicy glutes until Joshua is distracted by the thought of grabbing you closer and keeping his hands on you.",
     },
     "natasha-back-arms": {
-      preview: "Make that back look so sexy Joshua can't help staring when you're walking away from him.",
-      full: "Carve that sexy back and arm line until Joshua is staring at you from behind and replaying that view in his head all day.",
+      preview: "Make that back look so tempting Joshua can't help staring when you walk away from him.",
+      full: "Carve that sexy back and arm line until Joshua is staring from behind and replaying that view in his head all day.",
     },
     "natasha-glutes-quads": {
-      preview: "Train legs that look wickedly good and curves Joshua will want all over him.",
-      full: "Shape those legs and curves until Joshua is turned on just watching the way you move around him.",
+      preview: "Train legs that look wickedly good and curves Joshua will be dying to pull closer.",
+      full: "Shape those legs and curves until Joshua is worked up just watching the way you move around him.",
     },
     "natasha-upper-core": {
       preview: "Tighten that waist and shape that body until Joshua is fully obsessed with the view.",
-      full: "Tighten that waist and shape that body into the kind of view that makes Joshua want you the second he sees you.",
+      full: "Tighten that waist and shape that body into the kind of view that makes Joshua want you the second he sees you move.",
     },
     "natasha-core-explosive": {
-      preview: "Move hot, feel dangerous, and carry that sexy little energy straight back to Joshua.",
-      full: "Move hot, feel dangerous, and carry that charged-up energy back to Joshua so he feels it the second you're near him.",
+      preview: "Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
+      full: "Move hot, feel dangerous, and carry that charged-up energy back to Joshua so he feels it the second you get close.",
     },
   },
   joshua: {
@@ -49,12 +49,12 @@ const workoutMotivationByProfile: Record<string, Record<string, { preview: strin
       full: "Build that thick chest until Natasha feels weak when she's close to you and wants to melt right into it.",
     },
     "joshua-back-biceps": {
-      preview: "Train that wide back and those strong arms until Natasha feels weak every time you hold her.",
-      full: "Train that wide back and those strong arms until Natasha gets turned on just thinking about you wrapping her up in them.",
+      preview: "Train that wide back and those strong arms until Natasha gets weak every time you hold her.",
+      full: "Train that wide back and those strong arms until Natasha gets worked up just thinking about you wrapping her up in them.",
     },
     "joshua-legs": {
       preview: "Strong legs and broad shoulders make you look filthy good in exactly the way Natasha loves.",
-      full: "Strong legs and broad shoulders give you that powerful look Natasha loves and notices the second you walk in.",
+      full: "Strong legs and broad shoulders give you that powerful look Natasha notices the second you walk in and wants all over her.",
     },
     "joshua-shoulders-arms": {
       preview: "Fill out those shoulders and arms so Natasha can't keep her hands off you.",
@@ -62,7 +62,7 @@ const workoutMotivationByProfile: Record<string, Record<string, { preview: strin
     },
     "joshua-upper-strength": {
       preview: "Get wider, thicker, and more tempting so Natasha sees exactly what all this work is doing to you.",
-      full: "Get wider, thicker, and more tempting until Natasha can see the difference and feel exactly why the work is worth it.",
+      full: "Get wider, thicker, and more tempting until Natasha can see the difference and feel why the work is worth it the second she's close.",
     },
   },
 };
@@ -144,7 +144,7 @@ export function HomeScreen({
         <p className="medium-label mt-2 text-muted">
           {activeWorkoutName
             ? "Session in progress. Jump back in when you are ready."
-            : `${todaysWorkout.focus} · ${todaysWorkout.exercises.length} exercises · ${todaysWorkout.durationMinutes} min`}
+            : `${todaysWorkout.focus} | ${todaysWorkout.exercises.length} exercises | ${todaysWorkout.durationMinutes} min`}
         </p>
         <div className="mt-5 flex gap-3">
           <button
@@ -221,7 +221,7 @@ export function HomeScreen({
                     >
                       <p className="text-base font-medium text-text">{session.workoutName}</p>
                       <p className="caption-text mt-1 text-muted">
-                        {formatDate(session.performedAt)} · {session.exercises.length} exercises
+                        {formatDate(session.performedAt)} | {session.exercises.length} exercises
                       </p>
                     </button>
                   ))

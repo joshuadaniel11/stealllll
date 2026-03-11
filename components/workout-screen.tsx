@@ -88,7 +88,7 @@ export function WorkoutScreen({
                   <div>
                     <p className="text-base font-medium">{workout.name}</p>
                     <p className="caption-text mt-1 text-muted">
-                      {workout.dayLabel} · {workout.exercises.length} exercises
+                      {workout.dayLabel} | {workout.exercises.length} exercises
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -118,7 +118,7 @@ export function WorkoutScreen({
                 <p className="text-sm text-muted">Workout preview</p>
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
-                  {previewWorkout.focus} · {previewWorkout.durationMinutes} min
+                  {previewWorkout.focus} | {previewWorkout.durationMinutes} min
                 </p>
 
                 <div className="mt-5 space-y-3">
