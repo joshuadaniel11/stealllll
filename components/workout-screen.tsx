@@ -56,6 +56,7 @@ export function WorkoutScreen({
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [previewWorkoutId, setPreviewWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
@@ -63,36 +64,98 @@ export function WorkoutScreen({
       setShowExitConfirmation(false);
       return;
     }
+    setPreviewWorkoutId(null);
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
   }, [activeWorkout?.id, activeWorkout?.userId, profile.id]);
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
+    const previewWorkout = profile.workoutPlan.find((workout) => workout.id === previewWorkoutId) ?? null;
+
     return (
-      <Card>
-        <p className="text-sm text-muted">Workout plan</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">Choose a day</h2>
-        <div className="mt-4 space-y-3">
-          {profile.workoutPlan.map((workout) => (
-            <button
-              key={workout.id}
-              className={`w-full rounded-[28px] px-4 py-4 text-left transition duration-300 ${
-                workout.id === todaysWorkoutId ? "bg-accentSoft text-text" : "bg-[var(--card-strong)] text-text"
-              }`}
-              onClick={() => onStartWorkout(workout)}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-base font-medium">{workout.name}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {workout.dayLabel} · {workout.exercises.length} exercises
-                  </p>
+      <>
+        <Card>
+          <p className="text-sm text-muted">Workout plan</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">Choose a day</h2>
+          <div className="mt-4 space-y-3">
+            {profile.workoutPlan.map((workout) => (
+              <div
+                key={workout.id}
+                className={`rounded-[28px] px-4 py-4 transition duration-300 ${
+                  workout.id === todaysWorkoutId ? "bg-accentSoft text-text" : "bg-[var(--card-strong)] text-text"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-base font-medium">{workout.name}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {workout.dayLabel} · {workout.exercises.length} exercises
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="rounded-[22px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
+                      onClick={() => setPreviewWorkoutId(workout.id)}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      className="rounded-[22px] bg-white px-3 py-2 text-sm font-semibold text-black"
+                      onClick={() => onStartWorkout(workout)}
+                    >
+                      Begin
+                    </button>
+                  </div>
                 </div>
-                <span className="text-sm font-medium text-muted">Begin</span>
               </div>
-            </button>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+
+        {previewWorkout ? (
+          <div className="fixed inset-0 z-30 bg-black/50 px-4 py-10 backdrop-blur-sm">
+            <div className="mx-auto max-w-md">
+              <Card className="bg-[var(--surface)]">
+                <p className="text-sm text-muted">Workout preview</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">{previewWorkout.name}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  {previewWorkout.focus} · {previewWorkout.durationMinutes} min
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {previewWorkout.exercises.map((exercise, index) => (
+                    <div key={exercise.id} className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-text">
+                          {index + 1}. {exercise.name}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {exercise.sets} x {exercise.repRange}
+                        </p>
+                      </div>
+                      {exercise.note ? <p className="mt-2 text-sm leading-6 text-muted">{exercise.note}</p> : null}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <button
+                    className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
+                    onClick={() => setPreviewWorkoutId(null)}
+                  >
+                    Close
+                  </button>
+                  <button
+                    className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
+                    onClick={() => onStartWorkout(previewWorkout)}
+                  >
+                    Begin Session
+                  </button>
+                </div>
+              </Card>
+            </div>
+          </div>
+        ) : null}
+      </>
     );
   }
 
