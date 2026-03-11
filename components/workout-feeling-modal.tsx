@@ -11,8 +11,9 @@ export function WorkoutFeelingModal({
 }) {
   return (
     <div className="sheet-backdrop">
-      <div className="sheet-panel animate-sheet-up">
-        <Card className="bg-[var(--surface)]">
+      <div className="sheet-panel sheet-detent-medium animate-sheet-up">
+        <Card className="sheet-card bg-[var(--surface)]">
+          <div className="sheet-drag-handle" />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-muted">Workout complete</p>

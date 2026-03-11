@@ -15,8 +15,9 @@ export function ExitSessionModal({
 
   return (
     <div className="sheet-backdrop">
-      <div className="sheet-panel animate-sheet-up">
-        <Card className="bg-[var(--surface)]">
+      <div className="sheet-panel sheet-detent-medium animate-sheet-up">
+        <Card className="sheet-card bg-[var(--surface)]">
+          <div className="sheet-drag-handle" />
           <p className="text-sm text-muted">Exit session</p>
           <h3 className="large-title mt-2 font-semibold text-text">Leave without saving?</h3>
           <p className="medium-label mt-3 text-muted">

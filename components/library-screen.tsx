@@ -72,25 +72,31 @@ export function LibraryScreen({
       </Card>
 
       <div className="space-y-3">
-        {filteredLibrary.map((exercise) => (
-          <button
-            key={exercise.id}
-            className="glass hairline w-full rounded-[26px] px-5 py-5 text-left shadow-card"
-            onClick={() => onOpenExercise(exercise.id)}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium">{exercise.name}</p>
-                <p className="mt-1 text-sm text-muted">
-                  {exercise.muscleGroup} - {exercise.equipment}
-                </p>
+        {filteredLibrary.length ? (
+          filteredLibrary.map((exercise) => (
+            <button
+              key={exercise.id}
+              className="glass hairline w-full rounded-[26px] px-5 py-5 text-left shadow-card"
+              onClick={() => onOpenExercise(exercise.id)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{exercise.name}</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {exercise.muscleGroup} - {exercise.equipment}
+                  </p>
+                </div>
+                {exercise.isCustom && (
+                  <span className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">Custom</span>
+                )}
               </div>
-              {exercise.isCustom && (
-                <span className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">Custom</span>
-              )}
-            </div>
-          </button>
-        ))}
+            </button>
+          ))
+        ) : (
+          <div className="empty-state">
+            No matches yet. Try a different muscle group or add your own exercise.
+          </div>
+        )}
       </div>
     </>
   );

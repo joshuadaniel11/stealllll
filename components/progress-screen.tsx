@@ -115,29 +115,33 @@ export function ProgressScreen({
           </div>
         </div>
         <div className="mt-4 h-52">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="volumeFill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-              <Tooltip
-                cursor={{ stroke: "rgba(91,142,255,0.3)" }}
-                contentStyle={{
-                  borderRadius: 20,
-                  border: "1px solid var(--stroke)",
-                  background: "var(--card)",
-                  backdropFilter: "blur(18px)",
-                }}
-              />
-              <Area type="monotone" dataKey="volume" stroke="var(--accent)" fill="url(#volumeFill)" strokeWidth={3} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {trendData.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="volumeFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                <Tooltip
+                  cursor={{ stroke: "rgba(91,142,255,0.3)" }}
+                  contentStyle={{
+                    borderRadius: 20,
+                    border: "1px solid var(--stroke)",
+                    background: "var(--card)",
+                    backdropFilter: "blur(18px)",
+                  }}
+                />
+                <Area type="monotone" dataKey="volume" stroke="var(--accent)" fill="url(#volumeFill)" strokeWidth={3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="empty-state h-full">Log a full workout and your volume trend will appear here.</div>
+          )}
         </div>
       </Card>
 

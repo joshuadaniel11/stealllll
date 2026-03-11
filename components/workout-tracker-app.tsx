@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from "react";
 import clsx from "clsx";
 import { Activity, ChartColumn, Dumbbell, Search, Settings } from "lucide-react";
 
@@ -263,6 +263,7 @@ export function WorkoutTrackerApp() {
   const [customExerciseName, setCustomExerciseName] = useState("");
   const [customMuscleGroup, setCustomMuscleGroup] = useState<MuscleGroup>("Full Body");
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
+  const [scrollY, setScrollY] = useState(0);
   const deferredLibraryQuery = useDeferredValue(libraryQuery);
 
   const softHaptic = (pattern: number | number[]) => {
@@ -288,6 +289,13 @@ export function WorkoutTrackerApp() {
       saveState(state);
     }
   }, [state, hydrated]);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!showCompletionCelebration) {
@@ -776,9 +784,11 @@ export function WorkoutTrackerApp() {
 
   const isJoshuaTheme = selectedProfile.id === "joshua";
   const immersiveWorkoutMode = activeTab === "workout" && state.activeWorkout?.userId === selectedProfile.id;
+  const compactHeader = scrollY > 18 && !immersiveWorkoutMode;
 
   return (
     <main
+      style={{ "--parallax-shift": `${Math.min(scrollY * 0.08, 18)}px` } as CSSProperties}
       className={clsx(
         "theme-shell min-h-screen px-4 pb-32 pt-5 text-text transition-colors duration-500 sm:px-6",
         isJoshuaTheme ? "theme-joshua" : "",
@@ -786,13 +796,20 @@ export function WorkoutTrackerApp() {
     >
       <div className="mx-auto flex max-w-md flex-col gap-5">
         {!immersiveWorkoutMode ? (
-          <Card className="animate-fade-up px-5 py-5">
+          <Card className={clsx("hero-shell animate-fade-up px-5 py-5", compactHeader ? "py-4" : "py-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm text-muted">STEALLLLL</p>
-                <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.06em] text-text">{selectedProfile.name}</h1>
+                <p className={clsx("hero-subtle text-sm text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEALLLLL</p>
+                <h1
+                  className={clsx(
+                    "hero-title mt-2 text-[32px] font-semibold tracking-[-0.06em] text-text",
+                    compactHeader ? "hero-title-compact" : "",
+                  )}
+                >
+                  {selectedProfile.name}
+                </h1>
                 {selectedProfile.id === "natasha" ? (
-                  <p className="mt-2 text-sm font-medium text-accent">For Natasha by Joshua</p>
+                  <p className={clsx("hero-subtle mt-2 text-sm font-medium text-accent", compactHeader ? "hero-subtle-compact" : "")}>For Natasha by Joshua</p>
                 ) : null}
               </div>
               <button
@@ -802,20 +819,20 @@ export function WorkoutTrackerApp() {
                 <Settings className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-2 rounded-[28px] bg-[var(--card-strong)] p-1.5">
+            <div className="ios-segmented mt-5 grid grid-cols-2">
               {state.profiles.map((profile) => (
                 <button
                   key={profile.id}
                   className={clsx(
-                    "rounded-[24px] px-4 py-3 text-left text-sm font-medium transition duration-300",
-                    profile.id === selectedProfile.id ? "bg-black/20 text-text" : "text-muted",
+                    "ios-segment text-sm font-medium",
+                    profile.id === selectedProfile.id ? "ios-segment-active" : "",
                   )}
-                onClick={() => {
-                  setSelectedExerciseId(null);
-                  setState((current) => ({ ...current, selectedUserId: profile.id }));
-                  softHaptic(6);
-                  startTransition(() => setActiveTab("home"));
-                }}
+                  onClick={() => {
+                    setSelectedExerciseId(null);
+                    setState((current) => ({ ...current, selectedUserId: profile.id }));
+                    softHaptic(6);
+                    startTransition(() => setActiveTab("home"));
+                  }}
                 >
                   {profile.name}
                 </button>

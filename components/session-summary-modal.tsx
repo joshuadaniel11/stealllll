@@ -20,8 +20,9 @@ export function SessionSummaryModal({
 
   return (
     <div className="sheet-backdrop">
-      <div className="sheet-panel animate-sheet-up">
-        <Card className="bg-[var(--surface)]">
+      <div className="sheet-panel sheet-detent-medium animate-sheet-up">
+        <Card className="sheet-card bg-[var(--surface)]">
+          <div className="sheet-drag-handle" />
           <p className="text-sm text-muted">Session complete</p>
           <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
           <div className="mt-6 grid grid-cols-3 gap-3">

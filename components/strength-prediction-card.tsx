@@ -51,7 +51,7 @@ export function StrengthPredictionCard({
           ))}
         </div>
       ) : (
-        <div className="relative z-10 mt-5 rounded-[26px] border border-dashed border-white/10 bg-[rgba(255,255,255,0.03)] px-4 py-5 text-sm text-muted">
+        <div className="empty-state relative z-10 mt-5 border border-dashed border-white/10 text-sm">
           Not enough data yet to generate prediction
         </div>
       )}

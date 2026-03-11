@@ -34,9 +34,10 @@ export function ExerciseDetailModal({
   const cues = "cues" in exercise ? exercise.cues : [exercise.note ?? "Smooth tempo and stable setup."];
 
   return (
-    <div className="fixed inset-0 z-30 bg-slate-950/30 px-4 py-10 backdrop-blur-sm">
-      <div className="mx-auto max-w-md">
-        <Card className="bg-[var(--surface)]">
+    <div className="sheet-backdrop">
+      <div className="sheet-panel sheet-detent-large animate-sheet-up">
+        <Card className="sheet-card bg-[var(--surface)]">
+          <div className="sheet-drag-handle" />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-muted">Exercise detail</p>
@@ -44,7 +45,7 @@ export function ExerciseDetailModal({
               <p className="mt-1 text-sm text-muted">{exercise.muscleGroup}</p>
             </div>
             <button
-              className="rounded-full bg-black/5 px-3 py-2 text-sm text-muted dark:bg-white/5"
+              className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
               onClick={onClose}
             >
               Close
@@ -72,13 +73,13 @@ export function ExerciseDetailModal({
                 </div>
               ))
             ) : (
-              <div className="rounded-[20px] border border-stroke bg-white/50 px-4 py-3 text-sm text-muted dark:bg-white/5">
+              <div className="empty-state text-sm">
                 No recent history yet.
               </div>
             )}
           </div>
 
-          <div className="mt-4 rounded-[24px] bg-black/5 p-4 dark:bg-white/5">
+          <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] p-4">
             <p className="text-sm font-medium text-text">Notes</p>
             <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
               {cues.map((cue) => (

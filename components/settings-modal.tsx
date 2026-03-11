@@ -1,4 +1,4 @@
-import { Download, RefreshCcw, Smartphone, Trash2, Upload } from "lucide-react";
+import { ChevronRight, Download, RefreshCcw, Smartphone, Trash2, Upload } from "lucide-react";
 
 import { Card } from "@/components/ui";
 import type { Profile } from "@/lib/types";
@@ -19,73 +19,100 @@ export function SettingsModal({
   onResetAll: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 bg-slate-950/30 px-4 py-10 backdrop-blur-sm">
-      <div className="mx-auto max-w-md">
-        <Card className="bg-[var(--surface)]">
+    <div className="sheet-backdrop">
+      <div className="sheet-panel sheet-detent-large animate-sheet-up">
+        <Card className="sheet-card bg-[var(--surface)]">
+          <div className="sheet-drag-handle" />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-muted">Settings</p>
-              <h2 className="mt-1 text-[28px] font-bold tracking-[-0.05em]">Device and data</h2>
+              <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Device and data</h2>
             </div>
             <button
-              className="rounded-full bg-black/5 px-3 py-2 text-sm text-muted dark:bg-white/5"
+              className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
               onClick={onClose}
             >
               Close
             </button>
           </div>
 
-          <div className="mt-5 rounded-[24px] bg-black/5 p-4 dark:bg-white/5">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-accent" />
-              <p className="text-sm font-medium text-text">Local-only saving</p>
+          <div className="grouped-list mt-5">
+            <div>
+              <p className="caption-text px-2 pb-2 text-muted">This device</p>
+              <div className="grouped-section">
+                <div className="grouped-row">
+                  <span className="row-icon">
+                    <Smartphone className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text">Local-only saving</p>
+                    <p className="caption-text mt-1 text-muted">
+                      This phone keeps its own workout history and progress. Use the same browser or home screen app each time.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              This phone keeps its own workout history and progress. Use the same browser or home screen app each time to keep data consistent.
-            </p>
-          </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button
-              className="rounded-[22px] border border-stroke bg-white/50 px-4 py-4 text-left dark:bg-white/5"
-              onClick={onExport}
-            >
-              <Download className="h-5 w-5 text-accent" />
-              <p className="mt-3 font-medium">Export</p>
-              <p className="mt-1 text-sm text-muted">Backup this phone&apos;s data.</p>
-            </button>
+            <div>
+              <p className="caption-text px-2 pb-2 text-muted">Backup</p>
+              <div className="grouped-section">
+                <button className="grouped-row" onClick={onExport}>
+                  <span className="row-icon">
+                    <Download className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text">Export backup</p>
+                    <p className="caption-text mt-1 text-muted">Save this phone&apos;s data as a file.</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted" />
+                </button>
 
-            <label className="rounded-[22px] border border-stroke bg-white/50 px-4 py-4 text-left dark:bg-white/5">
-              <Upload className="h-5 w-5 text-accent" />
-              <p className="mt-3 font-medium">Import</p>
-              <p className="mt-1 text-sm text-muted">Restore from a backup.</p>
-              <input
-                className="hidden"
-                type="file"
-                accept="application/json"
-                onChange={(event) => onImport(event.target.files?.[0] ?? null)}
-              />
-            </label>
-          </div>
+                <label className="grouped-row cursor-pointer">
+                  <span className="row-icon">
+                    <Upload className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text">Import backup</p>
+                    <p className="caption-text mt-1 text-muted">Restore from a previous export file.</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted" />
+                  <input
+                    className="hidden"
+                    type="file"
+                    accept="application/json"
+                    onChange={(event) => onImport(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
+            </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button
-              className="rounded-[22px] border border-stroke bg-white/50 px-4 py-4 text-left dark:bg-white/5"
-              onClick={onResetProfile}
-            >
-              <RefreshCcw className="h-5 w-5 text-warning" />
-              <p className="mt-3 font-medium">Reset {profile.name}</p>
-              <p className="mt-1 text-sm text-muted">Clear this profile&apos;s progress only.</p>
-            </button>
+            <div>
+              <p className="caption-text px-2 pb-2 text-muted">Reset</p>
+              <div className="grouped-section">
+                <button className="grouped-row" onClick={onResetProfile}>
+                  <span className="row-icon text-warning">
+                    <RefreshCcw className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text">Reset {profile.name}</p>
+                    <p className="caption-text mt-1 text-muted">Clear this profile&apos;s progress only.</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted" />
+                </button>
 
-            <button
-              className="rounded-[22px] border border-stroke bg-white/50 px-4 py-4 text-left dark:bg-white/5"
-              onClick={onResetAll}
-            >
-              <Trash2 className="h-5 w-5 text-warning" />
-              <p className="mt-3 font-medium">Reset all</p>
-              <p className="mt-1 text-sm text-muted">Return the app to a clean start.</p>
-            </button>
+                <button className="grouped-row" onClick={onResetAll}>
+                  <span className="row-icon text-warning">
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-text">Reset all data</p>
+                    <p className="caption-text mt-1 text-muted">Return the app to a clean start.</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted" />
+                </button>
+              </div>
+            </div>
           </div>
         </Card>
       </div>
