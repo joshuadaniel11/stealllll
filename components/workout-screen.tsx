@@ -73,9 +73,9 @@ export function WorkoutScreen({
 
     return (
       <>
-        <Card>
+        <Card className="animate-page-in">
           <p className="text-sm text-muted">Workout plan</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">Choose a day</h2>
+          <h2 className="large-title mt-2 font-semibold text-text">Choose a day</h2>
           <div className="mt-4 space-y-3">
             {profile.workoutPlan.map((workout) => (
               <div
@@ -87,7 +87,7 @@ export function WorkoutScreen({
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-base font-medium">{workout.name}</p>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="caption-text mt-1 text-muted">
                       {workout.dayLabel} · {workout.exercises.length} exercises
                     </p>
                   </div>
@@ -112,12 +112,12 @@ export function WorkoutScreen({
         </Card>
 
         {previewWorkout ? (
-          <div className="fixed inset-0 z-30 bg-black/50 px-4 py-10 backdrop-blur-sm">
-            <div className="mx-auto max-w-md">
+          <div className="sheet-backdrop">
+            <div className="sheet-panel animate-sheet-up">
               <Card className="bg-[var(--surface)]">
                 <p className="text-sm text-muted">Workout preview</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">{previewWorkout.name}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted">
+                <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
+                <p className="medium-label mt-2 text-muted">
                   {previewWorkout.focus} · {previewWorkout.durationMinutes} min
                 </p>
 
@@ -128,11 +128,11 @@ export function WorkoutScreen({
                         <p className="text-sm font-medium text-text">
                           {index + 1}. {exercise.name}
                         </p>
-                        <p className="text-xs text-muted">
+                        <p className="caption-text text-muted">
                           {exercise.sets} x {exercise.repRange}
                         </p>
                       </div>
-                      {exercise.note ? <p className="mt-2 text-sm leading-6 text-muted">{exercise.note}</p> : null}
+                      {exercise.note ? <p className="medium-label mt-2 text-muted">{exercise.note}</p> : null}
                     </div>
                   ))}
                 </div>
@@ -185,15 +185,15 @@ export function WorkoutScreen({
 
   return (
     <div className="space-y-4">
-      <Card className="bg-[rgba(5,6,8,0.96)] px-5 py-6 shadow-[0_16px_40px_rgba(0,0,0,0.42)]">
+      <Card className="animate-page-in bg-[rgba(5,6,8,0.92)] px-5 py-6 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Current exercise</p>
-        <h1 className="mt-3 text-[34px] font-semibold leading-[1.02] text-text">{currentExercise.exerciseName}</h1>
+        <h1 className="large-title mt-3 font-semibold text-text">{currentExercise.exerciseName}</h1>
         {nextExerciseName ? (
-          <p className="mt-3 text-sm text-muted">
+          <p className="caption-text mt-3 text-muted">
             Next up: <span className="text-text">{nextExerciseName}</span>
           </p>
         ) : (
-          <p className="mt-3 text-sm text-muted">Final exercise in this session.</p>
+          <p className="caption-text mt-3 text-muted">Final exercise in this session.</p>
         )}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -262,7 +262,7 @@ export function WorkoutScreen({
         </div>
 
         <button
-          className={`mt-6 w-full rounded-[28px] px-5 py-5 text-base font-semibold transition duration-300 ${
+          className={`mt-6 w-full rounded-[28px] px-5 py-5 text-base font-semibold ${
             canCompleteSet ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canCompleteSet}
@@ -272,7 +272,7 @@ export function WorkoutScreen({
         </button>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 animate-soft-in">
         <button
           className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
           onClick={() => setShowExitConfirmation(true)}
@@ -290,7 +290,7 @@ export function WorkoutScreen({
             Next Exercise
             <ChevronRight className="h-4 w-4" />
           </div>
-          <p className="mt-1 text-xs text-muted">{nextExerciseName ?? "Session finish next"}</p>
+          <p className="caption-text mt-1 text-muted">{nextExerciseName ?? "Session finish next"}</p>
         </button>
         <button
           className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"

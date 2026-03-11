@@ -225,6 +225,12 @@ export function WorkoutTrackerApp() {
   const [timerBase, setTimerBase] = useState(90);
   const deferredLibraryQuery = useDeferredValue(libraryQuery);
 
+  const softHaptic = (pattern: number | number[]) => {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  };
+
   useEffect(() => {
     const localState = loadState();
     if (localState) {
@@ -344,6 +350,7 @@ export function WorkoutTrackerApp() {
       ...current,
       activeWorkout: toActiveWorkout(selectedProfile.id, workout, userSessions),
     }));
+    softHaptic(10);
     startTransition(() => setActiveTab("workout"));
   };
 
@@ -424,9 +431,7 @@ export function WorkoutTrackerApp() {
       completedSets,
       feeling,
     });
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(18);
-    }
+    softHaptic([10, 36, 12]);
     startTransition(() => setActiveTab("home"));
   };
 
@@ -647,11 +652,12 @@ export function WorkoutTrackerApp() {
                     "rounded-[24px] px-4 py-3 text-left text-sm font-medium transition duration-300",
                     profile.id === selectedProfile.id ? "bg-black/20 text-text" : "text-muted",
                   )}
-                  onClick={() => {
-                    setSelectedExerciseId(null);
-                    setState((current) => ({ ...current, selectedUserId: profile.id }));
-                    startTransition(() => setActiveTab("home"));
-                  }}
+                onClick={() => {
+                  setSelectedExerciseId(null);
+                  setState((current) => ({ ...current, selectedUserId: profile.id }));
+                  softHaptic(6);
+                  startTransition(() => setActiveTab("home"));
+                }}
                 >
                   {profile.name}
                 </button>
@@ -660,7 +666,7 @@ export function WorkoutTrackerApp() {
           </Card>
         ) : null}
 
-        <div className="animate-soft-in">
+        <div className="animate-page-in">
           {activeTab === "home" && (
             <HomeScreen
               profile={selectedProfile}
@@ -769,7 +775,7 @@ export function WorkoutTrackerApp() {
           onSetPreset={triggerTimer}
         />
       ) : (
-        <nav className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[28px] bg-[var(--card-strong)] px-3 py-3 shadow-[var(--shadow-card)] backdrop-blur-2xl">
+        <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -777,10 +783,13 @@ export function WorkoutTrackerApp() {
               <button
                 key={item.id}
                 className={clsx(
-                  "flex min-w-[72px] flex-col items-center gap-1 rounded-[24px] px-3 py-2 text-xs font-medium transition duration-300",
-                  isActive ? "bg-accentSoft text-accent" : "text-muted",
+                  "tabbar-button flex flex-col items-center gap-1 text-xs font-medium transition duration-300",
+                  isActive ? "tabbar-button-active text-accent" : "text-muted",
                 )}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  softHaptic(6);
+                  setActiveTab(item.id);
+                }}
               >
                 <Icon className="h-5 w-5" />
                 {item.label}

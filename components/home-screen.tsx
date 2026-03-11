@@ -116,10 +116,10 @@ export function HomeScreen({
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-page-in">
       <Card className="px-5 py-5">
         <p className="text-sm text-muted">{profile.name}</p>
-        <p className="mt-3 max-w-[28ch] text-base font-medium leading-7 text-text">{smallDailyMessage}</p>
+        <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>
         {dailyMotivation ? (
           <button
             className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-accent"
@@ -129,21 +129,19 @@ export function HomeScreen({
             {showFullPrivateNote ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         ) : (
-          <p className="mt-4 text-sm text-muted">Daily verse available below.</p>
+          <p className="caption-text mt-4 text-muted">Daily verse available below.</p>
         )}
         {showFullPrivateNote && dailyMotivation ? (
           <div className="mt-4 rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
-            <p className="text-sm leading-6 text-text">{dailyMotivation.full}</p>
+            <p className="medium-label text-text">{dailyMotivation.full}</p>
           </div>
         ) : null}
       </Card>
 
       <Card className="px-5 py-5">
         <p className="text-sm text-muted">Today's workout</p>
-        <h2 className="mt-2 text-[30px] font-semibold tracking-[-0.05em] text-text">
-          {activeWorkoutName ?? todaysWorkout.name}
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted">
+        <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
+        <p className="medium-label mt-2 text-muted">
           {activeWorkoutName
             ? "Session in progress. Jump back in when you are ready."
             : `${todaysWorkout.focus} · ${todaysWorkout.exercises.length} exercises · ${todaysWorkout.durationMinutes} min`}
@@ -191,14 +189,14 @@ export function HomeScreen({
         </button>
 
         {showDetails ? (
-          <div className="mt-5 space-y-4">
+          <div className="mt-5 space-y-4 animate-soft-in">
             <StrengthPredictionCard predictions={strengthPredictions} />
             <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 
             <Card className="px-5 py-5">
               <p className="text-sm text-muted">Shared progress</p>
               <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-text">Couple summary</h3>
-              <p className="mt-3 text-sm leading-6 text-muted">{sharedSummary.weeklyHighlight}</p>
+              <p className="medium-label mt-3 text-muted">{sharedSummary.weeklyHighlight}</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
                   <p className="text-sm text-muted">Combined workouts</p>
@@ -222,7 +220,7 @@ export function HomeScreen({
                       onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
                     >
                       <p className="text-base font-medium text-text">{session.workoutName}</p>
-                      <p className="mt-1 text-sm text-muted">
+                      <p className="caption-text mt-1 text-muted">
                         {formatDate(session.performedAt)} · {session.exercises.length} exercises
                       </p>
                     </button>

@@ -10,13 +10,13 @@ export function WorkoutFeelingModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-30 bg-slate-950/30 px-4 py-10 backdrop-blur-sm">
-      <div className="mx-auto max-w-md">
+    <div className="sheet-backdrop">
+      <div className="sheet-panel animate-sheet-up">
         <Card className="bg-[var(--surface)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-muted">Workout complete</p>
-              <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">
+              <h3 className="large-title mt-1 font-semibold">
                 How did today feel?
               </h3>
             </div>

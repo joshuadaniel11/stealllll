@@ -19,11 +19,11 @@ export function SessionSummaryModal({
   }
 
   return (
-    <div className="fixed inset-0 z-30 bg-black/50 px-4 py-10 backdrop-blur-sm">
-      <div className="mx-auto max-w-md">
+    <div className="sheet-backdrop">
+      <div className="sheet-panel animate-sheet-up">
         <Card className="bg-[var(--surface)]">
           <p className="text-sm text-muted">Session complete</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">{summary.workoutName}</h3>
+          <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
           <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
               <p className="text-sm text-muted">Length</p>

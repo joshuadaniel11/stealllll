@@ -14,12 +14,12 @@ export function ExitSessionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-30 bg-black/50 px-4 py-10 backdrop-blur-sm">
-      <div className="mx-auto max-w-md">
+    <div className="sheet-backdrop">
+      <div className="sheet-panel animate-sheet-up">
         <Card className="bg-[var(--surface)]">
           <p className="text-sm text-muted">Exit session</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-text">Leave without saving?</h3>
-          <p className="mt-3 text-sm leading-6 text-muted">
+          <h3 className="large-title mt-2 font-semibold text-text">Leave without saving?</h3>
+          <p className="medium-label mt-3 text-muted">
             This clears the current workout and takes you back out of Workout Mode.
           </p>
           <div className="mt-6 grid grid-cols-2 gap-3">
