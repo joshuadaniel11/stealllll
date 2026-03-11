@@ -29,7 +29,7 @@ export function DateTimeChip() {
   }, []);
 
   return (
-    <div className="flex w-fit items-center gap-2 rounded-[22px] border border-stroke bg-white/90 px-4 py-3 text-sm text-text shadow-card dark:bg-white/10 dark:text-white">
+    <div className="flex w-fit items-center gap-2 rounded-[22px] border border-stroke bg-[var(--card-strong)]/80 px-4 py-3 text-sm text-text shadow-[var(--shadow-soft)]">
       <CalendarDays className="h-4 w-4" />
       <span className="font-medium">{now.date}</span>
       <span className="opacity-50">•</span>

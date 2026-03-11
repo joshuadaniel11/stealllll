@@ -79,7 +79,7 @@ body {
   --stroke: rgba(255, 255, 255, 0.09);
   --text: #ffffff;
   --muted: #d6d9df;
-  --accent: #ffffff;
+  --accent: rgba(255, 255, 255, 0.14);
   --accent-soft: rgba(255, 255, 255, 0.08);
   --shadow-card: 0 30px 80px rgba(0, 0, 0, 0.58);
   --shadow-soft: 0 18px 38px rgba(0, 0, 0, 0.34);
@@ -94,6 +94,21 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 26%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 80%),
     var(--card);
+}
+
+.theme-joshua .bg-accent {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)) !important;
+  color: #ffffff !important;
+}
+
+.theme-joshua .bg-accentSoft,
+.theme-joshua .bg-accentSoft\/70 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-joshua .text-accent {
+  color: #ffffff !important;
 }
 
 .hairline {
