@@ -24,7 +24,6 @@ export function WorkoutScreen({
   onUpdateExerciseNote,
   onOpenExercise,
   onSwapExercise,
-  onTriggerTimer,
   onCompleteWorkout,
   onCancelWorkout,
 }: {
@@ -45,7 +44,6 @@ export function WorkoutScreen({
   onUpdateExerciseNote: (exerciseIndex: number, note: string) => void;
   onOpenExercise: (id: string) => void;
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
-  onTriggerTimer: (seconds: number) => void;
   onCompleteWorkout: () => void;
   onCancelWorkout: () => void;
 }) {
@@ -161,12 +159,6 @@ export function WorkoutScreen({
                   </p>
                   {template?.note && <p className="mt-2 text-sm leading-6 text-muted">{template.note}</p>}
                 </div>
-                <button
-                  className="rounded-full bg-accentSoft px-3 py-2 text-xs font-medium text-accent"
-                  onClick={() => onTriggerTimer(template?.restSeconds ?? 60)}
-                >
-                  Rest
-                </button>
               </div>
 
               <div className="mt-4 rounded-[24px] bg-black/5 p-4 text-sm dark:bg-white/5">
@@ -236,17 +228,6 @@ export function WorkoutScreen({
                           }
                         />
                       </label>
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      {[60, 90, 120].map((seconds) => (
-                        <button
-                          key={seconds}
-                          className="rounded-full border border-stroke px-3 py-2 text-xs text-muted"
-                          onClick={() => onTriggerTimer(seconds)}
-                        >
-                          {seconds}s
-                        </button>
-                      ))}
                     </div>
                   </div>
                 ))}

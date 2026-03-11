@@ -715,7 +715,6 @@ export function WorkoutTrackerApp() {
                 return next;
               });
             }}
-            onTriggerTimer={triggerTimer}
             onCompleteWorkout={openWorkoutCompletionPrompt}
             onCancelWorkout={cancelWorkout}
           />
