@@ -20,18 +20,26 @@ import type {
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
 
-const getDailyMotivation = (lines: string[] | undefined) => {
-  if (!lines?.length) {
-    return null;
-  }
-
-  const now = new Date();
-  const dayOfYear = Math.floor(
-    (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 0)) / 86_400_000,
-  );
-
-  return lines[dayOfYear % lines.length];
+const workoutMotivationByProfile: Record<string, Record<string, string>> = {
+  natasha: {
+    "natasha-glutes-hams": "Grow those round, soft-looking glutes and make Joshua want his hands on you.",
+    "natasha-back-arms": "Build that sexy back so Joshua can't stop staring when you walk away.",
+    "natasha-glutes-quads": "Strong legs, fuller curves, and a body Joshua will keep thinking about.",
+    "natasha-upper-core": "Carve that tight waist and shoulder line for a dangerously feminine shape.",
+    "natasha-core-explosive": "Move like fire, feel sexy, and carry that energy straight back to Joshua.",
+  },
+  joshua: {
+    "joshua-chest-triceps": "Build that thick chest so Natasha melts every time she leans into you.",
+    "joshua-back-biceps": "Train that wide back and strong arms so Natasha feels safe and turned on around you.",
+    "joshua-legs": "Strong legs and broad shoulders make you look powerful in all the right ways.",
+    "joshua-shoulders-arms": "Cap the shoulders, fill out the arms, and give Natasha something serious to admire.",
+    "joshua-upper-strength": "Get wider, thicker, and stronger so Natasha sees the sexier version of you showing up.",
+  },
 };
+
+function getWorkoutMotivation(profileId: string, workoutId: string) {
+  return workoutMotivationByProfile[profileId]?.[workoutId] ?? null;
+}
 
 export function HomeScreen({
   profile,
@@ -73,7 +81,7 @@ export function HomeScreen({
   onOpenExercise: (id: string | null) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
-  const dailyMotivation = getDailyMotivation(profile.motivationLines);
+  const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
   const smallDailyMessage = useMemo(
     () => dailyMotivation ?? dailyVerse.preview,
     [dailyMotivation, dailyVerse.preview],
