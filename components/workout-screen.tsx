@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
+import { ExitSessionModal } from "@/components/exit-session-modal";
 import { Card } from "@/components/ui";
 import type { ActiveWorkout, Profile, WorkoutPlanDay } from "@/lib/types";
 
@@ -54,10 +55,12 @@ export function WorkoutScreen({
   onCancelWorkout: () => void;
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
       setCurrentExerciseIndex(0);
+      setShowExitConfirmation(false);
       return;
     }
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
@@ -122,6 +125,9 @@ export function WorkoutScreen({
       <Card className="bg-[rgba(5,6,8,0.96)] px-5 py-6 shadow-[0_16px_40px_rgba(0,0,0,0.42)]">
         <p className="text-sm text-muted">Current exercise</p>
         <h1 className="mt-3 text-[34px] font-semibold leading-[1.02] text-text">{currentExercise.exerciseName}</h1>
+        <p className="mt-3 text-sm text-muted">
+          Next up: <span className="text-text">{nextExerciseName}</span>
+        </p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
@@ -202,7 +208,7 @@ export function WorkoutScreen({
       <div className="grid grid-cols-3 gap-3">
         <button
           className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-          onClick={onCancelWorkout}
+          onClick={() => setShowExitConfirmation(true)}
         >
           Exit Session
         </button>
@@ -226,6 +232,12 @@ export function WorkoutScreen({
           Finish Workout
         </button>
       </div>
+
+      <ExitSessionModal
+        open={showExitConfirmation}
+        onClose={() => setShowExitConfirmation(false)}
+        onConfirm={onCancelWorkout}
+      />
     </div>
   );
 }

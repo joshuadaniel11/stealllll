@@ -12,6 +12,7 @@ import { LibraryScreen } from "@/components/library-screen";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { ProgressScreen } from "@/components/progress-screen";
 import { RestTimer } from "@/components/rest-timer";
+import { SessionSummaryModal, type SessionSummary } from "@/components/session-summary-modal";
 import { SettingsModal } from "@/components/settings-modal";
 import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
@@ -215,6 +216,7 @@ export function WorkoutTrackerApp() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
   const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [customExerciseName, setCustomExerciseName] = useState("");
   const [customMuscleGroup, setCustomMuscleGroup] = useState<MuscleGroup>("Full Body");
@@ -373,13 +375,18 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout) {
       return;
     }
+    const completedSets = state.activeWorkout.exercises.reduce(
+      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
+      0,
+    );
+    const durationMinutes = Math.max(25, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000));
     const completedSession: WorkoutSession = {
       id: `session-${Date.now()}`,
       userId: state.activeWorkout.userId,
       workoutDayId: state.activeWorkout.workoutDayId,
       workoutName: state.activeWorkout.workoutName,
       performedAt: new Date().toISOString(),
-      durationMinutes: Math.max(25, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000)),
+      durationMinutes,
       feeling,
       exercises: state.activeWorkout.exercises.map((exercise) => ({
         ...exercise,
@@ -402,10 +409,16 @@ export function WorkoutTrackerApp() {
     setTimerSeconds(0);
     setCompletionMessage(`${selectedProfile.name} logged a ${feeling.toLowerCase()} session.`);
     setShowCompletionCelebration(true);
+    setSessionSummary({
+      workoutName: completedSession.workoutName,
+      durationMinutes,
+      completedSets,
+      feeling,
+    });
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(18);
     }
-    startTransition(() => setActiveTab("progress"));
+    startTransition(() => setActiveTab("home"));
   };
 
   const saveMeasurement = (entry: Omit<AppState["measurements"][UserId][number], "id" | "date">) => {
@@ -761,6 +774,7 @@ export function WorkoutTrackerApp() {
           onClose={() => setShowWorkoutFeelingPrompt(false)}
         />
       )}
+      <SessionSummaryModal summary={sessionSummary} onClose={() => setSessionSummary(null)} />
 
       {immersiveWorkoutMode ? (
         <RestTimer
