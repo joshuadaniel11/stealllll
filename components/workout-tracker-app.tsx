@@ -594,8 +594,15 @@ export function WorkoutTrackerApp() {
           <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_right,_rgba(95,143,255,0.14),_transparent_34%)]" />
           <div className="flex items-start justify-between gap-4">
             <div className="relative z-10">
-              <div className="inline-flex items-center rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-                STEALLLLL
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                  STEALLLLL
+                </div>
+                {selectedProfile.id === "natasha" ? (
+                  <div className="inline-flex items-center rounded-full bg-accentSoft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
+                    For Natasha by Joshua
+                  </div>
+                ) : null}
               </div>
               <h1 className="balanced-text mt-3 text-[32px] font-semibold tracking-[-0.06em]">Calm progress for two.</h1>
               <p className="mt-2 text-sm leading-6 text-muted">
