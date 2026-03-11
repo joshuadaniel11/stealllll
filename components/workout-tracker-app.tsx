@@ -11,7 +11,6 @@ import { HomeScreen } from "@/components/home-screen";
 import { LibraryScreen } from "@/components/library-screen";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { ProgressScreen } from "@/components/progress-screen";
-import { RestTimer } from "@/components/rest-timer";
 import { SessionSummaryModal, type SessionSummary } from "@/components/session-summary-modal";
 import { SettingsModal } from "@/components/settings-modal";
 import { Card } from "@/components/ui";
@@ -220,9 +219,6 @@ export function WorkoutTrackerApp() {
   const [libraryQuery, setLibraryQuery] = useState("");
   const [customExerciseName, setCustomExerciseName] = useState("");
   const [customMuscleGroup, setCustomMuscleGroup] = useState<MuscleGroup>("Full Body");
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerBase, setTimerBase] = useState(90);
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const deferredLibraryQuery = useDeferredValue(libraryQuery);
 
@@ -249,22 +245,6 @@ export function WorkoutTrackerApp() {
       saveState(state);
     }
   }, [state, hydrated]);
-
-  useEffect(() => {
-    if (!timerRunning || timerSeconds <= 0) {
-      return;
-    }
-    const interval = window.setInterval(() => {
-      setTimerSeconds((current) => {
-        if (current <= 1) {
-          setTimerRunning(false);
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [timerRunning, timerSeconds]);
 
   useEffect(() => {
     if (!showCompletionCelebration) {
@@ -381,8 +361,6 @@ export function WorkoutTrackerApp() {
       activeWorkout:
         current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
     }));
-    setTimerRunning(false);
-    setTimerSeconds(0);
     setShowWorkoutFeelingPrompt(false);
     setCompletionMessage(`${selectedProfile.name}'s workout was cancelled.`);
     setShowCompletionCelebration(true);
@@ -423,8 +401,6 @@ export function WorkoutTrackerApp() {
       },
     }));
     setShowWorkoutFeelingPrompt(false);
-    setTimerRunning(false);
-    setTimerSeconds(0);
     setCompletionMessage(`${selectedProfile.name} logged a ${feeling.toLowerCase()} session.`);
     setShowCompletionCelebration(true);
     setSessionSummary({
@@ -585,12 +561,6 @@ export function WorkoutTrackerApp() {
     setCustomExerciseName("");
   };
 
-  const triggerTimer = (seconds: number) => {
-    setTimerBase(seconds);
-    setTimerSeconds(seconds);
-    setTimerRunning(true);
-  };
-
   const completeStretch = () => {
     if (stretchCompletedToday) {
       return;
@@ -748,7 +718,6 @@ export function WorkoutTrackerApp() {
               onUpdateSet={updateSet}
               onCompleteSet={completeSet}
               onSwapExercise={swapExercise}
-              onTriggerRestTimer={triggerTimer}
               onCompleteWorkout={openWorkoutCompletionPrompt}
               onCancelWorkout={cancelWorkout}
             />
@@ -808,22 +777,7 @@ export function WorkoutTrackerApp() {
       )}
       <SessionSummaryModal summary={sessionSummary} onClose={() => setSessionSummary(null)} />
 
-      {immersiveWorkoutMode ? (
-        <RestTimer
-          seconds={timerSeconds}
-          running={timerRunning}
-          onToggle={() => setTimerRunning((value) => !value)}
-          onSkip={() => {
-            setTimerRunning(false);
-            setTimerSeconds(0);
-          }}
-          onRestart={() => {
-            setTimerSeconds(timerBase);
-            setTimerRunning(true);
-          }}
-          onSetPreset={triggerTimer}
-        />
-      ) : (
+      {!immersiveWorkoutMode ? (
         <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -846,7 +800,7 @@ export function WorkoutTrackerApp() {
             );
           })}
         </nav>
-      )}
+      ) : null}
     </main>
   );
 }

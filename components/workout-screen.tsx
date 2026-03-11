@@ -68,7 +68,6 @@ export function WorkoutScreen({
   onUpdateSet,
   onCompleteSet,
   onSwapExercise,
-  onTriggerRestTimer,
   onCompleteWorkout,
   onCancelWorkout,
 }: {
@@ -87,7 +86,6 @@ export function WorkoutScreen({
   ) => void;
   onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
-  onTriggerRestTimer: (seconds: number) => void;
   onCompleteWorkout: () => void;
   onCancelWorkout: () => void;
 }) {
@@ -220,7 +218,6 @@ export function WorkoutScreen({
     const nextExerciseIndex = getNextExerciseIndex(activeWorkout.exercises, currentExerciseIndex);
 
     onCompleteSet(currentExerciseIndex, currentSetIndex);
-    onTriggerRestTimer(currentTemplate?.restSeconds ?? 90);
 
     if (nextSetIndex === -1 && nextExerciseIndex !== currentExerciseIndex) {
       setCurrentExerciseIndex(nextExerciseIndex);
