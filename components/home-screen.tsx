@@ -24,36 +24,36 @@ const formatDate = (value: string) =>
 const workoutMotivationByProfile: Record<string, Record<string, { preview: string }>> = {
   natasha: {
     "natasha-glutes-hams": {
-      preview: "Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
+      preview: "🍑🔥 Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
     },
     "natasha-back-arms": {
-      preview: "Make that back look so tempting Joshua goes crazy watching you walk away from him.",
+      preview: "😈🖤 Make that back look so tempting Joshua goes crazy watching you walk away from him.",
     },
     "natasha-glutes-quads": {
-      preview: "Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
+      preview: "🍑💋 Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
     },
     "natasha-upper-core": {
-      preview: "Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
+      preview: "✨🫦 Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
     },
     "natasha-core-explosive": {
-      preview: "Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
+      preview: "⚡😏 Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
     },
   },
   joshua: {
       "joshua-chest-triceps": {
-        preview: "Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
+        preview: "😈💪 Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
       },
       "joshua-back-biceps": {
-        preview: "Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
+        preview: "🖤💪 Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
       },
       "joshua-legs": {
-        preview: "Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
+        preview: "🔥🦵 Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
       },
       "joshua-shoulders-arms": {
-        preview: "Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
+        preview: "💪😏 Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
       },
       "joshua-upper-strength": {
-        preview: "Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
+        preview: "🖤🔥 Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
       },
     },
   };
