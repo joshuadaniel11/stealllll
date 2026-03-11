@@ -351,6 +351,15 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout) {
       return;
     }
+    const completedSets = state.activeWorkout.exercises.reduce(
+      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
+      0,
+    );
+    if (completedSets === 0) {
+      setCompletionMessage("Log at least one set before finishing the workout.");
+      setShowCompletionCelebration(true);
+      return;
+    }
     setShowWorkoutFeelingPrompt(true);
   };
 
@@ -503,38 +512,6 @@ export function WorkoutTrackerApp() {
         return current;
       }
       targetSet.completed = true;
-      return next;
-    });
-  };
-
-  const duplicateLastSet = (exerciseIndex: number, setIndex: number) => {
-    setState((current) => {
-      if (!current.activeWorkout || setIndex === 0) {
-        return current;
-      }
-      const next = structuredClone(current);
-      if (!next.activeWorkout) {
-        return current;
-      }
-      const previous = next.activeWorkout.exercises[exerciseIndex].sets[setIndex - 1];
-      next.activeWorkout.exercises[exerciseIndex].sets[setIndex] = {
-        ...previous,
-        id: `${previous.id}-copy-${Date.now()}`,
-      };
-      return next;
-    });
-  };
-
-  const updateExerciseNote = (exerciseIndex: number, note: string) => {
-    setState((current) => {
-      if (!current.activeWorkout) {
-        return current;
-      }
-      const next = structuredClone(current);
-      if (!next.activeWorkout) {
-        return current;
-      }
-      next.activeWorkout.exercises[exerciseIndex].note = note;
       return next;
     });
   };

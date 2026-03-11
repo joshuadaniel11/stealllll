@@ -101,7 +101,7 @@ export function WorkoutScreen({
   const currentSetIndex = getFirstIncompleteSetIndex(currentExercise.sets);
   const currentSet = currentExercise.sets[currentSetIndex];
   const hasNextExercise = currentExerciseIndex < activeWorkout.exercises.length - 1;
-  const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : "Last exercise";
+  const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
   const canCompleteSet = Boolean(currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed);
 
   const handleCompleteSet = () => {
@@ -125,9 +125,13 @@ export function WorkoutScreen({
       <Card className="bg-[rgba(5,6,8,0.96)] px-5 py-6 shadow-[0_16px_40px_rgba(0,0,0,0.42)]">
         <p className="text-sm text-muted">Current exercise</p>
         <h1 className="mt-3 text-[34px] font-semibold leading-[1.02] text-text">{currentExercise.exerciseName}</h1>
-        <p className="mt-3 text-sm text-muted">
-          Next up: <span className="text-text">{nextExerciseName}</span>
-        </p>
+        {nextExerciseName ? (
+          <p className="mt-3 text-sm text-muted">
+            Next up: <span className="text-text">{nextExerciseName}</span>
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-muted">Final exercise in this session.</p>
+        )}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
@@ -223,7 +227,7 @@ export function WorkoutScreen({
             Next Exercise
             <ChevronRight className="h-4 w-4" />
           </div>
-          <p className="mt-1 text-xs text-muted">{nextExerciseName}</p>
+          <p className="mt-1 text-xs text-muted">{nextExerciseName ?? "Session finish next"}</p>
         </button>
         <button
           className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
