@@ -188,6 +188,9 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
   return {
     ...seed,
     ...incoming,
+    profiles: seed.profiles,
+    exerciseLibrary: seed.exerciseLibrary,
+    weeklySummaries: seed.weeklySummaries,
     measurements: {
       ...seed.measurements,
       ...(incoming.measurements ?? {}),
@@ -197,6 +200,7 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
       ...(incoming.stretchCompletions ?? {}),
     },
     bibleVerses: incoming.bibleVerses?.length ? incoming.bibleVerses : seed.bibleVerses,
+    activeWorkout: null,
   };
 }
 

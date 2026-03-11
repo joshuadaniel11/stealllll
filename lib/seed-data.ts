@@ -141,7 +141,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-back-biceps",
     name: "Back + Biceps",
-    focus: "Width, thickness, arm size, and a short core finisher",
+    focus: "Width, thickness, and arm size with mostly machines and dumbbells",
     dayLabel: "Day 2",
     durationMinutes: 58,
     exercises: [
@@ -151,7 +151,6 @@ const joshuaPlan: WorkoutPlanDay[] = [
       { id: "neutral-lat-pulldown", name: "Neutral-Grip Lat Pulldown", muscleGroup: "Back", sets: 3, repRange: "10-12", restSeconds: 90 },
       { id: "alternating-dumbbell-curl-backday", name: "Alternating Dumbbell Curl", muscleGroup: "Biceps", sets: 3, repRange: "8-10", restSeconds: 60 },
       { id: "machine-preacher-curl", name: "Machine Preacher Curl", muscleGroup: "Biceps", sets: 2, repRange: "10-12", restSeconds: 60 },
-      { id: "cable-crunch-josh", name: "Cable Crunch", muscleGroup: "Core", sets: 3, repRange: "12-15", restSeconds: 60 },
     ],
   },
   {
@@ -189,7 +188,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-upper-strength",
     name: "Back + Biceps",
-    focus: "Back width, thickness, and direct biceps work to finish the week strong",
+    focus: "Back width, thickness, direct biceps work, and a short core finisher",
     dayLabel: "Day 5",
     durationMinutes: 60,
     exercises: [
@@ -199,6 +198,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
       { id: "bayesian-curl", name: "Bayesian Curl", muscleGroup: "Biceps", sets: 3, repRange: "10-12", restSeconds: 60 },
       { id: "alternating-dumbbell-curl", name: "Alternating Dumbbell Curl", muscleGroup: "Biceps", sets: 2, repRange: "10-12", restSeconds: 60 },
       { id: "machine-preacher-curl-friday", name: "Machine Preacher Curl", muscleGroup: "Biceps", sets: 2, repRange: "12-15", restSeconds: 60 },
+      { id: "cable-crunch-josh-day5", name: "Cable Crunch", muscleGroup: "Core", sets: 3, repRange: "12-15", restSeconds: 60 },
     ],
   },
 ];
