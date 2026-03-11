@@ -18,7 +18,7 @@ import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getLastExerciseSets } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
-import { loadState, saveState } from "@/lib/storage";
+import { deserializeState, loadState, saveState } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
 import type {
   ActiveWorkout,
@@ -219,6 +219,73 @@ function dedupeLibrary(items: ExerciseLibraryItem[]) {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isValidSetLog(value: unknown): value is SetLog {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.weight === "number" &&
+    typeof value.reps === "number" &&
+    typeof value.completed === "boolean"
+  );
+}
+
+function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    (value.userId === "joshua" || value.userId === "natasha") &&
+    typeof value.startedAt === "string" &&
+    typeof value.workoutDayId === "string" &&
+    typeof value.workoutName === "string" &&
+    Array.isArray(value.exercises) &&
+    value.exercises.every(
+      (exercise) =>
+        isRecord(exercise) &&
+        typeof exercise.exerciseId === "string" &&
+        typeof exercise.exerciseName === "string" &&
+        typeof exercise.muscleGroup === "string" &&
+        Array.isArray(exercise.sets) &&
+        exercise.sets.every(isValidSetLog),
+    )
+  );
+}
+
+function isValidImportedState(value: Partial<AppState>) {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (value.selectedUserId && value.selectedUserId !== "joshua" && value.selectedUserId !== "natasha") {
+    return false;
+  }
+
+  if (value.sessions && !Array.isArray(value.sessions)) {
+    return false;
+  }
+
+  if (value.measurements && !isRecord(value.measurements)) {
+    return false;
+  }
+
+  if (value.stretchCompletions && !isRecord(value.stretchCompletions)) {
+    return false;
+  }
+
+  if (value.workoutOverrides && !isRecord(value.workoutOverrides)) {
+    return false;
+  }
+
+  if (value.exerciseSwapMemory && !isRecord(value.exerciseSwapMemory)) {
+    return false;
+  }
+
+  return true;
+}
+
 function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppState {
   return {
     ...seed,
@@ -243,7 +310,7 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
       ...(incoming.exerciseSwapMemory ?? {}),
     },
     bibleVerses: incoming.bibleVerses?.length ? incoming.bibleVerses : seed.bibleVerses,
-    activeWorkout: null,
+    activeWorkout: isValidActiveWorkout(incoming.activeWorkout) ? incoming.activeWorkout : null,
   };
 }
 
@@ -259,6 +326,12 @@ export function WorkoutTrackerApp() {
   const [completionMessage, setCompletionMessage] = useState("");
   const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [toastActionLabel, setToastActionLabel] = useState<string | null>(null);
+  const [toastActionKind, setToastActionKind] = useState<"undo-schedule" | null>(null);
+  const [pendingScheduleUndo, setPendingScheduleUndo] = useState<{
+    userId: UserId;
+    previousNextWorkoutId: string | null;
+  } | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [customExerciseName, setCustomExerciseName] = useState("");
   const [customMuscleGroup, setCustomMuscleGroup] = useState<MuscleGroup>("Full Body");
@@ -270,6 +343,21 @@ export function WorkoutTrackerApp() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(pattern);
     }
+  };
+
+  const showToast = (
+    message: string,
+    options?: {
+      actionLabel?: string;
+      actionKind?: "undo-schedule";
+      pendingScheduleUndo?: { userId: UserId; previousNextWorkoutId: string | null } | null;
+    },
+  ) => {
+    setCompletionMessage(message);
+    setToastActionLabel(options?.actionLabel ?? null);
+    setToastActionKind(options?.actionKind ?? null);
+    setPendingScheduleUndo(options?.pendingScheduleUndo ?? null);
+    setShowCompletionCelebration(true);
   };
 
   useEffect(() => {
@@ -301,9 +389,14 @@ export function WorkoutTrackerApp() {
     if (!showCompletionCelebration) {
       return;
     }
-    const timeout = window.setTimeout(() => setShowCompletionCelebration(false), 1800);
+    const timeout = window.setTimeout(() => {
+      setShowCompletionCelebration(false);
+      setToastActionLabel(null);
+      setToastActionKind(null);
+      setPendingScheduleUndo(null);
+    }, toastActionKind ? 4200 : 1800);
     return () => window.clearTimeout(timeout);
-  }, [showCompletionCelebration]);
+  }, [showCompletionCelebration, toastActionKind]);
 
   const selectedProfile = useMemo(
     () => state.profiles.find((profile) => profile.id === state.selectedUserId) ?? state.profiles[0],
@@ -406,8 +499,12 @@ export function WorkoutTrackerApp() {
   };
 
   const skipWorkout = () => {
+    if (typeof window !== "undefined" && !window.confirm(`Skip ${todaysWorkout.dayLabel} for now?`)) {
+      return;
+    }
     const currentIndex = selectedProfile.workoutPlan.findIndex((workout) => workout.id === todaysWorkout.id);
     const nextWorkout = selectedProfile.workoutPlan[(currentIndex + 1) % selectedProfile.workoutPlan.length];
+    const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
 
     setState((current) => ({
       ...current,
@@ -419,11 +516,16 @@ export function WorkoutTrackerApp() {
         },
       },
     }));
-    setCompletionMessage(`${todaysWorkout.dayLabel} was skipped. ${nextWorkout.dayLabel} is queued up next.`);
-    setShowCompletionCelebration(true);
+    showToast(`${todaysWorkout.dayLabel} was skipped. ${nextWorkout.dayLabel} is queued up next.`, {
+      actionLabel: "Undo",
+      actionKind: "undo-schedule",
+      pendingScheduleUndo: { userId: selectedProfile.id, previousNextWorkoutId },
+    });
   };
 
   const moveWorkout = (workoutId: string) => {
+    const workout = selectedProfile.workoutPlan.find((item) => item.id === workoutId);
+    const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
     setState((current) => ({
       ...current,
       workoutOverrides: {
@@ -434,6 +536,11 @@ export function WorkoutTrackerApp() {
         },
       },
     }));
+    showToast(`${workout?.dayLabel ?? "Workout"} is now lined up next.`, {
+      actionLabel: "Undo",
+      actionKind: "undo-schedule",
+      pendingScheduleUndo: { userId: selectedProfile.id, previousNextWorkoutId },
+    });
   };
 
   const openWorkoutCompletionPrompt = () => {
@@ -445,8 +552,7 @@ export function WorkoutTrackerApp() {
       0,
     );
     if (completedSets === 0) {
-      setCompletionMessage("Log at least one set before finishing the workout.");
-      setShowCompletionCelebration(true);
+      showToast("Log at least one set before finishing the workout.");
       return;
     }
     setShowWorkoutFeelingPrompt(true);
@@ -552,15 +658,16 @@ export function WorkoutTrackerApp() {
     }
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as Partial<AppState>;
+      const parsed = deserializeState(text);
+      if (!parsed || !isValidImportedState(parsed)) {
+        throw new Error("invalid-import");
+      }
       const seed = createSeedState();
       setState(mergeStateWithSeed(seed, parsed));
       startTransition(() => setActiveTab("home"));
-      setCompletionMessage("Backup imported successfully.");
-      setShowCompletionCelebration(true);
+      showToast("Backup imported successfully.");
     } catch {
-      setCompletionMessage("Import failed. Please use a valid workout backup file.");
-      setShowCompletionCelebration(true);
+      showToast("Import failed. Please use a valid workout backup file.");
     }
   };
 
@@ -666,9 +773,31 @@ export function WorkoutTrackerApp() {
     });
   };
 
+  const saveStretchCompletion = () => {
+    if (stretchCompletedToday) {
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      stretchCompletions: {
+        ...current.stretchCompletions,
+        [selectedProfile.id]: [
+          {
+            id: `stretch-${Date.now()}`,
+            userId: selectedProfile.id,
+            date: new Date().toISOString(),
+            stretchTitle: todaysStretch.title,
+          },
+          ...current.stretchCompletions[selectedProfile.id],
+        ],
+      },
+    }));
+    showToast(`${selectedProfile.name} finished today's Bend stretch.`);
+  };
+
   const toggleStretchCompletion = () => {
     if (!stretchCompletedToday) {
-      completeStretch();
+      saveStretchCompletion();
       return;
     }
 
@@ -681,8 +810,7 @@ export function WorkoutTrackerApp() {
         ),
       },
     }));
-    setCompletionMessage(`${selectedProfile.name}'s Bend stretch was marked undone.`);
-    setShowCompletionCelebration(true);
+    showToast(`${selectedProfile.name}'s Bend stretch was marked undone.`);
   };
 
   const addCustomExercise = () => {
@@ -737,6 +865,12 @@ export function WorkoutTrackerApp() {
   };
 
   const resetProfileData = () => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Reset ${selectedProfile.name}'s saved progress on this phone?`)
+    ) {
+      return;
+    }
     const seed = createSeedState();
     setState((current) => ({
       ...current,
@@ -764,27 +898,45 @@ export function WorkoutTrackerApp() {
       activeWorkout:
         current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
     }));
-    setCompletionMessage(`${selectedProfile.name}'s saved progress was reset on this phone.`);
-    setShowCompletionCelebration(true);
+    showToast(`${selectedProfile.name}'s saved progress was reset on this phone.`);
     setShowSettings(false);
     startTransition(() => setActiveTab("home"));
   };
 
   const resetAllData = () => {
+    if (typeof window !== "undefined" && !window.confirm("Reset the whole app to a clean start on this phone?")) {
+      return;
+    }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(ONBOARDING_KEY);
     }
     setState(createSeedState());
     setShowSettings(false);
     setShowOnboarding(true);
-    setCompletionMessage("The app was reset to a clean start.");
-    setShowCompletionCelebration(true);
+    showToast("The app was reset to a clean start.");
     startTransition(() => setActiveTab("home"));
   };
 
   const isJoshuaTheme = selectedProfile.id === "joshua";
   const immersiveWorkoutMode = activeTab === "workout" && state.activeWorkout?.userId === selectedProfile.id;
   const compactHeader = scrollY > 18 && !immersiveWorkoutMode;
+  const handleToastAction = () => {
+    if (toastActionKind !== "undo-schedule" || !pendingScheduleUndo) {
+      return;
+    }
+
+    setState((current) => ({
+      ...current,
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [pendingScheduleUndo.userId]: {
+          nextWorkoutId: pendingScheduleUndo.previousNextWorkoutId,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    showToast("Workout order change undone.");
+  };
 
   return (
     <main
@@ -923,7 +1075,12 @@ export function WorkoutTrackerApp() {
 
       <ExerciseDetailModal exercise={selectedExercise} userSessions={userSessions} onClose={() => setSelectedExerciseId(null)} />
       <BibleVerseModal verse={showDailyVerse ? dailyVerse : null} onClose={() => setShowDailyVerse(false)} />
-      <CompletionCelebration visible={showCompletionCelebration} message={completionMessage} />
+      <CompletionCelebration
+        visible={showCompletionCelebration}
+        message={completionMessage}
+        actionLabel={toastActionLabel}
+        onAction={handleToastAction}
+      />
       {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
       {showSettings && (
         <SettingsModal

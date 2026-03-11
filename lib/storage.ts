@@ -1,8 +1,41 @@
 import type { AppState } from "@/lib/types";
 
 const STORAGE_KEY = "workout-together-state-v2-clean-start";
+const STORAGE_VERSION = 1;
 
-export function loadState(): AppState | null {
+type StoredStateEnvelope = {
+  version: number;
+  savedAt: string;
+  state: AppState;
+};
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function deserializeState(raw: string): Partial<AppState> | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (
+      isObject(parsed) &&
+      typeof parsed.version === "number" &&
+      "state" in parsed &&
+      isObject(parsed.state)
+    ) {
+      if (parsed.version > STORAGE_VERSION) {
+        return null;
+      }
+      return parsed.state as Partial<AppState>;
+    }
+
+    return isObject(parsed) ? (parsed as Partial<AppState>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function loadState(): Partial<AppState> | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -12,11 +45,7 @@ export function loadState(): AppState | null {
     return null;
   }
 
-  try {
-    return JSON.parse(raw) as AppState;
-  } catch {
-    return null;
-  }
+  return deserializeState(raw);
 }
 
 export function saveState(state: AppState) {
@@ -24,5 +53,11 @@ export function saveState(state: AppState) {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const payload: StoredStateEnvelope = {
+    version: STORAGE_VERSION,
+    savedAt: new Date().toISOString(),
+    state,
+  };
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
