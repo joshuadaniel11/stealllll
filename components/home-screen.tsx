@@ -44,28 +44,28 @@ const workoutMotivationByProfile: Record<string, Record<string, { preview: strin
     },
   },
   joshua: {
-    "joshua-chest-triceps": {
-      preview: "Build that thick chest so Natasha wants to press herself against you the second you're close.",
-      full: "Build that thick chest until Natasha feels weak when she's close to you and wants to melt right into it.",
+      "joshua-chest-triceps": {
+        preview: "Press up that thick chest and triceps so Natasha wants to feel herself pinned close against you.",
+        full: "Build that thick chest and hard triceps until Natasha gets turned on just imagining herself pressed up against you and feeling all of it when she's close.",
+      },
+      "joshua-back-biceps": {
+        preview: "Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped around her.",
+        full: "Build that wide back and thick biceps until Natasha gets worked up picturing you pulling her in close and keeping those strong arms all over her.",
+      },
+      "joshua-legs": {
+        preview: "Build those shoulders and legs so Natasha feels that hard, athletic look the second you walk in.",
+        full: "Grow those capped shoulders and strong legs until Natasha can't stop thinking about how powerful you look and how good you'd feel all over her.",
+      },
+      "joshua-shoulders-arms": {
+        preview: "Hit chest and triceps again so Natasha can feel the difference every time she leans into you.",
+        full: "Train that second chest and triceps day until Natasha wants to run her hands over you and feel how much thicker and harder you've gotten.",
+      },
+      "joshua-upper-strength": {
+        preview: "Finish back and biceps hard so Natasha can see that wider, sexier shape all over you.",
+        full: "Finish this back and biceps session until Natasha can see that wider, thicker shape on you and gets turned on knowing exactly what all this work is building.",
+      },
     },
-    "joshua-back-biceps": {
-      preview: "Train that wide back and those strong arms until Natasha gets weak every time you hold her.",
-      full: "Train that wide back and those strong arms until Natasha gets worked up just thinking about you wrapping her up in them.",
-    },
-    "joshua-legs": {
-      preview: "Strong legs and broad shoulders make you look filthy good in exactly the way Natasha loves.",
-      full: "Strong legs and broad shoulders give you that powerful look Natasha notices the second you walk in and wants all over her.",
-    },
-    "joshua-shoulders-arms": {
-      preview: "Fill out those shoulders and arms so Natasha can't keep her hands off you.",
-      full: "Fill out those shoulders and arms until Natasha wants her hands on you the second she gets the chance.",
-    },
-    "joshua-upper-strength": {
-      preview: "Get wider, thicker, and more tempting so Natasha sees exactly what all this work is doing to you.",
-      full: "Get wider, thicker, and more tempting until Natasha can see the difference and feel why the work is worth it the second she's close.",
-    },
-  },
-};
+  };
 
 function getWorkoutMotivation(profileId: string, workoutId: string) {
   return workoutMotivationByProfile[profileId]?.[workoutId] ?? null;
