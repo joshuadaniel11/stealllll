@@ -223,6 +223,7 @@ export function WorkoutTrackerApp() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerBase, setTimerBase] = useState(90);
+  const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const deferredLibraryQuery = useDeferredValue(libraryQuery);
 
   const softHaptic = (pattern: number | number[]) => {
@@ -350,6 +351,7 @@ export function WorkoutTrackerApp() {
       ...current,
       activeWorkout: toActiveWorkout(selectedProfile.id, workout, userSessions),
     }));
+    setWorkoutPreviewId(null);
     softHaptic(10);
     startTransition(() => setActiveTab("workout"));
   };
@@ -685,7 +687,10 @@ export function WorkoutTrackerApp() {
               onCompleteStretch={completeStretch}
               onStartWorkout={() => startWorkout(todaysWorkout)}
               onResumeWorkout={() => setActiveTab("workout")}
-              onBrowse={() => setActiveTab("workout")}
+              onPreviewWorkout={() => {
+                setWorkoutPreviewId(todaysWorkout.id);
+                startTransition(() => setActiveTab("workout"));
+              }}
               onOpenExercise={setSelectedExerciseId}
             />
           )}
@@ -694,6 +699,7 @@ export function WorkoutTrackerApp() {
             <WorkoutScreen
               profile={selectedProfile}
               todaysWorkoutId={todaysWorkout.id}
+              previewWorkoutId={workoutPreviewId}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
               onStartWorkout={startWorkout}

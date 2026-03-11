@@ -29,6 +29,7 @@ function getFirstPendingExerciseIndex(exercises: ActiveWorkout["exercises"]) {
 export function WorkoutScreen({
   profile,
   todaysWorkoutId,
+  previewWorkoutId,
   activeWorkout,
   activeWorkoutTemplate,
   onStartWorkout,
@@ -40,6 +41,7 @@ export function WorkoutScreen({
 }: {
   profile: Profile;
   todaysWorkoutId: string;
+  previewWorkoutId?: string | null;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
   onStartWorkout: (workout: WorkoutPlanDay) => void;
@@ -56,7 +58,7 @@ export function WorkoutScreen({
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  const [previewWorkoutId, setPreviewWorkoutId] = useState<string | null>(null);
+  const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
@@ -64,12 +66,18 @@ export function WorkoutScreen({
       setShowExitConfirmation(false);
       return;
     }
-    setPreviewWorkoutId(null);
+    setLocalPreviewWorkoutId(null);
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
   }, [activeWorkout?.id, activeWorkout?.userId, profile.id]);
 
+  useEffect(() => {
+    if (!activeWorkout || activeWorkout.userId !== profile.id) {
+      setLocalPreviewWorkoutId(previewWorkoutId ?? null);
+    }
+  }, [activeWorkout, previewWorkoutId, profile.id]);
+
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
-    const previewWorkout = profile.workoutPlan.find((workout) => workout.id === previewWorkoutId) ?? null;
+    const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
 
     return (
       <>
@@ -94,7 +102,7 @@ export function WorkoutScreen({
                   <div className="flex gap-2">
                     <button
                       className="rounded-[22px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
-                      onClick={() => setPreviewWorkoutId(workout.id)}
+                      onClick={() => setLocalPreviewWorkoutId(workout.id)}
                     >
                       Preview
                     </button>
@@ -140,7 +148,7 @@ export function WorkoutScreen({
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   <button
                     className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-                    onClick={() => setPreviewWorkoutId(null)}
+                    onClick={() => setLocalPreviewWorkoutId(null)}
                   >
                     Close
                   </button>

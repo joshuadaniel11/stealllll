@@ -88,7 +88,7 @@ export function HomeScreen({
   onCompleteStretch,
   onStartWorkout,
   onResumeWorkout,
-  onBrowse,
+  onPreviewWorkout,
   onOpenExercise,
 }: {
   profile: Profile;
@@ -107,7 +107,7 @@ export function HomeScreen({
   onCompleteStretch: () => void;
   onStartWorkout: () => void;
   onResumeWorkout: () => void;
-  onBrowse: () => void;
+  onPreviewWorkout: () => void;
   onOpenExercise: (id: string | null) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -155,9 +155,9 @@ export function HomeScreen({
           </button>
           <button
             className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-            onClick={onBrowse}
+            onClick={onPreviewWorkout}
           >
-            Plan
+            Preview
           </button>
         </div>
       </Card>
