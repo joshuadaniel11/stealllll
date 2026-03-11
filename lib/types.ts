@@ -98,7 +98,6 @@ export type Profile = {
   goalSummary: string;
   goals: Goal[];
   notes: string[];
-  motivationLines?: string[];
   workoutPlan: WorkoutPlanDay[];
   stretchPlan: StretchRecommendation[];
   favoriteExerciseIds: string[];

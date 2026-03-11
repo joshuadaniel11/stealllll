@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
@@ -22,18 +22,18 @@ const formatDate = (value: string) =>
 
 const workoutMotivationByProfile: Record<string, Record<string, string>> = {
   natasha: {
-    "natasha-glutes-hams": "Grow those round, soft-looking glutes and make Joshua want his hands on you.",
-    "natasha-back-arms": "Build that sexy back so Joshua can't stop staring when you walk away.",
-    "natasha-glutes-quads": "Strong legs, fuller curves, and a body Joshua will keep thinking about.",
-    "natasha-upper-core": "Carve that tight waist and shoulder line for a dangerously feminine shape.",
-    "natasha-core-explosive": "Move like fire, feel sexy, and carry that energy straight back to Joshua.",
+    "natasha-glutes-hams": "Build those round, juicy glutes and give Joshua something sinful to think about later.",
+    "natasha-back-arms": "Make that back look so sexy Joshua can't help staring when you're walking away from him.",
+    "natasha-glutes-quads": "Train legs that look wickedly good and curves Joshua will want all over him.",
+    "natasha-upper-core": "Tighten that waist and shape that body until Joshua is fully obsessed with the view.",
+    "natasha-core-explosive": "Move hot, feel dangerous, and carry that sexy little energy straight back to Joshua.",
   },
   joshua: {
-    "joshua-chest-triceps": "Build that thick chest so Natasha melts every time she leans into you.",
-    "joshua-back-biceps": "Train that wide back and strong arms so Natasha feels safe and turned on around you.",
-    "joshua-legs": "Strong legs and broad shoulders make you look powerful in all the right ways.",
-    "joshua-shoulders-arms": "Cap the shoulders, fill out the arms, and give Natasha something serious to admire.",
-    "joshua-upper-strength": "Get wider, thicker, and stronger so Natasha sees the sexier version of you showing up.",
+    "joshua-chest-triceps": "Build that thick chest so Natasha wants to press herself against you the second you're close.",
+    "joshua-back-biceps": "Train that wide back and those strong arms until Natasha feels weak every time you hold her.",
+    "joshua-legs": "Strong legs and broad shoulders make you look filthy good in exactly the way Natasha loves.",
+    "joshua-shoulders-arms": "Fill out those shoulders and arms so Natasha can't keep her hands off you.",
+    "joshua-upper-strength": "Get wider, thicker, and more tempting so Natasha sees exactly what all this work is doing to you.",
   },
 };
 
@@ -82,22 +82,14 @@ export function HomeScreen({
 }) {
   const [showDetails, setShowDetails] = useState(false);
   const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
-  const smallDailyMessage = useMemo(
-    () => dailyMotivation ?? dailyVerse.preview,
-    [dailyMotivation, dailyVerse.preview],
-  );
+  const smallDailyMessage = dailyMotivation ?? dailyVerse.preview;
 
   return (
     <div className="space-y-4">
       <Card className="px-5 py-5">
         <p className="text-sm text-muted">{profile.name}</p>
         <p className="mt-3 max-w-[28ch] text-base font-medium leading-7 text-text">{smallDailyMessage}</p>
-        <button
-          className="mt-4 text-sm font-medium text-accent"
-          onClick={dailyMotivation ? onOpenDailyVerse : onOpenDailyVerse}
-        >
-          Open daily note
-        </button>
+        <p className="mt-4 text-sm text-muted">Private note for today&apos;s session.</p>
       </Card>
 
       <Card className="px-5 py-5">
@@ -132,6 +124,12 @@ export function HomeScreen({
         <StatCard label="Last PR" value={`${pbCount}`} sublabel="saved" />
       </div>
 
+      <DailyStretchCard
+        stretch={dailyStretch}
+        completed={stretchCompletedToday}
+        onComplete={onCompleteStretch}
+      />
+
       <Card className="px-5 py-5">
         <button
           className="flex w-full items-center justify-between text-left"
@@ -149,11 +147,6 @@ export function HomeScreen({
         {showDetails ? (
           <div className="mt-5 space-y-4">
             <StrengthPredictionCard predictions={strengthPredictions} />
-            <DailyStretchCard
-              stretch={dailyStretch}
-              completed={stretchCompletedToday}
-              onComplete={onCompleteStretch}
-            />
             <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 
             <Card className="px-5 py-5">

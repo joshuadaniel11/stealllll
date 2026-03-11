@@ -218,13 +218,6 @@ const profiles: Profile[] = [
       { id: "n4", title: "Flatter Stomach", focus: "Core", target: "Stay consistent with core work", progress: 58 },
     ],
     notes: ["Keep hip thrust reps smooth at lockout.", "Use straps for rows if grip starts to limit back work.", "Core work stays crisp and controlled, not rushed."],
-    motivationLines: [
-      "Shape that sexy back for Joshua with every clean pull.",
-      "Build those round glutes and own the room.",
-      "Keep carving that hourglass look, one strong session at a time.",
-      "Strong shoulders, tight waist, confident energy.",
-      "Train with intention and let the results speak for themselves.",
-    ],
     workoutPlan: withWorkoutNotes(natashaPlan),
     stretchPlan: [
       { dayLabel: "Sunday", title: "Lower Body Reset", focus: "Hips and hamstrings", durationMinutes: 10, bendSearch: "hips hamstrings", note: "Open Bend and choose a gentle hips and hamstrings flow." },
@@ -251,13 +244,6 @@ const profiles: Profile[] = [
       { id: "j4", title: "Visible Abs", focus: "Core", target: "Train abs 2 to 3 times weekly", progress: 56 },
     ],
     notes: ["Keep bench press reps powerful with consistent pauses.", "No deadlifts or dips in the rotation.", "Ab sessions should stay challenging but quick."],
-    motivationLines: [
-      "Build that broad chest and make Natasha look twice.",
-      "Train those arms until the shirt fit feels different.",
-      "Strong legs, tighter waist, more confident presence.",
-      "Show up sharp and let Natasha see the work.",
-      "Every clean rep is building a stronger, more attractive version of you.",
-    ],
     workoutPlan: withWorkoutNotes(joshuaPlan),
     stretchPlan: [
       { dayLabel: "Sunday", title: "Athletic Reset", focus: "Ankles, hips, and spine", durationMinutes: 10, bendSearch: "athletic recovery", note: "Open Bend and run an athletic recovery flow to stay loose for the week." },
