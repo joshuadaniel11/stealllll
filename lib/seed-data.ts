@@ -125,7 +125,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-chest-triceps",
     name: "Chest + Triceps",
-    focus: "Chest growth with stable dumbbell and machine pressing",
+    focus: "Chest growth with stable dumbbell and machine pressing, plus a short core finish",
     dayLabel: "Monday",
     durationMinutes: 60,
     exercises: [
@@ -141,7 +141,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-back-biceps",
     name: "Back + Biceps",
-    focus: "Width, thickness, and arm size with mostly machines and dumbbells",
+    focus: "Width, thickness, arm size, and a short core finisher",
     dayLabel: "Tuesday",
     durationMinutes: 58,
     exercises: [
@@ -157,7 +157,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-legs",
     name: "Legs + Shoulders",
-    focus: "Athletic legs with clean shoulder work to build shape and strength",
+    focus: "Athletic legs with clean shoulder work and a short core finisher",
     dayLabel: "Wednesday",
     durationMinutes: 60,
     exercises: [
@@ -167,6 +167,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
       { id: "lying-leg-curl", name: "Lying Leg Curl", muscleGroup: "Hamstrings", sets: 3, repRange: "10-12", restSeconds: 60 },
       { id: "machine-shoulder-press-main", name: "Machine Shoulder Press", muscleGroup: "Shoulders", sets: 3, repRange: "8-10", restSeconds: 90 },
       { id: "dumbbell-lateral-raise", name: "Dumbbell Lateral Raise", muscleGroup: "Shoulders", sets: 3, repRange: "12-15", restSeconds: 60 },
+      { id: "hanging-knee-raise", name: "Hanging Knee Raise", muscleGroup: "Core", sets: 3, repRange: "10-15", restSeconds: 60, note: "Short core finisher for abs and trunk control." },
     ],
   },
   {
