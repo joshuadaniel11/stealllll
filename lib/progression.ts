@@ -1,4 +1,4 @@
-import type { ExerciseTemplate, WorkoutSession } from "@/lib/types";
+import type { ExerciseTemplate, SetLog, WorkoutSession } from "@/lib/types";
 
 type PerformanceSummary = {
   lastSession: string;
@@ -7,6 +7,22 @@ type PerformanceSummary = {
 };
 
 const formatSet = (weight: number, reps: number) => `${weight}kg x ${reps}`;
+
+export function getLastExerciseSets(exerciseName: string, sessions: WorkoutSession[]): SetLog[] {
+  const lastMatch = sessions
+    .flatMap((session) =>
+      session.exercises
+        .filter((item) => item.exerciseName === exerciseName)
+        .map((item) => ({
+          performedAt: session.performedAt,
+          sets: item.sets.filter((set) => set.completed && set.weight > 0),
+        })),
+    )
+    .filter((item) => item.sets.length > 0)
+    .sort((a, b) => +new Date(b.performedAt) - +new Date(a.performedAt))[0];
+
+  return lastMatch?.sets ?? [];
+}
 
 export function getExercisePerformance(
   exercise: ExerciseTemplate,

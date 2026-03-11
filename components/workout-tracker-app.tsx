@@ -17,6 +17,7 @@ import { SettingsModal } from "@/components/settings-modal";
 import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
+import { getLastExerciseSets } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import { loadState, saveState } from "@/lib/storage";
 import type {
@@ -143,16 +144,16 @@ function getStreak(sessions: WorkoutSession[]) {
   return streak;
 }
 
-function buildEmptySets(exercise: ExerciseTemplate): SetLog[] {
+function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = []): SetLog[] {
   return Array.from({ length: exercise.sets }, (_, index) => ({
     id: `${exercise.id}-${index}-${Date.now()}`,
-    weight: 0,
+    weight: previousSets[index]?.weight ?? previousSets.at(-1)?.weight ?? 0,
     reps: 0,
     completed: false,
   }));
 }
 
-function toActiveWorkout(userId: UserId, workout: WorkoutPlanDay): ActiveWorkout {
+function toActiveWorkout(userId: UserId, workout: WorkoutPlanDay, sessions: WorkoutSession[]): ActiveWorkout {
   return {
     id: `active-${Date.now()}`,
     userId,
@@ -164,7 +165,7 @@ function toActiveWorkout(userId: UserId, workout: WorkoutPlanDay): ActiveWorkout
       exerciseName: exercise.name,
       muscleGroup: exercise.muscleGroup,
       note: "",
-      sets: buildEmptySets(exercise),
+      sets: buildEmptySets(exercise, getLastExerciseSets(exercise.name, sessions)),
     })),
   };
 }
@@ -321,7 +322,7 @@ export function WorkoutTrackerApp() {
   const startWorkout = (workout: WorkoutPlanDay) => {
     setState((current) => ({
       ...current,
-      activeWorkout: toActiveWorkout(selectedProfile.id, workout),
+      activeWorkout: toActiveWorkout(selectedProfile.id, workout, userSessions),
     }));
     startTransition(() => setActiveTab("workout"));
   };
