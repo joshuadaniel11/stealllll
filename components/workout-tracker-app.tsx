@@ -499,6 +499,26 @@ export function WorkoutTrackerApp() {
     });
   };
 
+  const copyPreviousSet = (exerciseIndex: number, setIndex: number) => {
+    setState((current) => {
+      if (!current.activeWorkout || setIndex <= 0) {
+        return current;
+      }
+      const next = structuredClone(current);
+      if (!next.activeWorkout) {
+        return current;
+      }
+      const previousSet = next.activeWorkout.exercises[exerciseIndex].sets[setIndex - 1];
+      const targetSet = next.activeWorkout.exercises[exerciseIndex].sets[setIndex];
+      if ((previousSet.weight <= 0 && previousSet.reps <= 0) || targetSet.completed) {
+        return current;
+      }
+      targetSet.weight = previousSet.weight;
+      targetSet.reps = previousSet.reps;
+      return next;
+    });
+  };
+
   const swapExercise = (exerciseIndex: number, exerciseId: string) => {
     setState((current) => {
       if (!current.activeWorkout) {
@@ -732,12 +752,13 @@ export function WorkoutTrackerApp() {
               previewWorkoutId={workoutPreviewId}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
-              exerciseLibrary={state.exerciseLibrary}
-              onStartWorkout={startWorkout}
-              onUpdateSet={updateSet}
-              onCompleteSet={completeSet}
-              onSwapExercise={swapExercise}
-              onCompleteWorkout={openWorkoutCompletionPrompt}
+                exerciseLibrary={state.exerciseLibrary}
+                onStartWorkout={startWorkout}
+                onUpdateSet={updateSet}
+                onCopyPreviousSet={copyPreviousSet}
+                onCompleteSet={completeSet}
+                onSwapExercise={swapExercise}
+                onCompleteWorkout={openWorkoutCompletionPrompt}
               onCancelWorkout={cancelWorkout}
             />
           )}

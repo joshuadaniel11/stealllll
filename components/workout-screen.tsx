@@ -77,11 +77,12 @@ export function WorkoutScreen({
   activeWorkout,
   activeWorkoutTemplate,
   exerciseLibrary,
-  onStartWorkout,
-  onUpdateSet,
-  onCompleteSet,
-  onSwapExercise,
-  onCompleteWorkout,
+    onStartWorkout,
+    onUpdateSet,
+    onCopyPreviousSet,
+    onCompleteSet,
+    onSwapExercise,
+    onCompleteWorkout,
   onCancelWorkout,
 }: {
   profile: Profile;
@@ -91,13 +92,14 @@ export function WorkoutScreen({
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
   exerciseLibrary: ExerciseLibraryItem[];
   onStartWorkout: (workout: WorkoutPlanDay) => void;
-  onUpdateSet: (
-    exerciseIndex: number,
-    setIndex: number,
-    field: "weight" | "reps",
-    value: number,
-  ) => void;
-  onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
+    onUpdateSet: (
+      exerciseIndex: number,
+      setIndex: number,
+      field: "weight" | "reps",
+      value: number,
+    ) => void;
+    onCopyPreviousSet: (exerciseIndex: number, setIndex: number) => void;
+    onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
   onCompleteWorkout: () => void;
   onCancelWorkout: () => void;
@@ -217,9 +219,15 @@ export function WorkoutScreen({
   const currentTemplate = activeWorkoutTemplate?.exercises[currentExerciseIndex];
   const currentSetIndex = getFirstIncompleteSetIndex(currentExercise.sets);
   const currentSet = currentExercise.sets[currentSetIndex];
+  const previousSet = currentSetIndex > 0 ? currentExercise.sets[currentSetIndex - 1] : null;
   const hasNextExercise = currentExerciseIndex < activeWorkout.exercises.length - 1;
   const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
   const canCompleteSet = Boolean(currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed);
+  const canCopyPreviousSet = Boolean(
+    previousSet &&
+      !currentSet?.completed &&
+      (previousSet.weight > 0 || previousSet.reps > 0),
+  );
   const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
 
   const handleCompleteSet = () => {
@@ -263,8 +271,8 @@ export function WorkoutScreen({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
             <span className="text-sm text-muted">Weight</span>
             <input
               className="mt-3 w-full bg-transparent text-[36px] font-semibold text-text outline-none"
@@ -289,10 +297,24 @@ export function WorkoutScreen({
                 onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", Number(event.target.value))
               }
             />
-          </label>
-        </div>
+            </label>
+          </div>
 
-        {substitutions.length ? (
+          {currentSetIndex > 0 ? (
+            <button
+              className={`mt-4 w-full rounded-[24px] px-4 py-3 text-sm font-medium transition-all ${
+                canCopyPreviousSet ? "bg-[var(--card-strong)] text-text" : "bg-[var(--card-strong)] text-muted"
+              }`}
+              disabled={!canCopyPreviousSet}
+              onClick={() => onCopyPreviousSet(currentExerciseIndex, currentSetIndex)}
+            >
+              {canCopyPreviousSet
+                ? `Same as Set ${currentSetIndex}${previousSet?.weight ? ` | ${previousSet.weight}kg` : ""}${previousSet?.reps ? ` x ${previousSet.reps}` : ""}`
+                : `Same as Set ${currentSetIndex}`}
+            </button>
+          ) : null}
+
+          {substitutions.length ? (
           <div className="mt-6">
             <p className="text-sm text-muted">Quick swap</p>
             <div className="mt-3 flex flex-wrap gap-2">
