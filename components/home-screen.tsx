@@ -1,4 +1,7 @@
-import { Activity, ArrowRight, Flame, HeartHandshake, Sparkles } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { Activity, ArrowRight, ChevronDown, Flame, HeartHandshake, Sparkles } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
@@ -61,6 +64,7 @@ export function HomeScreen({
   onOpenExercise: (id: string | null) => void;
 }) {
   const dailyMotivation = getDailyMotivation(profile.motivationLines);
+  const [showSecondary, setShowSecondary] = useState(false);
   const isJoshuaTheme = profile.id === "joshua";
   const heroGlow = isJoshuaTheme
     ? "radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 34%)"
@@ -123,23 +127,6 @@ export function HomeScreen({
         onComplete={onCompleteStretch}
       />
 
-      {dailyMotivation ? (
-        <Card className="overflow-hidden">
-          <div
-            className="rounded-[26px] border border-white/60 p-1 dark:border-white/10"
-            style={{ backgroundImage: motivationGlow }}
-          >
-            <p className="text-sm text-muted">Motivation</p>
-            <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">For {profile.name}</h3>
-            <p className="mt-3 max-w-[26ch] text-base font-semibold leading-7 text-foreground">
-              {dailyMotivation}
-            </p>
-          </div>
-        </Card>
-      ) : null}
-
-      <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
-
       <Card>
         <div className="flex items-center justify-between">
           <div>
@@ -155,48 +142,85 @@ export function HomeScreen({
           <MiniMetric label="Current profile" value={profile.name} />
         </div>
         <p className="mt-4 text-sm leading-6 text-muted">{sharedSummary.weeklyHighlight}</p>
-        <div className="mt-4 space-y-2">
-          {sharedSummary.recentMilestones.map((milestone) => (
-            <div
-              key={milestone}
-              className="rounded-[22px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-3 text-sm text-muted shadow-[var(--shadow-soft)]"
-            >
-              {milestone}
-            </div>
-          ))}
-        </div>
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between">
+        <button
+          className="flex w-full items-center justify-between text-left"
+          onClick={() => setShowSecondary((current) => !current)}
+        >
           <div>
-            <p className="text-sm text-muted">Recent</p>
-            <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Completed workouts</h3>
+            <p className="text-sm text-muted">More for today</p>
+            <h3 className="mt-1 text-[22px] font-bold tracking-[-0.04em]">Optional cards</h3>
+            <p className="mt-2 text-sm text-muted">
+              Open motivation, Bible, and recent workout history when you want it.
+            </p>
           </div>
-          <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-soft)]">
-            <HeartHandshake className="h-5 w-5" />
+          <div className="rounded-[22px] border border-stroke bg-[var(--card-strong)]/70 p-3 shadow-[var(--shadow-soft)]">
+            <ChevronDown
+              className={`h-5 w-5 text-muted transition-transform duration-300 ${
+                showSecondary ? "rotate-180" : ""
+              }`}
+            />
           </div>
-        </div>
-        <div className="mt-4 space-y-3">
-          {recentWorkouts.map((session) => (
-            <button
-              key={session.id}
-              className="w-full rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-left shadow-[var(--shadow-soft)]"
-              onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{session.workoutName}</p>
-                <p className="text-sm text-muted">{formatDate(session.performedAt)}</p>
+        </button>
+
+        {showSecondary ? (
+          <div className="mt-5 space-y-5">
+            {dailyMotivation ? (
+              <div
+                className="rounded-[26px] border border-white/60 p-4 dark:border-white/10"
+                style={{ backgroundImage: motivationGlow }}
+              >
+                <p className="text-sm text-muted">Motivation</p>
+                <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">For {profile.name}</h3>
+                <p className="mt-3 max-w-[26ch] text-base font-semibold leading-7 text-foreground">
+                  {dailyMotivation}
+                </p>
               </div>
-              <p className="mt-1 text-sm text-muted">
-                {session.exercises.length} exercises - {session.durationMinutes} min
-              </p>
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center justify-end gap-2 text-sm text-muted">
-          Open details <ArrowRight className="h-4 w-4" />
-        </div>
+            ) : null}
+
+            <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
+
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted">Recent</p>
+                  <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Completed workouts</h3>
+                </div>
+                <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-soft)]">
+                  <HeartHandshake className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 space-y-3">
+                {recentWorkouts.length ? (
+                  recentWorkouts.map((session) => (
+                    <button
+                      key={session.id}
+                      className="w-full rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-left shadow-[var(--shadow-soft)]"
+                      onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{session.workoutName}</p>
+                        <p className="text-sm text-muted">{formatDate(session.performedAt)}</p>
+                      </div>
+                      <p className="mt-1 text-sm text-muted">
+                        {session.exercises.length} exercises - {session.durationMinutes} min
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-sm text-muted shadow-[var(--shadow-soft)]">
+                    No workouts logged yet. Your history will show here once you complete your first session.
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-2 text-sm text-muted">
+                Open details <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </Card>
     </>
   );
