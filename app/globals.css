@@ -282,7 +282,10 @@ h3 {
 
 .sheet-card {
   max-height: inherit;
-  overflow: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .sheet-drag-handle {

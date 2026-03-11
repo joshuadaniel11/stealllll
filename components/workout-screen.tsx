@@ -169,8 +169,9 @@ export function WorkoutScreen({
 
         {previewWorkout ? (
           <div className="sheet-backdrop">
-            <div className="sheet-panel animate-sheet-up">
-              <Card className="bg-[var(--surface)]">
+            <div className="sheet-panel sheet-detent-large animate-sheet-up">
+              <Card className="sheet-card bg-[var(--surface)]">
+                <div className="sheet-drag-handle" />
                 <p className="text-sm text-muted">Workout preview</p>
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
