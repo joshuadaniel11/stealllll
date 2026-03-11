@@ -122,7 +122,7 @@ export function HomeScreen({
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
   return (
-    <div className="space-y-4 animate-page-in">
+    <div className="content-stack space-y-4 animate-page-in">
         <Card className="px-5 py-5">
           <p className="text-sm text-muted">{profile.name}</p>
           <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>

@@ -177,7 +177,7 @@ export function WorkoutScreen({
                   {previewWorkout.focus} | {previewWorkout.durationMinutes} min
                 </p>
 
-                <div className="mt-5 space-y-3">
+                <div className="content-stack mt-5 space-y-3">
                   {previewWorkout.exercises.map((exercise, index) => (
                     <div key={exercise.id} className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                       <div className="flex items-center justify-between gap-3">
@@ -246,7 +246,7 @@ export function WorkoutScreen({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="content-stack space-y-4">
       <Card className="animate-page-in bg-[rgba(5,6,8,0.92)] px-5 py-6 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Current exercise</p>
         <h1 className="large-title mt-3 font-semibold text-text">{currentExercise.exerciseName}</h1>
