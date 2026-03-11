@@ -1,14 +1,13 @@
 "use client";
 
-import { startTransition, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { startTransition, useEffect, useMemo, useState, type CSSProperties } from "react";
 import clsx from "clsx";
-import { Activity, ChartColumn, Dumbbell, Search, Settings } from "lucide-react";
+import { Activity, ChartColumn, Dumbbell, Settings } from "lucide-react";
 
 import { BibleVerseModal } from "@/components/bible-verse-modal";
 import { CompletionCelebration } from "@/components/completion-celebration";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
 import { HomeScreen } from "@/components/home-screen";
-import { LibraryScreen } from "@/components/library-screen";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionSummaryModal, type SessionSummary } from "@/components/session-summary-modal";
@@ -25,7 +24,6 @@ import type {
   AppState,
   ExerciseLibraryItem,
   ExerciseTemplate,
-  MuscleGroup,
   Profile,
   SetLog,
   UserId,
@@ -33,13 +31,12 @@ import type {
   WorkoutSession,
 } from "@/lib/types";
 
-type TabId = "home" | "workout" | "progress" | "library";
+type TabId = "home" | "workout" | "progress";
 
 const navItems = [
   { id: "home" as const, label: "Home", icon: Activity },
   { id: "workout" as const, label: "Workout", icon: Dumbbell },
   { id: "progress" as const, label: "Progress", icon: ChartColumn },
-  { id: "library" as const, label: "Library", icon: Search },
 ];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
@@ -215,10 +212,6 @@ function toActiveWorkout(
   };
 }
 
-function dedupeLibrary(items: ExerciseLibraryItem[]) {
-  return Array.from(new Map(items.map((item) => [item.id, item])).values());
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -332,12 +325,8 @@ export function WorkoutTrackerApp() {
     userId: UserId;
     previousNextWorkoutId: string | null;
   } | null>(null);
-  const [libraryQuery, setLibraryQuery] = useState("");
-  const [customExerciseName, setCustomExerciseName] = useState("");
-  const [customMuscleGroup, setCustomMuscleGroup] = useState<MuscleGroup>("Full Body");
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
-  const deferredLibraryQuery = useDeferredValue(libraryQuery);
 
   const softHaptic = (pattern: number | number[]) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -454,17 +443,6 @@ export function WorkoutTrackerApp() {
           volume: formatVolume(session),
         })),
     [userSessions],
-  );
-
-  const filteredLibrary = useMemo(
-    () =>
-      dedupeLibrary(
-        state.exerciseLibrary.filter((item) => {
-          const query = deferredLibraryQuery.toLowerCase();
-          return item.name.toLowerCase().includes(query) || item.muscleGroup.toLowerCase().includes(query);
-        }),
-      ),
-    [state.exerciseLibrary, deferredLibraryQuery],
   );
 
   const dailyVerse = useMemo(() => {
@@ -813,26 +791,6 @@ export function WorkoutTrackerApp() {
     showToast(`${selectedProfile.name}'s Bend stretch was marked undone.`);
   };
 
-  const addCustomExercise = () => {
-    if (!customExerciseName.trim()) {
-      return;
-    }
-    setState((current) => ({
-      ...current,
-      exerciseLibrary: [
-        {
-          id: `custom-${Date.now()}`,
-          name: customExerciseName.trim(),
-          muscleGroup: customMuscleGroup,
-          equipment: "Custom",
-          cues: ["Add your own notes and rep targets."],
-          isCustom: true,
-        },
-        ...current.exerciseLibrary,
-      ],
-    }));
-    setCustomExerciseName("");
-  };
   const closeOnboarding = () => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(ONBOARDING_KEY, "true");
@@ -1034,20 +992,6 @@ export function WorkoutTrackerApp() {
             />
           )}
 
-          {activeTab === "library" && (
-            <LibraryScreen
-              query={libraryQuery}
-              onQueryChange={setLibraryQuery}
-              customExerciseName={customExerciseName}
-              customMuscleGroup={customMuscleGroup}
-              muscleOptions={["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Glutes", "Hamstrings", "Quads", "Core", "Full Body"]}
-              filteredLibrary={filteredLibrary}
-              onCustomExerciseNameChange={setCustomExerciseName}
-              onCustomMuscleGroupChange={setCustomMuscleGroup}
-              onAddCustomExercise={addCustomExercise}
-              onOpenExercise={setSelectedExerciseId}
-            />
-          )}
         </div>
       </div>
 
