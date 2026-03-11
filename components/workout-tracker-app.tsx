@@ -523,6 +523,47 @@ export function WorkoutTrackerApp() {
     });
   };
 
+  const swapExercise = (exerciseIndex: number, exerciseId: string) => {
+    setState((current) => {
+      if (!current.activeWorkout) {
+        return current;
+      }
+      const replacement = current.exerciseLibrary.find((item) => item.id === exerciseId);
+      if (!replacement) {
+        return current;
+      }
+      const next = structuredClone(current);
+      if (!next.activeWorkout) {
+        return current;
+      }
+      const existing = next.activeWorkout.exercises[exerciseIndex];
+      const targetProfile = next.profiles.find((profile) => profile.id === next.activeWorkout?.userId);
+      const targetSessions = getUserSessions(next, next.activeWorkout.userId);
+      const templateForSlot = targetProfile?.workoutPlan
+        .find((workout) => workout.id === next.activeWorkout?.workoutDayId)
+        ?.exercises[exerciseIndex];
+      const setCount = templateForSlot?.sets ?? existing.sets.length;
+      const previousSets = getLastExerciseSets(replacement.name, targetSessions);
+
+      next.activeWorkout.exercises[exerciseIndex] = {
+        ...existing,
+        exerciseId: replacement.id,
+        exerciseName: replacement.name,
+        muscleGroup: replacement.muscleGroup,
+        note: replacement.cues[0] ?? existing.note ?? "",
+        sets: Array.from({ length: setCount }, (_, setIndex) => ({
+          id: `${replacement.id}-${setIndex}-${Date.now()}`,
+          weight: previousSets[setIndex]?.weight ?? previousSets.at(-1)?.weight ?? 0,
+          reps: 0,
+          completed: false,
+        })),
+      };
+      return next;
+    });
+    setCompletionMessage("Exercise swapped for a quick substitute.");
+    setShowCompletionCelebration(true);
+  };
+
   const addCustomExercise = () => {
     if (!customExerciseName.trim()) {
       return;
@@ -702,9 +743,11 @@ export function WorkoutTrackerApp() {
               previewWorkoutId={workoutPreviewId}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
+              exerciseLibrary={state.exerciseLibrary}
               onStartWorkout={startWorkout}
               onUpdateSet={updateSet}
               onCompleteSet={completeSet}
+              onSwapExercise={swapExercise}
               onTriggerRestTimer={triggerTimer}
               onCompleteWorkout={openWorkoutCompletionPrompt}
               onCancelWorkout={cancelWorkout}

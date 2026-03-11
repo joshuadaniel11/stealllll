@@ -5,7 +5,38 @@ import { ChevronRight } from "lucide-react";
 
 import { ExitSessionModal } from "@/components/exit-session-modal";
 import { Card } from "@/components/ui";
-import type { ActiveWorkout, Profile, WorkoutPlanDay } from "@/lib/types";
+import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay } from "@/lib/types";
+
+const substitutionHints: Record<string, string[]> = {
+  "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
+  "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
+  "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
+  "Flat Dumbbell Press": ["Flat Machine Press", "Smith Machine Flat Press", "Plate-Loaded Chest Press"],
+  "Incline Dumbbell Press": ["Incline Machine Press", "Smith Incline Press", "Plate-Loaded Chest Press"],
+  "Smith Machine Squat": ["Pendulum Squat", "Goblet Squat", "Leg Press"],
+  "Hack Squat": ["Leg Press", "Pendulum Squat", "Walking Lunge"],
+  "Leg Press (Glute Bias)": ["Leg Press High Foot Placement", "Smith Machine Hip Thrust", "Walking Lunge"],
+  "Machine Shoulder Press": ["Plate-Loaded Shoulder Press", "Seated Dumbbell Shoulder Press", "Cable Lateral Raise"],
+  "Seated Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
+  "Cable Triceps Extension": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Rope Extension"],
+  "Machine Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
+};
+
+function getSubstitutions(currentExerciseName: string, muscleGroup: string, library: ExerciseLibraryItem[]) {
+  const preferredNames = substitutionHints[currentExerciseName] ?? [];
+  const preferred = preferredNames
+    .map((name) => library.find((item) => item.name === name))
+    .filter((item): item is ExerciseLibraryItem => Boolean(item));
+
+  const fallback = library.filter(
+    (item) =>
+      item.muscleGroup === muscleGroup &&
+      item.name !== currentExerciseName &&
+      !preferred.some((option) => option.id === item.id),
+  );
+
+  return [...preferred, ...fallback].slice(0, 3);
+}
 
 function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
   const index = sets.findIndex((set) => !set.completed);
@@ -32,9 +63,11 @@ export function WorkoutScreen({
   previewWorkoutId,
   activeWorkout,
   activeWorkoutTemplate,
+  exerciseLibrary,
   onStartWorkout,
   onUpdateSet,
   onCompleteSet,
+  onSwapExercise,
   onTriggerRestTimer,
   onCompleteWorkout,
   onCancelWorkout,
@@ -44,6 +77,7 @@ export function WorkoutScreen({
   previewWorkoutId?: string | null;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
+  exerciseLibrary: ExerciseLibraryItem[];
   onStartWorkout: (workout: WorkoutPlanDay) => void;
   onUpdateSet: (
     exerciseIndex: number,
@@ -52,6 +86,7 @@ export function WorkoutScreen({
     value: number,
   ) => void;
   onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
+  onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
   onTriggerRestTimer: (seconds: number) => void;
   onCompleteWorkout: () => void;
   onCancelWorkout: () => void;
@@ -168,12 +203,13 @@ export function WorkoutScreen({
   }
 
   const currentExercise = activeWorkout.exercises[currentExerciseIndex];
-  const currentTemplate = activeWorkoutTemplate?.exercises.find((exercise) => exercise.id === currentExercise.exerciseId);
+  const currentTemplate = activeWorkoutTemplate?.exercises[currentExerciseIndex];
   const currentSetIndex = getFirstIncompleteSetIndex(currentExercise.sets);
   const currentSet = currentExercise.sets[currentSetIndex];
   const hasNextExercise = currentExerciseIndex < activeWorkout.exercises.length - 1;
   const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
   const canCompleteSet = Boolean(currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed);
+  const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -245,6 +281,23 @@ export function WorkoutScreen({
             />
           </label>
         </div>
+
+        {substitutions.length ? (
+          <div className="mt-6">
+            <p className="text-sm text-muted">Quick swap</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {substitutions.map((option) => (
+                <button
+                  key={option.id}
+                  className="rounded-[22px] bg-[var(--card-strong)] px-3 py-2 text-sm font-medium text-muted"
+                  onClick={() => onSwapExercise(currentExerciseIndex, option.id)}
+                >
+                  {option.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6">
           <p className="text-sm text-muted">Completed sets</p>

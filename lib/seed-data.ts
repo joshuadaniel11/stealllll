@@ -265,23 +265,52 @@ const weeklySummaries: Record<"natasha" | "joshua", WeeklySummary> = {
   joshua: { userId: "joshua", workoutsCompleted: 0, totalSets: 0, totalVolume: 0, personalBests: 0, mostTrainedMuscleGroup: "Chest", consistencyLabel: "Building rhythm with a clean start" },
 };
 
-const exerciseLibrary: ExerciseLibraryItem[] = profiles.flatMap((profile) =>
-  profile.workoutPlan.flatMap((day) =>
-    day.exercises.map((exercise) => ({
-      id: exercise.id,
-      name: exercise.name,
-      muscleGroup: exercise.muscleGroup,
-      equipment: exercise.name.includes("Cable")
-        ? "Cable"
-        : exercise.name.includes("Machine")
-          ? "Machine"
-          : exercise.name.includes("Dumbbell")
-            ? "Dumbbell"
-            : "Barbell",
-      cues: [exercise.note ?? "Smooth tempo and stable setup.", "Leave 1 to 2 good reps in reserve."],
-    })),
+const exerciseLibrary: ExerciseLibraryItem[] = [
+  ...profiles.flatMap((profile) =>
+    profile.workoutPlan.flatMap((day) =>
+      day.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        equipment: exercise.name.includes("Cable")
+          ? "Cable"
+          : exercise.name.includes("Machine")
+            ? "Machine"
+            : exercise.name.includes("Dumbbell")
+              ? "Dumbbell"
+              : "Barbell",
+        cues: [exercise.note ?? "Smooth tempo and stable setup.", "Leave 1 to 2 good reps in reserve."],
+      })),
+    ),
   ),
-);
+  { id: "smith-machine-hip-thrust", name: "Smith Machine Hip Thrust", muscleGroup: "Glutes", equipment: "Machine", cues: ["Use the same hip thrust setup with a more stable bar path.", "Drive through heels and pause hard at lockout."] },
+  { id: "machine-hip-thrust", name: "Machine Hip Thrust", muscleGroup: "Glutes", equipment: "Machine", cues: ["Let the machine keep you stable and focus on full glute squeeze.", "Control the lower and pause at the top."] },
+  { id: "glute-bridge-machine", name: "Glute Bridge Machine", muscleGroup: "Glutes", equipment: "Machine", cues: ["Shorter range, constant glute tension.", "Keep chin tucked and ribs down."] },
+  { id: "leg-press-high-feet", name: "Leg Press High Foot Placement", muscleGroup: "Glutes", equipment: "Machine", cues: ["Place feet high and slightly wider to bias glutes.", "Control the bottom and drive evenly."] },
+  { id: "single-arm-lat-pulldown", name: "Single-Arm Lat Pulldown", muscleGroup: "Back", equipment: "Cable", cues: ["Pull elbow into hip for lat focus.", "Stay tall and avoid shrugging."] },
+  { id: "assisted-pull-up", name: "Assisted Pull-Up", muscleGroup: "Back", equipment: "Machine", cues: ["Use assistance to stay in the target rep range.", "Lead with elbows and chest tall."] },
+  { id: "machine-lat-pullover", name: "Machine Lat Pullover", muscleGroup: "Back", equipment: "Machine", cues: ["Drive through the elbows and keep lats loaded.", "Smooth stretch and squeeze."] },
+  { id: "seated-cable-row", name: "Seated Cable Row", muscleGroup: "Back", equipment: "Cable", cues: ["Pull to lower ribs and keep chest high.", "Pause the squeeze before returning."] },
+  { id: "incline-machine-press", name: "Incline Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Stable upper-chest pressing with a controlled path.", "Keep shoulders down and press smoothly."] },
+  { id: "flat-machine-press", name: "Flat Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Press through palms and keep tension on the chest.", "Control the negative."] },
+  { id: "smith-flat-press", name: "Smith Machine Flat Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Fixed bar path for stable heavy pressing.", "Keep elbows under wrists."] },
+  { id: "plate-loaded-shoulder-press", name: "Plate-Loaded Shoulder Press", muscleGroup: "Shoulders", equipment: "Machine", cues: ["Stable shoulder press with clean overload.", "Keep ribcage stacked and press straight up."] },
+  { id: "seated-dumbbell-lateral-raise", name: "Seated Dumbbell Lateral Raise", muscleGroup: "Shoulders", equipment: "Dumbbell", cues: ["Use a shorter range and steady tempo.", "Lead with elbows, not wrists."] },
+  { id: "cable-front-raise", name: "Cable Front Raise", muscleGroup: "Shoulders", equipment: "Cable", cues: ["Keep shoulders down and lift smoothly.", "Use light load and clean control."] },
+  { id: "walking-lunge-alt", name: "Walking Lunge", muscleGroup: "Legs", equipment: "Dumbbell", cues: ["Take long controlled steps and stay balanced.", "Drive through the front foot."] },
+  { id: "goblet-squat", name: "Goblet Squat", muscleGroup: "Quads", equipment: "Dumbbell", cues: ["Keep torso tall and heels grounded.", "Use a controlled descent."] },
+  { id: "pendulum-squat", name: "Pendulum Squat", muscleGroup: "Quads", equipment: "Machine", cues: ["Stay deep and keep pressure through mid-foot.", "Let the machine support the path."] },
+  { id: "seated-hamstring-curl", name: "Seated Hamstring Curl", muscleGroup: "Hamstrings", equipment: "Machine", cues: ["Pull hard and control the stretch.", "Keep hips planted."] },
+  { id: "dumbbell-step-up", name: "Dumbbell Step-Up", muscleGroup: "Legs", equipment: "Dumbbell", cues: ["Drive through the working leg only.", "Stand tall at the top."] },
+  { id: "rope-pushdown", name: "Rope Pushdown", muscleGroup: "Triceps", equipment: "Cable", cues: ["Split rope at the bottom and lock out cleanly.", "Keep elbows pinned."] },
+  { id: "single-arm-cable-extension", name: "Single-Arm Cable Extension", muscleGroup: "Triceps", equipment: "Cable", cues: ["Use full triceps stretch and lockout.", "Keep shoulder quiet."] },
+  { id: "ez-bar-curl", name: "EZ-Bar Curl", muscleGroup: "Biceps", equipment: "Barbell", cues: ["Curl smoothly and lower under control.", "Keep elbows tucked."] },
+  { id: "cable-curl", name: "Cable Curl", muscleGroup: "Biceps", equipment: "Cable", cues: ["Constant tension through the full range.", "Stand tall and avoid swinging."] },
+  { id: "captains-chair-knee-raise", name: "Captain's Chair Knee Raise", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Curl pelvis up, not just knees.", "Move slowly and avoid swinging."] },
+  { id: "dead-bug", name: "Dead Bug", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Keep ribs down and lower back flat.", "Slow, controlled limbs."] },
+  { id: "bike-erg-sprint", name: "Bike Erg Sprint", muscleGroup: "Full Body", equipment: "Machine", cues: ["Keep output sharp and short.", "Recover fully between efforts."] },
+  { id: "battle-rope-slam", name: "Battle Rope Slam", muscleGroup: "Full Body", equipment: "Cable", cues: ["Stay athletic and slam with intent.", "Keep core braced."] },
+];
 
 const bibleVerses: BibleVerse[] = [
   {
