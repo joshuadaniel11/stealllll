@@ -2,11 +2,10 @@
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { Activity, ChartColumn, Dumbbell, HeartHandshake, Search, Settings, UserRound } from "lucide-react";
+import { Activity, ChartColumn, Dumbbell, Search, Settings } from "lucide-react";
 
 import { BibleVerseModal } from "@/components/bible-verse-modal";
 import { CompletionCelebration } from "@/components/completion-celebration";
-import { DateTimeChip } from "@/components/date-time-chip";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
 import { HomeScreen } from "@/components/home-screen";
 import { LibraryScreen } from "@/components/library-screen";
@@ -623,9 +622,7 @@ export function WorkoutTrackerApp() {
   };
 
   const isJoshuaTheme = selectedProfile.id === "joshua";
-  const headerGlow = isJoshuaTheme
-    ? "radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 34%)"
-    : "radial-gradient(circle at top right, rgba(95,143,255,0.14), transparent 34%)";
+  const immersiveWorkoutMode = activeTab === "workout" && state.activeWorkout?.userId === selectedProfile.id;
 
   return (
     <main
@@ -635,68 +632,43 @@ export function WorkoutTrackerApp() {
       )}
     >
       <div className="mx-auto flex max-w-md flex-col gap-5">
-        <Card className="animate-fade-up overflow-hidden">
-          <div
-            className="pointer-events-none absolute inset-0 rounded-[32px]"
-            style={{ backgroundImage: headerGlow }}
-          />
-          <div className="flex items-start justify-between gap-4">
-            <div className="relative z-10">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-                  STEALLLLL
-                </div>
+        {!immersiveWorkoutMode ? (
+          <Card className="animate-fade-up px-5 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-muted">STEALLLLL</p>
+                <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.06em] text-text">{selectedProfile.name}</h1>
                 {selectedProfile.id === "natasha" ? (
-                  <div className="inline-flex items-center rounded-full bg-accentSoft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
-                    For Natasha by Joshua
-                  </div>
+                  <p className="mt-2 text-sm font-medium text-accent">For Natasha by Joshua</p>
                 ) : null}
               </div>
-              <h1 className="balanced-text mt-3 text-[32px] font-semibold tracking-[-0.06em]">Calm progress for two.</h1>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                Preset gym workouts, elegant logging, and a shared rhythm for Joshua and Natasha.
-              </p>
-              <div className="mt-4">
-                <DateTimeChip />
-              </div>
-            </div>
-              <div className="relative z-10 flex items-center gap-2">
-                <button
-                  className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/70 p-3 text-muted shadow-[var(--shadow-soft)]"
-                  onClick={() => setShowSettings(true)}
-                >
-                  <Settings className="h-5 w-5" />
-                </button>
-                <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-glow)]">
-                  <HeartHandshake className="h-6 w-6" />
-                </div>
-              </div>
-            </div>
-          <div className="relative z-10 mt-5 grid grid-cols-2 gap-2 rounded-[26px] border border-stroke bg-[var(--card-strong)]/60 p-1.5 shadow-[var(--shadow-soft)]">
-            {state.profiles.map((profile) => (
               <button
-                key={profile.id}
-                className={clsx(
-                  "rounded-[22px] px-4 py-3 text-left transition duration-300",
-                  profile.id === selectedProfile.id
-                    ? "bg-[var(--card-strong)] text-text shadow-[var(--shadow-soft)]"
-                    : "text-muted opacity-85",
-                )}
-                onClick={() => {
-                  setSelectedExerciseId(null);
-                  setState((current) => ({ ...current, selectedUserId: profile.id }));
-                  startTransition(() => setActiveTab("home"));
-                }}
+                className="rounded-[28px] bg-[var(--card-strong)] p-3 text-muted"
+                onClick={() => setShowSettings(true)}
               >
-                <div className="flex items-center gap-2">
-                  <UserRound className="h-4 w-4" />
-                  <span className="text-sm font-medium">{profile.name}</span>
-                </div>
-                <p className="mt-1 text-xs text-muted">{profile.tagline}</p>
+                <Settings className="h-5 w-5" />
               </button>
-            ))}
-          </div>
-        </Card>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 rounded-[28px] bg-[var(--card-strong)] p-1.5">
+              {state.profiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  className={clsx(
+                    "rounded-[24px] px-4 py-3 text-left text-sm font-medium transition duration-300",
+                    profile.id === selectedProfile.id ? "bg-black/20 text-text" : "text-muted",
+                  )}
+                  onClick={() => {
+                    setSelectedExerciseId(null);
+                    setState((current) => ({ ...current, selectedUserId: profile.id }));
+                    startTransition(() => setActiveTab("home"));
+                  }}
+                >
+                  {profile.name}
+                </button>
+              ))}
+            </div>
+          </Card>
+        ) : null}
 
         <div className="animate-soft-in">
           {activeTab === "home" && (
@@ -728,12 +700,11 @@ export function WorkoutTrackerApp() {
               todaysWorkoutId={todaysWorkout.id}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
-              userSessions={userSessions}
               onStartWorkout={startWorkout}
               onUpdateSet={updateSet}
               onCompleteSet={completeSet}
+              onTriggerRestTimer={triggerTimer}
               onCompleteWorkout={openWorkoutCompletionPrompt}
-              onCancelWorkout={cancelWorkout}
             />
           )}
 
@@ -790,40 +761,42 @@ export function WorkoutTrackerApp() {
         />
       )}
 
-      <RestTimer
-        seconds={timerSeconds}
-        running={timerRunning}
-        onToggle={() => setTimerRunning((value) => !value)}
-        onSkip={() => {
-          setTimerRunning(false);
-          setTimerSeconds(0);
-        }}
-        onRestart={() => {
-          setTimerSeconds(timerBase);
-          setTimerRunning(true);
-        }}
-        onSetPreset={triggerTimer}
-      />
-
-      <nav className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] border border-stroke bg-[var(--card-strong)]/78 px-3 py-3 shadow-[var(--shadow-card)] backdrop-blur-2xl">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              className={clsx(
-                "flex min-w-[72px] flex-col items-center gap-1 rounded-[22px] px-3 py-2 text-xs font-medium transition duration-300",
-                isActive ? "bg-accentSoft text-accent shadow-[var(--shadow-soft)]" : "text-muted opacity-85",
-              )}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <Icon className="h-5 w-5" />
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
+      {immersiveWorkoutMode ? (
+        <RestTimer
+          seconds={timerSeconds}
+          running={timerRunning}
+          onToggle={() => setTimerRunning((value) => !value)}
+          onSkip={() => {
+            setTimerRunning(false);
+            setTimerSeconds(0);
+          }}
+          onRestart={() => {
+            setTimerSeconds(timerBase);
+            setTimerRunning(true);
+          }}
+          onSetPreset={triggerTimer}
+        />
+      ) : (
+        <nav className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[28px] bg-[var(--card-strong)] px-3 py-3 shadow-[var(--shadow-card)] backdrop-blur-2xl">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                className={clsx(
+                  "flex min-w-[72px] flex-col items-center gap-1 rounded-[24px] px-3 py-2 text-xs font-medium transition duration-300",
+                  isActive ? "bg-accentSoft text-accent" : "text-muted",
+                )}
+                onClick={() => setActiveTab(item.id)}
+              >
+                <Icon className="h-5 w-5" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </main>
   );
 }

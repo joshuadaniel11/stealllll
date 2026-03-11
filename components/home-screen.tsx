@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Activity, ArrowRight, ChevronDown, Flame, HeartHandshake, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
-import { StreakRings } from "@/components/streak-rings";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
-import { Card, MiniMetric, StatCard } from "@/components/ui";
+import { Card, StatCard } from "@/components/ui";
 import type {
   BibleVerse,
   Profile,
@@ -28,8 +27,7 @@ const getDailyMotivation = (lines: string[] | undefined) => {
 
   const now = new Date();
   const dayOfYear = Math.floor(
-    (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 0)) /
-      86_400_000,
+    (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 0)) / 86_400_000,
   );
 
   return lines[dayOfYear % lines.length];
@@ -74,167 +72,124 @@ export function HomeScreen({
   onBrowse: () => void;
   onOpenExercise: (id: string | null) => void;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
   const dailyMotivation = getDailyMotivation(profile.motivationLines);
-  const [showSecondary, setShowSecondary] = useState(false);
-  const isJoshuaTheme = profile.id === "joshua";
-  const heroGlow = isJoshuaTheme
-    ? "radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 34%)"
-    : "radial-gradient(circle at top right, rgba(95,143,255,0.12), transparent 34%)";
-  const motivationGlow = isJoshuaTheme
-    ? "radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 60%)"
-    : "radial-gradient(circle at top, rgba(242,143,178,0.16), transparent 60%)";
+  const smallDailyMessage = useMemo(
+    () => dailyMotivation ?? dailyVerse.preview,
+    [dailyMotivation, dailyVerse.preview],
+  );
 
   return (
-    <>
-      <Card className="overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0 rounded-[32px]"
-          style={{ backgroundImage: heroGlow }}
-        />
-        <div className="relative z-10 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted">Today</p>
-            <h2 className="mt-1 text-[30px] font-bold tracking-[-0.05em]">
-              {activeWorkoutName ?? todaysWorkout.name}
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {activeWorkoutName ? "Workout in progress" : todaysWorkout.focus}
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-white/40 bg-accentSoft px-3 py-2 text-right text-accent shadow-[var(--shadow-soft)] dark:border-white/10">
-            <p className="text-xs uppercase tracking-[0.18em]">Plan</p>
-            <p className="text-sm font-medium">
-              {activeWorkoutName ? `${todaysWorkout.exercises.length} exercises` : `${todaysWorkout.durationMinutes} min`}
-            </p>
-          </div>
-        </div>
-        <div className="relative z-10 mt-5 flex items-center gap-3">
+    <div className="space-y-4">
+      <Card className="px-5 py-5">
+        <p className="text-sm text-muted">{profile.name}</p>
+        <p className="mt-3 max-w-[28ch] text-base font-medium leading-7 text-text">{smallDailyMessage}</p>
+        <button
+          className="mt-4 text-sm font-medium text-accent"
+          onClick={dailyMotivation ? onOpenDailyVerse : onOpenDailyVerse}
+        >
+          Open daily note
+        </button>
+      </Card>
+
+      <Card className="px-5 py-5">
+        <p className="text-sm text-muted">Today&apos;s workout</p>
+        <h2 className="mt-2 text-[30px] font-semibold tracking-[-0.05em] text-text">
+          {activeWorkoutName ?? todaysWorkout.name}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          {activeWorkoutName
+            ? "Session in progress. Jump back in when you are ready."
+            : `${todaysWorkout.focus} · ${todaysWorkout.exercises.length} exercises · ${todaysWorkout.durationMinutes} min`}
+        </p>
+        <div className="mt-5 flex gap-3">
           <button
-            className="flex-1 rounded-[24px] bg-accent px-5 py-4 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-all duration-300 hover:-translate-y-0.5 hover:opacity-95"
+            className="flex-1 rounded-[28px] bg-accent px-5 py-4 text-base font-semibold text-white shadow-[var(--shadow-glow)]"
             onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
           >
             {activeWorkoutName ? "Resume Session" : "Begin Session"}
           </button>
           <button
-            className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-4 text-sm font-semibold text-muted shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-0.5"
+            className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
             onClick={onBrowse}
           >
-            Browse
+            Plan
           </button>
         </div>
       </Card>
 
-      <section className="grid grid-cols-3 gap-3">
-        <StatCard label="This week" value={`${weeklyCount}`} sublabel="workouts" icon={Activity} />
-        <StatCard label="Streak" value={`${streak}`} sublabel="days" icon={Flame} />
-        <StatCard label="PBs" value={`${pbCount}`} sublabel="saved" icon={Sparkles} />
-      </section>
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard label="This week" value={`${weeklyCount}`} sublabel="workouts" />
+        <StatCard label="Streak" value={`${streak}`} sublabel="days" />
+        <StatCard label="Last PR" value={`${pbCount}`} sublabel="saved" />
+      </div>
 
-      <StreakRings completed={weeklyCount} goal={profile.workoutPlan.length} />
-
-      <StrengthPredictionCard predictions={strengthPredictions} />
-
-      <DailyStretchCard
-        stretch={dailyStretch}
-        completed={stretchCompletedToday}
-        onComplete={onCompleteStretch}
-      />
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted">Shared dashboard</p>
-            <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Couple summary</h3>
-          </div>
-          <div className="rounded-full border border-stroke bg-[var(--card-strong)]/70 px-3 py-1 text-xs text-muted shadow-[var(--shadow-soft)]">
-            Team streak {sharedSummary.teamStreak} days
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <MiniMetric label="Combined workouts" value={`${sharedSummary.combinedWorkouts}`} />
-          <MiniMetric label="Current profile" value={profile.name} />
-        </div>
-        <p className="mt-4 text-sm leading-6 text-muted">{sharedSummary.weeklyHighlight}</p>
-      </Card>
-
-      <Card>
+      <Card className="px-5 py-5">
         <button
           className="flex w-full items-center justify-between text-left"
-          onClick={() => setShowSecondary((current) => !current)}
+          onClick={() => setShowDetails((current) => !current)}
         >
           <div>
-            <p className="text-sm text-muted">More for today</p>
-            <h3 className="mt-1 text-[22px] font-bold tracking-[-0.04em]">Optional cards</h3>
-            <p className="mt-2 text-sm text-muted">
-              Open motivation, Bible, and recent workout history when you want it.
-            </p>
+            <p className="text-sm text-muted">More</p>
+            <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-text">Open extra details</h3>
           </div>
-          <div className="rounded-[22px] border border-stroke bg-[var(--card-strong)]/70 p-3 shadow-[var(--shadow-soft)]">
-            <ChevronDown
-              className={`h-5 w-5 text-muted transition-transform duration-300 ${
-                showSecondary ? "rotate-180" : ""
-              }`}
-            />
-          </div>
+          <ChevronDown
+            className={`h-5 w-5 text-muted transition-transform duration-300 ${showDetails ? "rotate-180" : ""}`}
+          />
         </button>
 
-        {showSecondary ? (
-          <div className="mt-5 space-y-5">
-            {dailyMotivation ? (
-              <div
-                className="rounded-[26px] border border-white/60 p-4 dark:border-white/10"
-                style={{ backgroundImage: motivationGlow }}
-              >
-                <p className="text-sm text-muted">Motivation</p>
-                <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">For {profile.name}</h3>
-                <p className="mt-3 max-w-[26ch] text-base font-semibold leading-7 text-foreground">
-                  {dailyMotivation}
-                </p>
-              </div>
-            ) : null}
-
+        {showDetails ? (
+          <div className="mt-5 space-y-4">
+            <StrengthPredictionCard predictions={strengthPredictions} />
+            <DailyStretchCard
+              stretch={dailyStretch}
+              completed={stretchCompletedToday}
+              onComplete={onCompleteStretch}
+            />
             <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 
-            <div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted">Recent</p>
-                  <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">Completed workouts</h3>
+            <Card className="px-5 py-5">
+              <p className="text-sm text-muted">Shared progress</p>
+              <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-text">Couple summary</h3>
+              <p className="mt-3 text-sm leading-6 text-muted">{sharedSummary.weeklyHighlight}</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+                  <p className="text-sm text-muted">Combined workouts</p>
+                  <p className="mt-2 text-lg font-semibold text-text">{sharedSummary.combinedWorkouts}</p>
                 </div>
-                <div className="rounded-[24px] bg-accentSoft p-3 text-accent shadow-[var(--shadow-soft)]">
-                  <HeartHandshake className="h-5 w-5" />
+                <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+                  <p className="text-sm text-muted">Team streak</p>
+                  <p className="mt-2 text-lg font-semibold text-text">{sharedSummary.teamStreak} days</p>
                 </div>
               </div>
+            </Card>
+
+            <Card className="px-5 py-5">
+              <p className="text-sm text-muted">Recent workouts</p>
               <div className="mt-4 space-y-3">
                 {recentWorkouts.length ? (
                   recentWorkouts.map((session) => (
                     <button
                       key={session.id}
-                      className="w-full rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-left shadow-[var(--shadow-soft)]"
+                      className="w-full rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-left"
                       onClick={() => onOpenExercise(session.exercises[0]?.exerciseId ?? null)}
                     >
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{session.workoutName}</p>
-                        <p className="text-sm text-muted">{formatDate(session.performedAt)}</p>
-                      </div>
+                      <p className="text-base font-medium text-text">{session.workoutName}</p>
                       <p className="mt-1 text-sm text-muted">
-                        {session.exercises.length} exercises - {session.durationMinutes} min
+                        {formatDate(session.performedAt)} · {session.exercises.length} exercises
                       </p>
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-[24px] border border-stroke bg-[var(--card-strong)]/72 px-4 py-4 text-sm text-muted shadow-[var(--shadow-soft)]">
-                    No workouts logged yet. Your history will show here once you complete your first session.
+                  <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm text-muted">
+                    No workouts logged yet. Your history will show here after your first session.
                   </div>
                 )}
               </div>
-              <div className="mt-4 flex items-center justify-end gap-2 text-sm text-muted">
-                Open details <ArrowRight className="h-4 w-4" />
-              </div>
-            </div>
+            </Card>
           </div>
         ) : null}
       </Card>
-    </>
+    </div>
   );
 }
