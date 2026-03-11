@@ -664,105 +664,107 @@ export function WorkoutTrackerApp() {
           </div>
         </Card>
 
-        {activeTab === "home" && (
-          <HomeScreen
-            profile={selectedProfile}
-            todaysWorkout={todaysWorkout}
-            activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
-            weeklyCount={weeklyCount}
-            streak={streak}
-            pbCount={state.personalBests[selectedProfile.id].length}
-            dailyVerse={dailyVerse}
-            dailyStretch={todaysStretch}
-            stretchCompletedToday={stretchCompletedToday}
-            sharedSummary={state.sharedSummary}
-            recentWorkouts={recentWorkouts}
-            onOpenDailyVerse={() => setShowDailyVerse(true)}
-            onCompleteStretch={completeStretch}
-            onStartWorkout={() => startWorkout(todaysWorkout)}
-            onResumeWorkout={() => setActiveTab("workout")}
-            onBrowse={() => setActiveTab("workout")}
-            onOpenExercise={setSelectedExerciseId}
-          />
-        )}
+        <div className="animate-soft-in">
+          {activeTab === "home" && (
+            <HomeScreen
+              profile={selectedProfile}
+              todaysWorkout={todaysWorkout}
+              activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
+              weeklyCount={weeklyCount}
+              streak={streak}
+              pbCount={state.personalBests[selectedProfile.id].length}
+              dailyVerse={dailyVerse}
+              dailyStretch={todaysStretch}
+              stretchCompletedToday={stretchCompletedToday}
+              sharedSummary={state.sharedSummary}
+              recentWorkouts={recentWorkouts}
+              onOpenDailyVerse={() => setShowDailyVerse(true)}
+              onCompleteStretch={completeStretch}
+              onStartWorkout={() => startWorkout(todaysWorkout)}
+              onResumeWorkout={() => setActiveTab("workout")}
+              onBrowse={() => setActiveTab("workout")}
+              onOpenExercise={setSelectedExerciseId}
+            />
+          )}
 
-        {activeTab === "workout" && (
-          <WorkoutScreen
-            profile={selectedProfile}
-            todaysWorkoutId={todaysWorkout.id}
-            activeWorkout={state.activeWorkout}
-            activeWorkoutTemplate={activeWorkoutTemplate}
-            userSessions={userSessions}
-            exerciseLibrary={state.exerciseLibrary}
-            onStartWorkout={startWorkout}
-            onUpdateSet={updateSet}
-            onDuplicateLastSet={duplicateLastSet}
-            onUpdateExerciseNote={updateExerciseNote}
-            onOpenExercise={setSelectedExerciseId}
-            onSwapExercise={(exerciseIndex, exerciseId) => {
-              setState((current) => {
-                if (!current.activeWorkout) {
-                  return current;
-                }
-                const replacement = current.exerciseLibrary.find((item) => item.id === exerciseId);
-                if (!replacement) {
-                  return current;
-                }
-                const next = structuredClone(current);
-                if (!next.activeWorkout) {
-                  return current;
-                }
-                const existing = next.activeWorkout.exercises[exerciseIndex];
-                next.activeWorkout.exercises[exerciseIndex] = {
-                  ...existing,
-                  exerciseId: replacement.id,
-                  exerciseName: replacement.name,
-                  muscleGroup: replacement.muscleGroup,
-                  note: replacement.cues[0] ?? "",
-                  sets: existing.sets.map((_, setIndex) => ({
-                    id: `${replacement.id}-${setIndex}-${Date.now()}`,
-                    weight: 0,
-                    reps: 0,
-                    completed: false,
-                  })),
-                };
-                return next;
-              });
-            }}
-            onCompleteWorkout={openWorkoutCompletionPrompt}
-            onCancelWorkout={cancelWorkout}
-          />
-        )}
+          {activeTab === "workout" && (
+            <WorkoutScreen
+              profile={selectedProfile}
+              todaysWorkoutId={todaysWorkout.id}
+              activeWorkout={state.activeWorkout}
+              activeWorkoutTemplate={activeWorkoutTemplate}
+              userSessions={userSessions}
+              exerciseLibrary={state.exerciseLibrary}
+              onStartWorkout={startWorkout}
+              onUpdateSet={updateSet}
+              onDuplicateLastSet={duplicateLastSet}
+              onUpdateExerciseNote={updateExerciseNote}
+              onOpenExercise={setSelectedExerciseId}
+              onSwapExercise={(exerciseIndex, exerciseId) => {
+                setState((current) => {
+                  if (!current.activeWorkout) {
+                    return current;
+                  }
+                  const replacement = current.exerciseLibrary.find((item) => item.id === exerciseId);
+                  if (!replacement) {
+                    return current;
+                  }
+                  const next = structuredClone(current);
+                  if (!next.activeWorkout) {
+                    return current;
+                  }
+                  const existing = next.activeWorkout.exercises[exerciseIndex];
+                  next.activeWorkout.exercises[exerciseIndex] = {
+                    ...existing,
+                    exerciseId: replacement.id,
+                    exerciseName: replacement.name,
+                    muscleGroup: replacement.muscleGroup,
+                    note: replacement.cues[0] ?? "",
+                    sets: existing.sets.map((_, setIndex) => ({
+                      id: `${replacement.id}-${setIndex}-${Date.now()}`,
+                      weight: 0,
+                      reps: 0,
+                      completed: false,
+                    })),
+                  };
+                  return next;
+                });
+              }}
+              onCompleteWorkout={openWorkoutCompletionPrompt}
+              onCancelWorkout={cancelWorkout}
+            />
+          )}
 
-        {activeTab === "progress" && (
-          <ProgressScreen
-            profile={selectedProfile}
-            totalWorkouts={userSessions.length}
-            weeklySummary={dynamicWeeklySummary}
-            trendData={trendData}
-            measurements={state.measurements[selectedProfile.id]}
-            userSessions={userSessions}
-            stretchCompletions={state.stretchCompletions[selectedProfile.id]}
-            onSaveMeasurement={saveMeasurement}
-            onExportData={exportData}
-            onImportData={importData}
-          />
-        )}
+          {activeTab === "progress" && (
+            <ProgressScreen
+              profile={selectedProfile}
+              totalWorkouts={userSessions.length}
+              weeklySummary={dynamicWeeklySummary}
+              trendData={trendData}
+              measurements={state.measurements[selectedProfile.id]}
+              userSessions={userSessions}
+              stretchCompletions={state.stretchCompletions[selectedProfile.id]}
+              onSaveMeasurement={saveMeasurement}
+              onExportData={exportData}
+              onImportData={importData}
+            />
+          )}
 
-        {activeTab === "library" && (
-          <LibraryScreen
-            query={libraryQuery}
-            onQueryChange={setLibraryQuery}
-            customExerciseName={customExerciseName}
-            customMuscleGroup={customMuscleGroup}
-            muscleOptions={["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Glutes", "Hamstrings", "Quads", "Core", "Full Body"]}
-            filteredLibrary={filteredLibrary}
-            onCustomExerciseNameChange={setCustomExerciseName}
-            onCustomMuscleGroupChange={setCustomMuscleGroup}
-            onAddCustomExercise={addCustomExercise}
-            onOpenExercise={setSelectedExerciseId}
-          />
-        )}
+          {activeTab === "library" && (
+            <LibraryScreen
+              query={libraryQuery}
+              onQueryChange={setLibraryQuery}
+              customExerciseName={customExerciseName}
+              customMuscleGroup={customMuscleGroup}
+              muscleOptions={["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Glutes", "Hamstrings", "Quads", "Core", "Full Body"]}
+              filteredLibrary={filteredLibrary}
+              onCustomExerciseNameChange={setCustomExerciseName}
+              onCustomMuscleGroupChange={setCustomMuscleGroup}
+              onAddCustomExercise={addCustomExercise}
+              onOpenExercise={setSelectedExerciseId}
+            />
+          )}
+        </div>
       </div>
 
       <ExerciseDetailModal exercise={selectedExercise} userSessions={userSessions} onClose={() => setSelectedExerciseId(null)} />

@@ -59,10 +59,10 @@ export function WorkoutScreen({
           {profile.workoutPlan.map((workout) => (
             <button
               key={workout.id}
-              className={`w-full rounded-[24px] border px-4 py-4 text-left transition dark:bg-white/5 ${
+              className={`animate-fade-up w-full rounded-[24px] border px-4 py-4 text-left transition duration-300 dark:bg-white/5 ${
                 workout.id === todaysWorkoutId
                   ? "border-accent bg-accentSoft/70 shadow-glow"
-                  : "border-stroke bg-white/50 hover:bg-white/70"
+                  : "border-stroke bg-white/50 hover:-translate-y-0.5 hover:bg-white/70"
               }`}
               onClick={() => onStartWorkout(workout)}
             >
@@ -70,6 +70,9 @@ export function WorkoutScreen({
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{workout.name}</p>
+                    <span className="rounded-full border border-stroke bg-[var(--card-strong)]/70 px-2.5 py-1 text-[11px] font-medium text-muted shadow-[var(--shadow-soft)]">
+                      {workout.exercises.length} exercises
+                    </span>
                     {workout.id === todaysWorkoutId && (
                       <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-white">
                         Today
@@ -147,7 +150,7 @@ export function WorkoutScreen({
           const substitutions = getSubstitutions(exercise.exerciseId);
 
           return (
-            <Card key={exercise.exerciseId}>
+            <Card key={exercise.exerciseId} className="animate-fade-up">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <button className="text-left" onClick={() => onOpenExercise(exercise.exerciseId)}>
