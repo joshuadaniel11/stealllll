@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
 import { ExitSessionModal } from "@/components/exit-session-modal";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay } from "@/lib/types";
 
@@ -129,6 +130,7 @@ export function WorkoutScreen({
 
     return (
       <>
+        <ScrollReveal delay={0}>
         <Card className="animate-page-in">
           <p className="text-sm text-muted">Workout plan</p>
           <h2 className="large-title mt-2 font-semibold text-text">Choose a day</h2>
@@ -166,6 +168,7 @@ export function WorkoutScreen({
             ))}
           </div>
         </Card>
+        </ScrollReveal>
 
         {previewWorkout ? (
           <div className="sheet-backdrop">
@@ -178,9 +181,10 @@ export function WorkoutScreen({
                   {previewWorkout.focus} | {previewWorkout.durationMinutes} min
                 </p>
 
-                <div className="content-stack mt-5 space-y-3">
+                <div className="mt-5 space-y-3">
                   {previewWorkout.exercises.map((exercise, index) => (
-                    <div key={exercise.id} className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+                    <ScrollReveal key={exercise.id} delay={index * 45} y={22} scale={0.992}>
+                    <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-medium text-text">
                           {index + 1}. {exercise.name}
@@ -191,6 +195,7 @@ export function WorkoutScreen({
                       </div>
                       {exercise.note ? <p className="medium-label mt-2 text-muted">{exercise.note}</p> : null}
                     </div>
+                    </ScrollReveal>
                   ))}
                 </div>
 
@@ -247,7 +252,8 @@ export function WorkoutScreen({
   };
 
   return (
-    <div className="content-stack space-y-4">
+    <div className="space-y-4">
+      <ScrollReveal delay={0}>
       <Card className="animate-page-in bg-[rgba(5,6,8,0.92)] px-5 py-6 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Current exercise</p>
         <h1 className="large-title mt-3 font-semibold text-text">{currentExercise.exerciseName}</h1>
@@ -365,7 +371,9 @@ export function WorkoutScreen({
           Complete Set
         </button>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={90}>
       <div className="grid grid-cols-3 gap-3 animate-soft-in">
         <button
           className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
@@ -393,6 +401,7 @@ export function WorkoutScreen({
           Finish Workout
         </button>
       </div>
+      </ScrollReveal>
 
       <ExitSessionModal
         open={showExitConfirmation}

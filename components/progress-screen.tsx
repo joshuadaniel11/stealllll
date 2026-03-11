@@ -1,5 +1,6 @@
 import { DataPortabilityCard } from "@/components/data-portability-card";
 import { MeasurementCard } from "@/components/measurement-card";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import {
   Area,
   AreaChart,
@@ -92,6 +93,7 @@ export function ProgressScreen({
 
   return (
     <>
+      <ScrollReveal delay={0}>
       <Card>
         <p className="text-sm text-muted">Progress</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{profile.name}&apos;s summary</h2>
@@ -103,7 +105,9 @@ export function ProgressScreen({
           <MiniMetric label="Consistency" value={weeklySummary.consistencyLabel} />
         </div>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={70}>
       <Card>
         <div className="flex items-center justify-between">
           <div>
@@ -144,7 +148,9 @@ export function ProgressScreen({
           )}
         </div>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={120}>
       <Card>
         <p className="text-sm text-muted">Goals</p>
         <div className="mt-4 grid grid-cols-1 gap-3">
@@ -175,12 +181,16 @@ export function ProgressScreen({
           ))}
         </div>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={170}>
       <MeasurementCard
         measurements={measurements}
         onSave={onSaveMeasurement}
       />
+      </ScrollReveal>
 
+      <ScrollReveal delay={220}>
       <Card>
         <div className="flex items-center justify-between">
           <div>
@@ -217,7 +227,9 @@ export function ProgressScreen({
           )}
         </div>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={270}>
       <Card>
         <p className="text-sm text-muted">Weekly summary</p>
         <div className="mt-4 grid grid-cols-2 gap-3">
@@ -230,8 +242,11 @@ export function ProgressScreen({
           {profile.name} is trending well with {weeklySummary.consistencyLabel.toLowerCase()}.
         </div>
       </Card>
+      </ScrollReveal>
 
-      <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
+      <ScrollReveal delay={320}>
+        <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
+      </ScrollReveal>
     </>
   );
 }

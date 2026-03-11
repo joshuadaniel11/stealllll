@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import type { ExerciseLibraryItem, MuscleGroup } from "@/lib/types";
 
@@ -28,6 +29,7 @@ export function LibraryScreen({
 }) {
   return (
     <>
+      <ScrollReveal delay={0}>
       <Card>
         <p className="text-sm text-muted">Exercise library</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Fast, clean, searchable</h2>
@@ -41,7 +43,9 @@ export function LibraryScreen({
           />
         </label>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={70}>
       <Card>
         <p className="text-sm text-muted">Custom exercise</p>
         <div className="mt-4 space-y-3">
@@ -70,7 +74,9 @@ export function LibraryScreen({
           </button>
         </div>
       </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={120}>
       <div className="space-y-3">
         {filteredLibrary.length ? (
           filteredLibrary.map((exercise) => (
@@ -98,6 +104,7 @@ export function LibraryScreen({
           </div>
         )}
       </div>
+      </ScrollReveal>
     </>
   );
 }

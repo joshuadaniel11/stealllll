@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, StatCard } from "@/components/ui";
 import type {
@@ -122,7 +123,8 @@ export function HomeScreen({
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
   return (
-    <div className="content-stack space-y-4 animate-page-in">
+    <div className="space-y-4 animate-page-in">
+      <ScrollReveal delay={0}>
         <Card className="px-5 py-5">
           <p className="text-sm text-muted">{profile.name}</p>
           <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>
@@ -132,7 +134,9 @@ export function HomeScreen({
             <p className="caption-text mt-4 text-muted">Daily verse available below.</p>
           )}
         </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={80}>
         <Card className="px-5 py-5">
           <p className="text-sm text-muted">Today's workout</p>
           <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
@@ -145,14 +149,14 @@ export function HomeScreen({
           <div className="mt-5 flex gap-3">
             <button
               className="flex-1 rounded-[28px] bg-accent px-5 py-4 text-base font-semibold text-white shadow-[var(--shadow-glow)]"
-            onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
-          >
-            {activeWorkoutName ? "Resume Session" : "Begin Session"}
-          </button>
-          <button
-            className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-            onClick={onPreviewWorkout}
-          >
+              onClick={activeWorkoutName ? onResumeWorkout : onStartWorkout}
+            >
+              {activeWorkoutName ? "Resume Session" : "Begin Session"}
+            </button>
+            <button
+              className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
+              onClick={onPreviewWorkout}
+            >
               Preview
             </button>
           </div>
@@ -195,19 +199,25 @@ export function HomeScreen({
             </>
           ) : null}
         </Card>
+      </ScrollReveal>
 
+      <ScrollReveal delay={130}>
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="This week" value={`${weeklyCount}`} sublabel="workouts" />
         <StatCard label="Streak" value={`${streak}`} sublabel="days" />
         <StatCard label="Last PR" value={`${pbCount}`} sublabel="saved" />
       </div>
+      </ScrollReveal>
 
+      <ScrollReveal delay={170}>
         <DailyStretchCard
           stretch={dailyStretch}
           completed={stretchCompletedToday}
           onToggle={onToggleStretch}
         />
+      </ScrollReveal>
 
+      <ScrollReveal delay={220}>
       <Card className="px-5 py-5">
         <button
           className="flex w-full items-center justify-between text-left"
@@ -269,6 +279,7 @@ export function HomeScreen({
           </div>
         ) : null}
       </Card>
+      </ScrollReveal>
     </div>
   );
 }
