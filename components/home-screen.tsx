@@ -61,11 +61,21 @@ export function HomeScreen({
   onOpenExercise: (id: string | null) => void;
 }) {
   const dailyMotivation = getDailyMotivation(profile.motivationLines);
+  const isJoshuaTheme = profile.id === "joshua";
+  const heroGlow = isJoshuaTheme
+    ? "radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 34%)"
+    : "radial-gradient(circle at top right, rgba(95,143,255,0.12), transparent 34%)";
+  const motivationGlow = isJoshuaTheme
+    ? "radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 60%)"
+    : "radial-gradient(circle at top, rgba(242,143,178,0.16), transparent 60%)";
 
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_right,_rgba(95,143,255,0.12),_transparent_34%)]" />
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[32px]"
+          style={{ backgroundImage: heroGlow }}
+        />
         <div className="relative z-10 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm text-muted">Today</p>
@@ -115,7 +125,10 @@ export function HomeScreen({
 
       {dailyMotivation ? (
         <Card className="overflow-hidden">
-          <div className="rounded-[26px] border border-white/60 bg-[radial-gradient(circle_at_top,_rgba(242,143,178,0.16),_transparent_60%)] p-1 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top,_rgba(242,143,178,0.2),_transparent_60%)]">
+          <div
+            className="rounded-[26px] border border-white/60 p-1 dark:border-white/10"
+            style={{ backgroundImage: motivationGlow }}
+          >
             <p className="text-sm text-muted">Motivation</p>
             <h3 className="mt-1 text-[24px] font-bold tracking-[-0.04em]">For {profile.name}</h3>
             <p className="mt-3 max-w-[26ch] text-base font-semibold leading-7 text-foreground">

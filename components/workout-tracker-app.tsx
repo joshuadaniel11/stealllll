@@ -588,11 +588,24 @@ export function WorkoutTrackerApp() {
     startTransition(() => setActiveTab("home"));
   };
 
+  const isJoshuaTheme = selectedProfile.id === "joshua";
+  const headerGlow = isJoshuaTheme
+    ? "radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 34%)"
+    : "radial-gradient(circle at top right, rgba(95,143,255,0.14), transparent 34%)";
+
   return (
-    <main className="min-h-screen bg-app-light px-4 pb-32 pt-5 text-text transition-colors duration-500 dark:bg-app-dark sm:px-6">
+    <main
+      className={clsx(
+        "theme-shell min-h-screen px-4 pb-32 pt-5 text-text transition-colors duration-500 sm:px-6",
+        isJoshuaTheme ? "theme-joshua" : "",
+      )}
+    >
       <div className="mx-auto flex max-w-md flex-col gap-5">
         <Card className="animate-fade-up overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top_right,_rgba(95,143,255,0.14),_transparent_34%)]" />
+          <div
+            className="pointer-events-none absolute inset-0 rounded-[32px]"
+            style={{ backgroundImage: headerGlow }}
+          />
           <div className="flex items-start justify-between gap-4">
             <div className="relative z-10">
               <div className="flex flex-wrap items-center gap-2">
