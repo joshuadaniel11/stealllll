@@ -6,8 +6,17 @@ import { Activity, ArrowRight, ChevronDown, Flame, HeartHandshake, Sparkles } fr
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
 import { StreakRings } from "@/components/streak-rings";
+import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric, StatCard } from "@/components/ui";
-import type { BibleVerse, Profile, SharedSummary, StretchRecommendation, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type {
+  BibleVerse,
+  Profile,
+  SharedSummary,
+  StrengthPrediction,
+  StretchRecommendation,
+  WorkoutPlanDay,
+  WorkoutSession,
+} from "@/lib/types";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
@@ -33,6 +42,7 @@ export function HomeScreen({
   weeklyCount,
   streak,
   pbCount,
+  strengthPredictions,
   dailyVerse,
   dailyStretch,
   stretchCompletedToday,
@@ -51,6 +61,7 @@ export function HomeScreen({
   weeklyCount: number;
   streak: number;
   pbCount: number;
+  strengthPredictions: StrengthPrediction[];
   dailyVerse: BibleVerse;
   dailyStretch: StretchRecommendation;
   stretchCompletedToday: boolean;
@@ -120,6 +131,8 @@ export function HomeScreen({
       </section>
 
       <StreakRings completed={weeklyCount} goal={profile.workoutPlan.length} />
+
+      <StrengthPredictionCard predictions={strengthPredictions} />
 
       <DailyStretchCard
         stretch={dailyStretch}

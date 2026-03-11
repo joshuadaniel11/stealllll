@@ -20,6 +20,7 @@ import { WorkoutScreen } from "@/components/workout-screen";
 import { getLastExerciseSets } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import { loadState, saveState } from "@/lib/storage";
+import { getStrengthPredictions } from "@/lib/strength-prediction";
 import type {
   ActiveWorkout,
   AppState,
@@ -273,6 +274,10 @@ export function WorkoutTrackerApp() {
   const userSessions = useMemo(() => getUserSessions(state, selectedProfile.id), [state, selectedProfile.id]);
   const todaysWorkout = useMemo(() => getTodayWorkout(selectedProfile, userSessions), [selectedProfile, userSessions]);
   const todaysStretch = useMemo(() => getTodayStretch(selectedProfile), [selectedProfile]);
+  const strengthPredictions = useMemo(
+    () => getStrengthPredictions(selectedProfile.id, userSessions),
+    [selectedProfile.id, userSessions],
+  );
   const weeklyCount = getWorkoutsCompletedThisWeek(userSessions);
   const dynamicWeeklySummary = useMemo(
     () => getDynamicWeeklySummary(selectedProfile, userSessions),
@@ -702,6 +707,7 @@ export function WorkoutTrackerApp() {
               weeklyCount={weeklyCount}
               streak={streak}
               pbCount={state.personalBests[selectedProfile.id].length}
+              strengthPredictions={strengthPredictions}
               dailyVerse={dailyVerse}
               dailyStretch={todaysStretch}
               stretchCompletedToday={stretchCompletedToday}

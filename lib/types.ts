@@ -73,6 +73,13 @@ export type PersonalBest = {
   value: string;
 };
 
+export type StrengthPrediction = {
+  exerciseName: string;
+  currentBest: string;
+  projectedPerformance: string;
+  note: string;
+};
+
 export type StretchRecommendation = {
   dayLabel: string;
   title: string;
