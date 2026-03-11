@@ -44,7 +44,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     id: "natasha-glutes-hams",
     name: "Glutes + Hamstrings",
     focus: "Glute growth with clean hinge and curl work, then 10 minutes of core",
-    dayLabel: "Monday",
+    dayLabel: "Day 1",
     durationMinutes: 60,
     exercises: [
       { id: "barbell-hip-thrust", name: "Barbell Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8-10", restSeconds: 120, note: "Pause at the top for a full second.", progressionNote: "Add weight when all four sets reach 10 strong reps.", favorite: true },
@@ -59,7 +59,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     id: "natasha-back-arms",
     name: "Back + Arms",
     focus: "Back width and upper-back detail for a stronger V-taper look",
-    dayLabel: "Tuesday",
+    dayLabel: "Day 2",
     durationMinutes: 60,
     exercises: [
       { id: "lat-pulldown", name: "Wide-Grip Lat Pulldown", muscleGroup: "Back", sets: 4, repRange: "8-10", restSeconds: 90, favorite: true, note: "Lead with elbows down to build width." },
@@ -76,7 +76,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     id: "natasha-glutes-quads",
     name: "Glutes + Quads",
     focus: "Round glutes with leg press and squat patterns, then 10 minutes of core",
-    dayLabel: "Thursday",
+    dayLabel: "Day 3",
     durationMinutes: 60,
     exercises: [
       { id: "smith-squat", name: "Smith Machine Squat", muscleGroup: "Quads", sets: 4, repRange: "8-10", restSeconds: 120 },
@@ -91,7 +91,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     id: "natasha-upper-core",
     name: "Upper Body + Shape",
     focus: "Shoulder cap, posture, and extra back definition for hourglass shape",
-    dayLabel: "Friday",
+    dayLabel: "Day 4",
     durationMinutes: 55,
     exercises: [
       { id: "seated-dumbbell-press", name: "Seated Dumbbell Shoulder Press", muscleGroup: "Shoulders", sets: 3, repRange: "8-10", restSeconds: 90 },
@@ -107,7 +107,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     id: "natasha-core-explosive",
     name: "Core + Full Body Power",
     focus: "Simple explosive training with a focused 10 minute core finish",
-    dayLabel: "Saturday",
+    dayLabel: "Day 5",
     durationMinutes: 55,
     exercises: [
       { id: "kettlebell-swing", name: "Kettlebell Swing", muscleGroup: "Full Body", sets: 4, repRange: "12-15", restSeconds: 60, note: "Explode through the hips and stay crisp." },
@@ -126,7 +126,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
     id: "joshua-chest-triceps",
     name: "Chest + Triceps",
     focus: "Chest growth with stable dumbbell and machine pressing, plus a short core finish",
-    dayLabel: "Monday",
+    dayLabel: "Day 1",
     durationMinutes: 60,
     exercises: [
       { id: "flat-dumbbell-press", name: "Flat Dumbbell Press", muscleGroup: "Chest", sets: 4, repRange: "6-8", restSeconds: 120, favorite: true },
@@ -142,7 +142,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
     id: "joshua-back-biceps",
     name: "Back + Biceps",
     focus: "Width, thickness, arm size, and a short core finisher",
-    dayLabel: "Tuesday",
+    dayLabel: "Day 2",
     durationMinutes: 58,
     exercises: [
       { id: "neutral-lat-pulldown-heavy", name: "Neutral-Grip Lat Pulldown", muscleGroup: "Back", sets: 4, repRange: "8-10", restSeconds: 90 },
@@ -158,7 +158,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
     id: "joshua-legs",
     name: "Legs + Shoulders",
     focus: "Athletic legs with clean shoulder work and a short core finisher",
-    dayLabel: "Wednesday",
+    dayLabel: "Day 3",
     durationMinutes: 60,
     exercises: [
       { id: "hack-squat", name: "Hack Squat", muscleGroup: "Legs", sets: 4, repRange: "6-8", restSeconds: 120 },
@@ -174,7 +174,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
     id: "joshua-shoulders-arms",
     name: "Shoulders + Triceps",
     focus: "Round shoulders and stronger triceps with stable machine and cable work",
-    dayLabel: "Thursday",
+    dayLabel: "Day 4",
     durationMinutes: 56,
     exercises: [
       { id: "machine-shoulder-press-heavy", name: "Machine Shoulder Press", muscleGroup: "Shoulders", sets: 4, repRange: "6-8", restSeconds: 120 },
@@ -190,7 +190,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
     id: "joshua-upper-strength",
     name: "Back + Biceps",
     focus: "Back width, thickness, and direct biceps work to finish the week strong",
-    dayLabel: "Friday",
+    dayLabel: "Day 5",
     durationMinutes: 60,
     exercises: [
       { id: "neutral-lat-pulldown-friday", name: "Neutral-Grip Lat Pulldown", muscleGroup: "Back", sets: 4, repRange: "8-10", restSeconds: 90 },

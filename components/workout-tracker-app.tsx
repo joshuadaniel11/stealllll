@@ -42,8 +42,8 @@ const navItems = [
   { id: "library" as const, label: "Library", icon: Search },
 ];
 
-const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
@@ -58,9 +58,19 @@ function getWeekStart(date = new Date()) {
   return next;
 }
 
-function getTodayWorkout(profile: Profile) {
-  const today = days[new Date().getDay()];
-  return profile.workoutPlan.find((workout) => workout.dayLabel === today) ?? profile.workoutPlan[0];
+function getTodayWorkout(profile: Profile, sessions: WorkoutSession[]) {
+  if (!sessions.length) {
+    return profile.workoutPlan[0];
+  }
+
+  const lastSession = sessions[0];
+  const currentIndex = profile.workoutPlan.findIndex((workout) => workout.id === lastSession.workoutDayId);
+
+  if (currentIndex === -1) {
+    return profile.workoutPlan[0];
+  }
+
+  return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
 }
 
 function getTodayStretch(profile: Profile) {
@@ -257,7 +267,7 @@ export function WorkoutTrackerApp() {
   );
 
   const userSessions = useMemo(() => getUserSessions(state, selectedProfile.id), [state, selectedProfile.id]);
-  const todaysWorkout = useMemo(() => getTodayWorkout(selectedProfile), [selectedProfile]);
+  const todaysWorkout = useMemo(() => getTodayWorkout(selectedProfile, userSessions), [selectedProfile, userSessions]);
   const todaysStretch = useMemo(() => getTodayStretch(selectedProfile), [selectedProfile]);
   const weeklyCount = getWorkoutsCompletedThisWeek(userSessions);
   const dynamicWeeklySummary = useMemo(
