@@ -25,7 +25,7 @@ export function BibleVerseModal({
                 <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{verse.reference}</h3>
               </div>
               <button
-                className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
+                className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
                 onClick={onClose}
               >
                 Close

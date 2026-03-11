@@ -48,7 +48,7 @@ export function SessionSummaryModal({
           </ScrollReveal>
           <ScrollReveal delay={120} y={14} scale={0.996}>
             <button
-              className="mt-6 w-full rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
+              className="sheet-action-primary mt-6 w-full rounded-[28px] px-4 py-4 text-sm font-semibold"
               onClick={onClose}
             >
               Done

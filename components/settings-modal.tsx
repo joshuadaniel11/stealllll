@@ -33,7 +33,7 @@ export function SettingsModal({
                 <p className="caption-text mt-2 text-muted">Everything important for this phone, without extra noise.</p>
               </div>
               <button
-                className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
+                className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
                 onClick={onClose}
               >
                 Close

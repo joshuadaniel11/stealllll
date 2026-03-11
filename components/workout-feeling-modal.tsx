@@ -24,7 +24,7 @@ export function WorkoutFeelingModal({
                 </h3>
               </div>
               <button
-                className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
+                className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
                 onClick={onClose}
               >
                 Close
@@ -36,7 +36,7 @@ export function WorkoutFeelingModal({
               {options.map((option) => (
                 <button
                   key={option}
-                  className="w-full rounded-[22px] border border-stroke bg-[var(--card-strong)] px-4 py-4 text-left text-base font-medium text-text"
+                  className="sheet-action-secondary w-full rounded-[22px] px-4 py-4 text-left text-base font-semibold"
                   onClick={() => onSelect(option)}
                 >
                   {option}
