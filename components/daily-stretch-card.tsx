@@ -6,11 +6,11 @@ import type { StretchRecommendation } from "@/lib/types";
 export function DailyStretchCard({
   stretch,
   completed,
-  onComplete,
+  onToggle,
 }: {
   stretch: StretchRecommendation;
   completed: boolean;
-  onComplete: () => void;
+  onToggle: () => void;
 }) {
   return (
     <Card className="transition-all duration-500 hover:-translate-y-0.5 hover:shadow-glow">
@@ -40,22 +40,22 @@ export function DailyStretchCard({
       <div className="mt-4 flex items-center justify-end gap-2 text-sm font-medium text-muted">
         Daily stretch reminder <MoveRight className="h-4 w-4" />
       </div>
-      <button
-        className={`mt-4 w-full rounded-[22px] px-4 py-4 text-base font-bold transition-all ${
-          completed
-            ? "bg-[rgba(31,156,107,0.14)] text-success"
-            : "bg-accent text-white shadow-glow"
-        }`}
-        onClick={onComplete}
-      >
-        {completed ? (
-          <span className="inline-flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5" />
-            Bend stretch completed
-          </span>
-        ) : (
-          "Mark Bend stretch done"
-        )}
+        <button
+          className={`mt-4 w-full rounded-[22px] px-4 py-4 text-base font-bold transition-all ${
+            completed
+              ? "bg-[rgba(31,156,107,0.14)] text-success"
+              : "bg-accent text-white shadow-glow"
+          }`}
+          onClick={onToggle}
+        >
+          {completed ? (
+            <span className="inline-flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Undo Bend stretch done
+            </span>
+          ) : (
+            "Mark Bend stretch done"
+          )}
       </button>
     </Card>
   );

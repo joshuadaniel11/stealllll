@@ -83,12 +83,12 @@ export function HomeScreen({
   dailyStretch,
   stretchCompletedToday,
   sharedSummary,
-  recentWorkouts,
-  onOpenDailyVerse,
-  onCompleteStretch,
-  onStartWorkout,
-  onResumeWorkout,
-  onPreviewWorkout,
+    recentWorkouts,
+    onOpenDailyVerse,
+    onToggleStretch,
+    onStartWorkout,
+    onResumeWorkout,
+    onPreviewWorkout,
   onOpenExercise,
 }: {
   profile: Profile;
@@ -101,13 +101,13 @@ export function HomeScreen({
   dailyVerse: BibleVerse;
   dailyStretch: StretchRecommendation;
   stretchCompletedToday: boolean;
-  sharedSummary: SharedSummary;
-  recentWorkouts: WorkoutSession[];
-  onOpenDailyVerse: () => void;
-  onCompleteStretch: () => void;
-  onStartWorkout: () => void;
-  onResumeWorkout: () => void;
-  onPreviewWorkout: () => void;
+    sharedSummary: SharedSummary;
+    recentWorkouts: WorkoutSession[];
+    onOpenDailyVerse: () => void;
+    onToggleStretch: () => void;
+    onStartWorkout: () => void;
+    onResumeWorkout: () => void;
+    onPreviewWorkout: () => void;
   onOpenExercise: (id: string | null) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -168,11 +168,11 @@ export function HomeScreen({
         <StatCard label="Last PR" value={`${pbCount}`} sublabel="saved" />
       </div>
 
-      <DailyStretchCard
-        stretch={dailyStretch}
-        completed={stretchCompletedToday}
-        onComplete={onCompleteStretch}
-      />
+        <DailyStretchCard
+          stretch={dailyStretch}
+          completed={stretchCompletedToday}
+          onToggle={onToggleStretch}
+        />
 
       <Card className="px-5 py-5">
         <button

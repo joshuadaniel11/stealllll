@@ -540,6 +540,25 @@ export function WorkoutTrackerApp() {
     setShowCompletionCelebration(true);
   };
 
+  const toggleStretchCompletion = () => {
+    if (!stretchCompletedToday) {
+      completeStretch();
+      return;
+    }
+
+    setState((current) => ({
+      ...current,
+      stretchCompletions: {
+        ...current.stretchCompletions,
+        [selectedProfile.id]: current.stretchCompletions[selectedProfile.id].filter(
+          (entry) => !isSameLocalDay(entry.date, new Date()),
+        ),
+      },
+    }));
+    setCompletionMessage(`${selectedProfile.name}'s Bend stretch was marked undone.`);
+    setShowCompletionCelebration(true);
+  };
+
   const addCustomExercise = () => {
     if (!customExerciseName.trim()) {
       return;
@@ -695,7 +714,7 @@ export function WorkoutTrackerApp() {
               sharedSummary={state.sharedSummary}
               recentWorkouts={recentWorkouts}
               onOpenDailyVerse={() => setShowDailyVerse(true)}
-              onCompleteStretch={completeStretch}
+              onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}
               onResumeWorkout={() => setActiveTab("workout")}
               onPreviewWorkout={() => {
