@@ -31,16 +31,16 @@ export function ExitSessionModal({
           <ScrollReveal delay={80} y={14} scale={0.996}>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
-                className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                className="rounded-[28px] border border-white/10 bg-white/10 px-4 py-4 text-sm font-semibold text-white"
                 onClick={onClose}
               >
-                Keep Session
+                No, keep session
               </button>
               <button
-                className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
                 onClick={onConfirm}
               >
-                Exit Session
+                Yes, exit
               </button>
             </div>
           </ScrollReveal>

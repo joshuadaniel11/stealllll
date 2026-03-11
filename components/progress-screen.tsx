@@ -39,8 +39,6 @@ export function ProgressScreen({
   onExportData: () => void;
   onImportData: (file: File | null) => void;
 }) {
-  const [latestGoal] = [...profile.goals].sort((a, b) => b.progress - a.progress);
-
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -55,40 +53,65 @@ export function ProgressScreen({
 
   const weeklyStretchCount = stretchCompletions.filter((entry) => new Date(entry.date) >= weekStart).length;
 
+  const chestSessions = userSessions.filter((session) => /chest/i.test(session.workoutName)).length;
+  const backSessions = userSessions.filter((session) => /back/i.test(session.workoutName)).length;
+  const gluteSessions = userSessions.filter((session) => /glutes/i.test(session.workoutName)).length;
+  const coreSessions = userSessions.filter((session) => /core|abs/i.test(session.workoutName)).length;
+  const shouldersSessions = userSessions.filter((session) => /shoulder/i.test(session.workoutName)).length;
+
+  const recentVolume = trendData.slice(-2).reduce((sum, item) => sum + item.volume, 0);
+  const previousVolume = trendData.slice(-4, -2).reduce((sum, item) => sum + item.volume, 0);
+  const strengthMomentumLabel =
+    trendData.length < 3 ? "Starting" : recentVolume > previousVolume ? "Rising" : recentVolume < previousVolume ? "Steadying" : "Stable";
+
+  const latestBodyFat = bodyweightTrend.at(-1)?.bodyFat;
+  const previousBodyFat = bodyweightTrend.at(-2)?.bodyFat;
+  const absVisibilityLabel =
+    latestBodyFat !== undefined && previousBodyFat !== undefined
+      ? latestBodyFat < previousBodyFat
+        ? "Leaning out"
+        : "Holding steady"
+      : coreSessions >= 2
+        ? "Core work landing"
+        : "Still building";
+
+  const leadingIndicator =
+    profile.id === "natasha"
+      ? {
+          title: "Glute growth",
+          value: `${gluteSessions} sessions`,
+          detail: `Lower-body emphasis is landing cleanly, with ${weeklySummary.totalSets} total sets supporting shape and fullness.`,
+        }
+      : {
+          title: "Chest growth",
+          value: `${chestSessions} sessions`,
+          detail: `Pressing frequency and upper-body volume are lining up well for chest size and thickness.`,
+        };
+
   const smartCards =
     profile.id === "natasha"
       ? [
           {
-            title: "Back Shape",
-            value: `${userSessions.filter((session) => /back/i.test(session.workoutName)).length} sessions`,
-            detail: "Width and upper-back detail are being trained consistently.",
+            title: "Current focus",
+            value: "Back definition",
+            detail: `${backSessions} back sessions logged. Width and upper-back detail work are staying consistent enough to sharpen shape.`,
           },
           {
-            title: "Glute Focus",
-            value: `${userSessions.filter((session) => /glutes/i.test(session.workoutName)).length} sessions`,
-            detail: "Lower-body emphasis is staying high enough to matter.",
-          },
-          {
-            title: "Flexibility",
-            value: `${weeklyStretchCount} stretches`,
-            detail: "Bend work is landing through the week.",
+            title: "Support signal",
+            value: "Hourglass shape",
+            detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing the shoulder-to-waist-to-glute contrast.`,
           },
         ]
       : [
           {
-            title: "Chest Growth",
-            value: `${userSessions.filter((session) => /chest/i.test(session.workoutName)).length} sessions`,
-            detail: "Pressing volume is stacking up cleanly.",
+            title: "Current focus",
+            value: "Strength momentum",
+            detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions informing the recent load trend.`,
           },
           {
-            title: "Arm Focus",
-            value: `${userSessions.filter((session) => /biceps|triceps/i.test(session.workoutName)).length} sessions`,
-            detail: "Direct arm work is showing up regularly.",
-          },
-          {
-            title: "Flexibility",
-            value: `${weeklyStretchCount} stretches`,
-            detail: "Bend work is supporting recovery and movement quality.",
+            title: "Support signal",
+            value: "Abs visibility",
+            detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
           },
         ];
 
@@ -108,10 +131,11 @@ export function ProgressScreen({
           </div>
           <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] p-4">
             <p className="text-sm text-muted">Leading indicator</p>
-            <p className="mt-2 text-base font-semibold text-text">{latestGoal?.title ?? "Consistency"}</p>
-            <p className="caption-text mt-2 text-muted">
-              {latestGoal ? `${latestGoal.progress}% progress. ${latestGoal.target}` : weeklySummary.consistencyLabel}
-            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-base font-semibold text-text">{leadingIndicator.title}</p>
+              <p className="text-sm font-medium text-accent">{leadingIndicator.value}</p>
+            </div>
+            <p className="caption-text mt-2 text-muted">{leadingIndicator.detail}</p>
           </div>
         </Card>
       </ScrollReveal>
