@@ -833,30 +833,6 @@ export function WorkoutTrackerApp() {
     }));
     setCustomExerciseName("");
   };
-
-  const completeStretch = () => {
-    if (stretchCompletedToday) {
-      return;
-    }
-    setState((current) => ({
-      ...current,
-      stretchCompletions: {
-        ...current.stretchCompletions,
-        [selectedProfile.id]: [
-          {
-            id: `stretch-${Date.now()}`,
-            userId: selectedProfile.id,
-            date: new Date().toISOString(),
-            stretchTitle: todaysStretch.title,
-          },
-          ...current.stretchCompletions[selectedProfile.id],
-        ],
-      },
-    }));
-    setCompletionMessage(`${selectedProfile.name} finished today’s Bend stretch.`);
-    setShowCompletionCelebration(true);
-  };
-
   const closeOnboarding = () => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(ONBOARDING_KEY, "true");
@@ -1129,3 +1105,4 @@ export function WorkoutTrackerApp() {
     </main>
   );
 }
+

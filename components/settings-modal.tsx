@@ -1,5 +1,6 @@
 import { ChevronRight, Download, RefreshCcw, Smartphone, Trash2, Upload } from "lucide-react";
 
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import type { Profile } from "@/lib/types";
 
@@ -23,21 +24,24 @@ export function SettingsModal({
       <div className="sheet-panel sheet-detent-large animate-sheet-up">
         <Card className="sheet-card bg-[var(--surface)]">
           <div className="sheet-drag-handle" />
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-muted">Settings</p>
-              <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Device and data</h2>
+          <ScrollReveal delay={0} y={18} scale={0.994}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted">Settings</p>
+                <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Device and data</h2>
+              </div>
+              <button
+                className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
+                onClick={onClose}
+              >
+                Close
+              </button>
             </div>
-            <button
-              className="rounded-full bg-[var(--card-strong)] px-3 py-2 text-sm text-muted"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
+          </ScrollReveal>
 
           <div className="grouped-list mt-5">
-            <div>
+            <ScrollReveal delay={60} y={18} scale={0.994}>
+              <div>
               <p className="caption-text px-2 pb-2 text-muted">This device</p>
               <div className="grouped-section">
                 <div className="grouped-row">
@@ -52,9 +56,11 @@ export function SettingsModal({
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
+            </ScrollReveal>
 
-            <div>
+            <ScrollReveal delay={110} y={18} scale={0.994}>
+              <div>
               <p className="caption-text px-2 pb-2 text-muted">Backup</p>
               <div className="grouped-section">
                 <button className="grouped-row" onClick={onExport}>
@@ -85,9 +91,11 @@ export function SettingsModal({
                   />
                 </label>
               </div>
-            </div>
+              </div>
+            </ScrollReveal>
 
-            <div>
+            <ScrollReveal delay={160} y={18} scale={0.994}>
+              <div>
               <p className="caption-text px-2 pb-2 text-muted">Reset</p>
               <div className="grouped-section">
                 <button className="grouped-row" onClick={onResetProfile}>
@@ -112,7 +120,8 @@ export function SettingsModal({
                   <ChevronRight className="h-4 w-4 text-muted" />
                 </button>
               </div>
-            </div>
+              </div>
+            </ScrollReveal>
           </div>
         </Card>
       </div>
