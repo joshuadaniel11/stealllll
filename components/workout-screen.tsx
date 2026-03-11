@@ -35,6 +35,7 @@ export function WorkoutScreen({
   onCompleteSet,
   onTriggerRestTimer,
   onCompleteWorkout,
+  onCancelWorkout,
 }: {
   profile: Profile;
   todaysWorkoutId: string;
@@ -50,6 +51,7 @@ export function WorkoutScreen({
   onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
   onTriggerRestTimer: (seconds: number) => void;
   onCompleteWorkout: () => void;
+  onCancelWorkout: () => void;
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
 
@@ -197,7 +199,13 @@ export function WorkoutScreen({
         </button>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
+        <button
+          className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
+          onClick={onCancelWorkout}
+        >
+          Exit Session
+        </button>
         <button
           className={`rounded-[28px] px-4 py-4 text-sm font-medium ${
             hasNextExercise ? "bg-[var(--card-strong)] text-text" : "bg-[var(--card-strong)] text-muted"

@@ -705,6 +705,7 @@ export function WorkoutTrackerApp() {
               onCompleteSet={completeSet}
               onTriggerRestTimer={triggerTimer}
               onCompleteWorkout={openWorkoutCompletionPrompt}
+              onCancelWorkout={cancelWorkout}
             />
           )}
 
