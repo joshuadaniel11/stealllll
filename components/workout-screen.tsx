@@ -48,7 +48,7 @@ function getSubstitutions(currentExerciseName: string, muscleGroup: string, libr
       !preferred.some((option) => option.id === item.id),
   );
 
-  return [...preferred, ...fallback].slice(0, 3);
+  return [...preferred, ...fallback].slice(0, 2);
 }
 
 function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {

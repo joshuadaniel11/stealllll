@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyStretchCard } from "@/components/daily-stretch-card";
@@ -23,19 +23,19 @@ const formatDate = (value: string) =>
 const workoutMotivationByProfile: Record<string, Record<string, { preview: string; full: string }>> = {
   natasha: {
     "natasha-glutes-hams": {
-      preview: "Build those round, juicy glutes and give Joshua something filthy to think about later.",
+      preview: "Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
       full: "Build those round, juicy glutes until Joshua is distracted by the thought of grabbing you closer and keeping his hands on you.",
     },
     "natasha-back-arms": {
-      preview: "Make that back look so tempting Joshua can't help staring when you walk away from him.",
+      preview: "Make that back look so tempting Joshua goes crazy watching you walk away from him.",
       full: "Carve that sexy back and arm line until Joshua is staring from behind and replaying that view in his head all day.",
     },
     "natasha-glutes-quads": {
-      preview: "Train legs that look wickedly good and curves Joshua will be dying to pull closer.",
+      preview: "Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
       full: "Shape those legs and curves until Joshua is worked up just watching the way you move around him.",
     },
     "natasha-upper-core": {
-      preview: "Tighten that waist and shape that body until Joshua is fully obsessed with the view.",
+      preview: "Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
       full: "Tighten that waist and shape that body into the kind of view that makes Joshua want you the second he sees you move.",
     },
     "natasha-core-explosive": {
@@ -45,23 +45,23 @@ const workoutMotivationByProfile: Record<string, Record<string, { preview: strin
   },
   joshua: {
       "joshua-chest-triceps": {
-        preview: "Press up that thick chest and triceps so Natasha wants to feel herself pinned close against you.",
+        preview: "Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
         full: "Build that thick chest and hard triceps until Natasha gets turned on just imagining herself pressed up against you and feeling all of it when she's close.",
       },
       "joshua-back-biceps": {
-        preview: "Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped around her.",
+        preview: "Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
         full: "Build that wide back and thick biceps until Natasha gets worked up picturing you pulling her in close and keeping those strong arms all over her.",
       },
       "joshua-legs": {
-        preview: "Build those shoulders and legs so Natasha feels that hard, athletic look the second you walk in.",
+        preview: "Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
         full: "Grow those capped shoulders and strong legs until Natasha can't stop thinking about how powerful you look and how good you'd feel all over her.",
       },
       "joshua-shoulders-arms": {
-        preview: "Hit chest and triceps again so Natasha can feel the difference every time she leans into you.",
+        preview: "Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
         full: "Train that second chest and triceps day until Natasha wants to run her hands over you and feel how much thicker and harder you've gotten.",
       },
       "joshua-upper-strength": {
-        preview: "Finish back and biceps hard so Natasha can see that wider, sexier shape all over you.",
+        preview: "Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
         full: "Finish this back and biceps session until Natasha can see that wider, thicker shape on you and gets turned on knowing exactly what all this work is building.",
       },
     },
@@ -109,34 +109,22 @@ export function HomeScreen({
     onResumeWorkout: () => void;
     onPreviewWorkout: () => void;
   onOpenExercise: (id: string | null) => void;
-}) {
+  }) {
   const [showDetails, setShowDetails] = useState(false);
-  const [showFullPrivateNote, setShowFullPrivateNote] = useState(false);
   const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
   const smallDailyMessage = dailyMotivation?.preview ?? dailyVerse.preview;
 
   return (
     <div className="space-y-4 animate-page-in">
-      <Card className="px-5 py-5">
-        <p className="text-sm text-muted">{profile.name}</p>
-        <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>
-        {dailyMotivation ? (
-          <button
-            className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-accent"
-            onClick={() => setShowFullPrivateNote((current) => !current)}
-          >
-            {showFullPrivateNote ? "Hide full note" : "Open full note"}
-            {showFullPrivateNote ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-        ) : (
-          <p className="caption-text mt-4 text-muted">Daily verse available below.</p>
-        )}
-        {showFullPrivateNote && dailyMotivation ? (
-          <div className="mt-4 rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
-            <p className="medium-label text-text">{dailyMotivation.full}</p>
-          </div>
-        ) : null}
-      </Card>
+        <Card className="px-5 py-5">
+          <p className="text-sm text-muted">{profile.name}</p>
+          <p className="medium-label mt-3 max-w-[28ch] font-medium text-text">{smallDailyMessage}</p>
+          {dailyMotivation ? (
+            <p className="caption-text mt-4 text-muted">Private note for today's session.</p>
+          ) : (
+            <p className="caption-text mt-4 text-muted">Daily verse available below.</p>
+          )}
+        </Card>
 
       <Card className="px-5 py-5">
         <p className="text-sm text-muted">Today's workout</p>

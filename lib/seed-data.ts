@@ -124,7 +124,7 @@ const natashaPlan: WorkoutPlanDay[] = [
 const joshuaPlan: WorkoutPlanDay[] = [
   {
     id: "joshua-chest-triceps",
-    name: "Chest + Triceps",
+    name: "Chest + Triceps A",
     focus: "Heavy dumbbell chest work with direct triceps volume for size and strength",
     dayLabel: "Day 1",
     durationMinutes: 60,
@@ -139,7 +139,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   },
   {
     id: "joshua-back-biceps",
-    name: "Back + Biceps",
+    name: "Back + Biceps A",
     focus: "Lat width, back thickness, and direct biceps work with simple commercial-gym staples",
     dayLabel: "Day 2",
     durationMinutes: 60,
@@ -172,7 +172,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   },
   {
     id: "joshua-shoulders-arms",
-    name: "Chest + Triceps",
+    name: "Chest + Triceps B",
     focus: "Second chest and triceps touchpoint to drive size with slightly different loading",
     dayLabel: "Day 4",
     durationMinutes: 60,
@@ -187,7 +187,7 @@ const joshuaPlan: WorkoutPlanDay[] = [
   },
   {
     id: "joshua-upper-strength",
-    name: "Back + Biceps",
+    name: "Back + Biceps B",
     focus: "A second back and biceps session to reinforce width, rows, and direct arm volume",
     dayLabel: "Day 5",
     durationMinutes: 60,

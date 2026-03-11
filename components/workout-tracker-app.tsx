@@ -362,8 +362,6 @@ export function WorkoutTrackerApp() {
         current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
     }));
     setShowWorkoutFeelingPrompt(false);
-    setCompletionMessage(`${selectedProfile.name}'s workout was cancelled.`);
-    setShowCompletionCelebration(true);
     startTransition(() => setActiveTab("home"));
   };
 
@@ -401,8 +399,6 @@ export function WorkoutTrackerApp() {
       },
     }));
     setShowWorkoutFeelingPrompt(false);
-    setCompletionMessage(`${selectedProfile.name} logged a ${feeling.toLowerCase()} session.`);
-    setShowCompletionCelebration(true);
     setSessionSummary({
       workoutName: completedSession.workoutName,
       durationMinutes,
@@ -556,8 +552,6 @@ export function WorkoutTrackerApp() {
       };
       return next;
     });
-    setCompletionMessage("Exercise swapped for a quick substitute.");
-    setShowCompletionCelebration(true);
   };
 
   const toggleStretchCompletion = () => {
