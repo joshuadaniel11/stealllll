@@ -8,19 +8,32 @@ import { Card } from "@/components/ui";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay } from "@/lib/types";
 
 const substitutionHints: Record<string, string[]> = {
-  "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
-  "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-  "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-  "Flat Dumbbell Press": ["Flat Machine Press", "Smith Machine Flat Press", "Plate-Loaded Chest Press"],
-  "Incline Dumbbell Press": ["Incline Machine Press", "Smith Incline Press", "Plate-Loaded Chest Press"],
-  "Smith Machine Squat": ["Pendulum Squat", "Goblet Squat", "Leg Press"],
-  "Hack Squat": ["Leg Press", "Pendulum Squat", "Walking Lunge"],
-  "Leg Press (Glute Bias)": ["Leg Press High Foot Placement", "Smith Machine Hip Thrust", "Walking Lunge"],
-  "Machine Shoulder Press": ["Plate-Loaded Shoulder Press", "Seated Dumbbell Shoulder Press", "Cable Lateral Raise"],
-  "Seated Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
-  "Cable Triceps Extension": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Rope Extension"],
-  "Machine Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
-};
+    "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
+    "Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
+    "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
+    "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
+    "Flat Dumbbell Press": ["Flat Machine Press", "Smith Machine Flat Press", "Plate-Loaded Chest Press"],
+    "Incline Dumbbell Press": ["Incline Machine Press", "Smith Incline Press", "Plate-Loaded Chest Press"],
+    "Machine Chest Fly": ["Flat Machine Press", "Incline Machine Press", "Plate-Loaded Chest Press"],
+    "Chest-Supported Dumbbell Row": ["Seated Cable Row", "Machine Row", "Single-Arm Lat Pulldown"],
+    "Single-Arm Dumbbell Row": ["Seated Cable Row", "Machine Row", "Chest-Supported Dumbbell Row"],
+    "Seated Cable Row": ["Machine Row", "Single-Arm Dumbbell Row", "Chest-Supported Dumbbell Row"],
+    "Close-Grip Seated Cable Row": ["Machine Row", "Seated Cable Row", "Single-Arm Dumbbell Row"],
+    "Smith Machine Squat": ["Pendulum Squat", "Goblet Squat", "Leg Press"],
+    "Hack Squat": ["Leg Press", "Pendulum Squat", "Walking Lunge"],
+    Squat: ["Pendulum Squat", "Goblet Squat", "Leg Press"],
+    "Leg Press (Glute Bias)": ["Leg Press High Foot Placement", "Smith Machine Hip Thrust", "Walking Lunge"],
+    "Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
+    "Machine Shoulder Press": ["Plate-Loaded Shoulder Press", "Seated Dumbbell Shoulder Press", "Cable Lateral Raise"],
+    "Seated Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
+    "Cable Tricep Pushdown": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Cable Tricep Extension"],
+    "Overhead Cable Tricep Extension": ["Single-Arm Cable Extension", "Rope Pushdown", "Cable Skull Crusher"],
+    "Cable Triceps Extension": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Rope Extension"],
+    "Cable Skull Crusher": ["Overhead Cable Tricep Extension", "Rope Pushdown", "Single-Arm Cable Extension"],
+    "Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
+    "Cable Bicep Curl": ["Cable Curl", "EZ-Bar Curl", "Preacher Curl"],
+    "Machine Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
+  };
 
 function getSubstitutions(currentExerciseName: string, muscleGroup: string, library: ExerciseLibraryItem[]) {
   const preferredNames = substitutionHints[currentExerciseName] ?? [];
