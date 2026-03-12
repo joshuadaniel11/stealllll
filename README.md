@@ -4,16 +4,14 @@ A mobile-first couple workout tracker for Joshua and Natasha, built with Next.js
 
 ## Features
 
-- Apple-inspired calm UI with light and dark styling
-- Built-in profile switching for Joshua and Natasha
-- Preset weekly workout plans already loaded
-- Start-today workflow with prefilled workout days
-- Active workout logging with quick weight and rep entry
-- Duplicate last set and integrated rest timer presets
-- Exercise detail modal with history and progression suggestions
-- Progress and weekly summary views
-- Shared couple dashboard and milestone messaging
-- Local storage persistence so the app feels alive immediately
+- Dedicated profile entry flow for Joshua and Natasha
+- Preset workout plans with progress tracking, auto-filled weights, and quick swaps
+- Focused Workout Mode with picker-first exercise flow
+- Strength predictions, progress insights, and measurement tracking
+- Daily Bend stretch prompts and shared wedding countdown
+- Local storage persistence per phone/browser
+- Install polish for iPhone home screen with manifest, icon, and Apple web app metadata
+- Playwright smoke test harness for real browser tap-through checks
 
 ## Getting Started
 
@@ -24,6 +22,13 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+## Helpful Commands
+
+```bash
+npm run build
+npm run test:e2e
+```
+
 ## Stack
 
 - Next.js App Router
@@ -31,4 +36,4 @@ Then open `http://localhost:3000`.
 - TypeScript
 - Tailwind CSS
 - Recharts
-- Local storage persistence
+- Playwright
