@@ -9,6 +9,7 @@ import { CompletionCelebration } from "@/components/completion-celebration";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
 import { HomeScreen } from "@/components/home-screen";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { ProfileEntryScreen } from "@/components/profile-entry-screen";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionSummaryModal, type SessionSummary } from "@/components/session-summary-modal";
 import { SettingsModal } from "@/components/settings-modal";
@@ -356,6 +357,7 @@ export function WorkoutTrackerApp() {
     userId: UserId;
     previousNextWorkoutId: string | null;
   } | null>(null);
+  const [hasEnteredProfile, setHasEnteredProfile] = useState(false);
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
 
@@ -906,6 +908,28 @@ export function WorkoutTrackerApp() {
     showToast("Workout order change undone.");
   };
 
+  const enterProfile = (profileId: UserId) => {
+    setSelectedExerciseId(null);
+    setWorkoutPreviewId(null);
+    setShowSettings(false);
+    setState((current) => ({ ...current, selectedUserId: profileId }));
+    setHasEnteredProfile(true);
+    softHaptic(8);
+    startTransition(() => setActiveTab("home"));
+  };
+
+  const returnToProfileEntry = () => {
+    setSelectedExerciseId(null);
+    setWorkoutPreviewId(null);
+    setShowSettings(false);
+    setHasEnteredProfile(false);
+    softHaptic(6);
+  };
+
+  if (!hasEnteredProfile) {
+    return <ProfileEntryScreen profiles={state.profiles} onSelect={enterProfile} />;
+  }
+
   return (
     <main
       style={{ "--parallax-shift": `${Math.min(scrollY * 0.08, 18)}px` } as CSSProperties}
@@ -939,25 +963,6 @@ export function WorkoutTrackerApp() {
               >
                 <Settings className="h-5 w-5" />
               </button>
-            </div>
-            <div className="ios-segmented mt-5 grid grid-cols-2">
-              {state.profiles.map((profile) => (
-                <button
-                  key={profile.id}
-                  className={clsx(
-                    "ios-segment text-sm font-medium",
-                    profile.id === selectedProfile.id ? "ios-segment-active" : "",
-                  )}
-                  onClick={() => {
-                    setSelectedExerciseId(null);
-                    setState((current) => ({ ...current, selectedUserId: profile.id }));
-                    softHaptic(6);
-                    startTransition(() => setActiveTab("home"));
-                  }}
-                >
-                  {profile.name}
-                </button>
-              ))}
             </div>
           </Card>
         ) : null}
@@ -1047,6 +1052,7 @@ export function WorkoutTrackerApp() {
           onImport={importData}
           onResetProfile={resetProfileData}
           onResetAll={resetAllData}
+          onChooseProfile={returnToProfileEntry}
         />
       )}
       {showWorkoutFeelingPrompt && (

@@ -402,6 +402,68 @@ h3 {
     transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.entry-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(10, 12, 16, 0.72);
+  backdrop-filter: blur(30px) saturate(130%);
+}
+
+.entry-heart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.4rem;
+  width: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.entry-choice {
+  display: flex;
+  min-height: 9rem;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.25rem;
+  text-align: left;
+  backdrop-filter: blur(18px);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 260ms ease,
+    border-color 260ms ease,
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.entry-choice-joshua {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 30%),
+    rgba(7, 8, 11, 0.82);
+}
+
+.entry-choice-natasha {
+  background:
+    linear-gradient(180deg, rgba(236, 159, 186, 0.065), transparent 30%),
+    rgba(11, 9, 12, 0.82);
+}
+
+.entry-choice-label {
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.06em;
+  color: var(--text);
+}
+
+.entry-choice-subtle {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.54);
+}
+
 .hero-title {
   transition:
     font-size 360ms cubic-bezier(0.16, 1, 0.3, 1),

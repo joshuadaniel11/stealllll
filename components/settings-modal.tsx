@@ -1,4 +1,4 @@
-import { ChevronRight, Download, RefreshCcw, Shield, Trash2, Upload } from "lucide-react";
+import { ChevronRight, Download, RefreshCcw, Shield, Trash2, Upload, UserRound } from "lucide-react";
 
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
@@ -11,6 +11,7 @@ export function SettingsModal({
   onImport,
   onResetProfile,
   onResetAll,
+  onChooseProfile,
 }: {
   profile: Profile;
   onClose: () => void;
@@ -18,6 +19,7 @@ export function SettingsModal({
   onImport: (file: File | null) => void;
   onResetProfile: () => void;
   onResetAll: () => void;
+  onChooseProfile: () => void;
 }) {
   return (
     <div className="sheet-backdrop">
@@ -57,6 +59,18 @@ export function SettingsModal({
                       </p>
                     </div>
                   </div>
+                  <button className="grouped-row" onClick={onChooseProfile}>
+                    <span className="row-icon">
+                      <UserRound className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text">Choose profile</p>
+                      <p className="caption-text mt-1 text-muted">
+                        Go back to the opening screen and enter through Joshua or Natasha.
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted" />
+                  </button>
                 </div>
               </div>
             </ScrollReveal>
