@@ -28,27 +28,27 @@ function formatDate(value: string) {
 const workoutMotivationByProfile: Record<string, Record<string, string>> = {
   natasha: {
     "natasha-glutes-hams":
-      "🍑🔥 Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
+      "\u{1F351}\u{1F525} Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
     "natasha-back-arms":
-      "😈🖤 Make that back look so tempting Joshua goes crazy watching you walk away from him.",
+      "\u{1F608}\u{1F5A4} Make that back look so tempting Joshua goes crazy watching you walk away from him.",
     "natasha-glutes-quads":
-      "🍑💋 Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
+      "\u{1F351}\u{1F48B} Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
     "natasha-upper-core":
-      "✨🫦 Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
+      "\u2728\u{1FAE6} Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
     "natasha-core-explosive":
-      "⚡😏 Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
+      "\u26A1\u{1F60F} Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
   },
   joshua: {
     "joshua-chest-triceps":
-      "😈💪 Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
+      "\u{1F608}\u{1F4AA} Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
     "joshua-back-biceps":
-      "🖤💪 Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
+      "\u{1F5A4}\u{1F4AA} Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
     "joshua-legs":
-      "🔥🦵 Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
+      "\u{1F525}\u{1F9B5} Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
     "joshua-shoulders-arms":
-      "💪😏 Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
+      "\u{1F4AA}\u{1F60F} Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
     "joshua-upper-strength":
-      "🖤🔥 Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
+      "\u{1F5A4}\u{1F525} Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
   },
 };
 
@@ -116,10 +116,6 @@ export function HomeScreen({
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
   const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
-  const smallDailyMessage =
-    dailyMotivation.length > 108
-      ? `${dailyMotivation.slice(0, 105).trimEnd()}...`
-      : dailyMotivation;
 
   return (
     <div className="space-y-5 pb-28">
@@ -129,7 +125,7 @@ export function HomeScreen({
             Until November 2, 2026
           </p>
           <h2 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white">
-            {weddingCountdown.months} months • {weddingCountdown.days} days
+            {weddingCountdown.months} months {"\u2022"} {weddingCountdown.days} days
           </h2>
           <p className="mt-2 text-sm leading-6 text-white/58">
             {weddingCountdown.label}
@@ -146,7 +142,7 @@ export function HomeScreen({
             <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white">
               {profile.name}
             </h1>
-            <p className="text-sm leading-6 text-white/70">{smallDailyMessage}</p>
+            <p className="text-sm leading-7 text-white/70">{dailyMotivation}</p>
           </div>
         </Card>
       </ScrollReveal>
@@ -162,7 +158,7 @@ export function HomeScreen({
                 {todaysWorkout.name}
               </h2>
               <p className="text-sm leading-6 text-white/62">
-                {todaysWorkout.focus} • {todaysWorkout.exercises.length} exercises •{" "}
+                {todaysWorkout.focus} {"\u2022"} {todaysWorkout.exercises.length} exercises {"\u2022"}{" "}
                 {todaysWorkout.durationMinutes} min
               </p>
             </div>
@@ -212,7 +208,7 @@ export function HomeScreen({
                   className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
                 >
                   <span className="text-sm font-medium text-white/86">
-                    {workout.dayLabel} • {workout.name}
+                    {workout.dayLabel} {"\u2022"} {workout.name}
                   </span>
                   <span className="text-xs text-white/45">Move here</span>
                 </button>
@@ -316,7 +312,9 @@ export function HomeScreen({
                       <button
                         key={workout.id}
                         type="button"
-                        onClick={() => onOpenExercise(workout.exercises[0]?.exerciseName ?? "")}
+                        onClick={() =>
+                          onOpenExercise(workout.exercises[0]?.exerciseName ?? "")
+                        }
                         className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
                       >
                         <div className="space-y-1">
@@ -324,9 +322,11 @@ export function HomeScreen({
                             {workout.workoutName}
                           </p>
                           <p className="text-xs leading-5 text-white/48">
-                            {formatDate(workout.performedAt)} •{" "}
+                            {formatDate(workout.performedAt)} {"\u2022"}{" "}
                             {workout.exercises.reduce(
-                              (total, exercise) => total + exercise.sets.filter((set) => set.completed).length,
+                              (total, exercise) =>
+                                total +
+                                exercise.sets.filter((set) => set.completed).length,
                               0,
                             )}{" "}
                             sets
