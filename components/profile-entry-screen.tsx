@@ -50,9 +50,6 @@ export function ProfileEntryScreen({
                   className={`entry-choice ${profile.id === "natasha" ? "entry-choice-natasha" : "entry-choice-joshua"}`}
                 >
                   <span className="entry-choice-label">{profile.name}</span>
-                  <span className="entry-choice-subtle">
-                    {profile.id === "natasha" ? "For Natasha by Joshua" : "Built for Natasha"}
-                  </span>
                 </button>
               ))}
             </div>
