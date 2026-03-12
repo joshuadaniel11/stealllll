@@ -135,7 +135,7 @@ export function ProgressScreen({
             ? {
                 title: "Naughty reward",
                 status: "Unlocked",
-                note: "Three straight days in and the payoff is already obvious. Joshua is getting a version of you that looks a little more shameless every time.",
+                note: "Three straight days in and the payoff is already obvious. Joshua is getting a version of you that looks a little more irresistible every time.",
               }
             : {
                 title: "Next unlock",
