@@ -2,11 +2,40 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 
 export type SessionSummary = {
+  userId: "joshua" | "natasha";
   workoutName: string;
   durationMinutes: number;
   completedSets: number;
   feeling: "Strong" | "Solid" | "Tough";
 };
+
+function getAfterWorkoutTease(summary: SessionSummary) {
+  const lowerName = summary.workoutName.toLowerCase();
+
+  if (summary.userId === "natasha") {
+    if (lowerName.includes("glute")) {
+      return "Glute work landed. That softer, rounder shape is getting harder for Joshua to ignore.";
+    }
+    if (lowerName.includes("back")) {
+      return "Back day done. Joshua is going to notice that tempting line through your shoulders and waist.";
+    }
+    if (lowerName.includes("upper")) {
+      return "Upper-body shape work keeps that feminine, dangerous silhouette looking even better.";
+    }
+    return "You showed up, moved well, and kept building the kind of shape Joshua keeps thinking about.";
+  }
+
+  if (lowerName.includes("chest")) {
+    return "Chest work is stacking up. Natasha is going to feel that thicker upper body when she gets close.";
+  }
+  if (lowerName.includes("back")) {
+    return "Back and biceps are building that wider, wrapped-around-her look Natasha loves.";
+  }
+  if (lowerName.includes("shoulder") || lowerName.includes("leg")) {
+    return "Shoulders and legs keep that athletic, hard-to-ignore look getting stronger every week.";
+  }
+  return "Another strong session in. Natasha is going to notice how much more solid and tempting you feel.";
+}
 
 export function SessionSummaryModal({
   summary,
@@ -45,6 +74,9 @@ export function SessionSummaryModal({
                 <p className="mt-2 text-lg font-semibold text-text">{summary.feeling}</p>
               </div>
             </div>
+          </ScrollReveal>
+          <ScrollReveal delay={95} y={14} scale={0.996}>
+            <p className="mt-5 text-sm leading-6 text-muted">{getAfterWorkoutTease(summary)}</p>
           </ScrollReveal>
           <ScrollReveal delay={120} y={14} scale={0.996}>
             <button

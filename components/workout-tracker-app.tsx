@@ -623,6 +623,7 @@ export function WorkoutTrackerApp() {
     }));
     setShowWorkoutFeelingPrompt(false);
     setSessionSummary({
+      userId: completedSession.userId,
       workoutName: completedSession.workoutName,
       durationMinutes,
       completedSets,
@@ -1014,6 +1015,7 @@ export function WorkoutTrackerApp() {
             <ProgressScreen
               profile={selectedProfile}
               totalWorkouts={userSessions.length}
+              streak={streak}
               weeklySummary={dynamicWeeklySummary}
               trendData={trendData}
               measurements={state.measurements[selectedProfile.id]}

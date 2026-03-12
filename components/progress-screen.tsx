@@ -19,6 +19,7 @@ import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, Worko
 export function ProgressScreen({
   profile,
   totalWorkouts,
+  streak,
   weeklySummary,
   trendData,
   measurements,
@@ -30,6 +31,7 @@ export function ProgressScreen({
 }: {
   profile: Profile;
   totalWorkouts: number;
+  streak: number;
   weeklySummary: WeeklySummary;
   trendData: Array<{ date: string; volume: number }>;
   measurements: MeasurementEntry[];
@@ -80,12 +82,12 @@ export function ProgressScreen({
       ? {
           title: "Glute growth",
           value: `${gluteSessions} sessions`,
-          detail: `Lower-body emphasis is landing cleanly, with ${weeklySummary.totalSets} total sets supporting shape and fullness.`,
+          detail: `Lower-body emphasis is landing well, with ${weeklySummary.totalSets} total sets helping everything look rounder, softer, and far more tempting.`,
         }
       : {
           title: "Chest growth",
           value: `${chestSessions} sessions`,
-          detail: `Pressing frequency and upper-body volume are lining up well for chest size and thickness.`,
+          detail: `Pressing frequency and upper-body volume are stacking up for a thicker chest and a look Natasha is going to feel the second she is close.`,
         };
 
   const smartCards =
@@ -94,26 +96,75 @@ export function ProgressScreen({
           {
             title: "Current focus",
             value: "Back definition",
-            detail: `${backSessions} back sessions logged. Width and upper-back detail work are staying consistent enough to sharpen shape.`,
+            detail: `${backSessions} back sessions logged. Width and upper-back detail are carving in nicely and making that waist-to-shoulder line look even dirtier.`,
           },
           {
             title: "Support signal",
             value: "Hourglass shape",
-            detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing the shoulder-to-waist-to-glute contrast.`,
+            detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing that shoulder-to-waist-to-glute contrast and making your shape harder to forget.`,
           },
         ]
       : [
           {
             title: "Current focus",
             value: "Strength momentum",
-            detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions informing the recent load trend.`,
+            detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions feeding a load trend that keeps you looking stronger, fuller, and more dangerous.`,
           },
           {
             title: "Support signal",
             value: "Abs visibility",
-            detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
+            detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions so the waistline keeps tightening up.`,
           },
         ];
+
+  const streakReward =
+    profile.id === "natasha"
+      ? streak >= 14
+        ? {
+            title: "Naughty reward",
+            status: "Unlocked",
+            note: "Two weeks of consistency is giving you that polished, dangerous look Joshua is going to have a very hard time behaving around.",
+          }
+        : streak >= 7
+          ? {
+              title: "Naughty reward",
+              status: "Unlocked",
+              note: "A full week of showing up earns you a private payoff: that softer waist-and-glute combo is getting downright distracting.",
+            }
+          : streak >= 3
+            ? {
+                title: "Naughty reward",
+                status: "Unlocked",
+                note: "Three straight days in and the payoff is already obvious. Joshua is getting a version of you that looks a little more shameless every time.",
+              }
+            : {
+                title: "Next unlock",
+                status: "3-day streak",
+                note: "Stack a few more clean days and unlock the first private reward note.",
+              }
+      : streak >= 14
+        ? {
+            title: "Naughty reward",
+            status: "Unlocked",
+            note: "Two strong weeks in and the payoff is clear: thicker up top, more solid through the frame, and much harder for Natasha to keep her hands off you.",
+          }
+        : streak >= 7
+          ? {
+              title: "Naughty reward",
+              status: "Unlocked",
+              note: "A full week of discipline earns a private reward note: broad, solid, and built in exactly the way Natasha keeps wanting more of.",
+            }
+          : streak >= 3
+            ? {
+                title: "Naughty reward",
+                status: "Unlocked",
+                note: "Three straight days done. Your body is already starting to look like the kind Natasha wants pressed close.",
+              }
+            : {
+                title: "Next unlock",
+                status: "3-day streak",
+                note: "Keep the streak alive and the first private reward note unlocks automatically.",
+              };
 
   const showingBodyMetrics = bodyweightTrend.length > 0;
 
@@ -224,11 +275,26 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={170}>
+      <ScrollReveal delay={150}>
+        <Card>
+          <p className="text-sm text-muted">{streakReward.title}</p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold tracking-[-0.03em] text-text">
+              {streakReward.status}
+            </h3>
+            <span className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {streak} day streak
+            </span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted">{streakReward.note}</p>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={190}>
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={220}>
+      <ScrollReveal delay={240}>
         <Card>
           <p className="text-sm text-muted">At a glance</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -243,7 +309,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={270}>
+      <ScrollReveal delay={290}>
         <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
       </ScrollReveal>
     </>

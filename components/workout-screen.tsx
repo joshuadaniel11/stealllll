@@ -71,6 +71,40 @@ function getFirstPendingExerciseIndex(exercises: ActiveWorkout["exercises"]) {
   return index === -1 ? 0 : index;
 }
 
+function getPreviewTease(profileId: string, workoutId: string) {
+  const previewTeases: Record<string, Record<string, string>> = {
+    natasha: {
+      "natasha-glutes-hams":
+        "A slower, dirtier glute day that leaves Joshua thinking about your shape long after the gym.",
+      "natasha-back-arms":
+        "Back detail, arm tone, and that tempting line through your waist and shoulders.",
+      "natasha-glutes-quads":
+        "Legs and curves with the exact kind of fullness that keeps Joshua staring.",
+      "natasha-upper-core":
+        "Upper-body shape work for that feminine, dangerous little silhouette.",
+      "natasha-core-explosive":
+        "Sharp movement, hot energy, and a body that looks even better when it moves well.",
+    },
+    joshua: {
+      "joshua-chest-triceps":
+        "A pressing day built to make your upper body look thicker, broader, and harder to ignore.",
+      "joshua-back-biceps":
+        "Width, arm detail, and the kind of back Natasha wants wrapped around her.",
+      "joshua-legs":
+        "Broad shoulders, strong legs, and that solid athletic look landing all at once.",
+      "joshua-shoulders-arms":
+        "Another chest and triceps hit to keep you looking fuller, firmer, and more tempting.",
+      "joshua-upper-strength":
+        "Back and biceps again, because that wider, sexier frame is worth repeating.",
+    },
+  };
+
+  return (
+    previewTeases[profileId]?.[workoutId] ??
+    "A clean session that keeps your body moving in the exact direction you want."
+  );
+}
+
 export function WorkoutScreen({
   profile,
   todaysWorkoutId,
@@ -179,6 +213,9 @@ export function WorkoutScreen({
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
                   {previewWorkout.focus} | {previewWorkout.durationMinutes} min
+                </p>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  {getPreviewTease(profile.id, previewWorkout.id)}
                 </p>
 
                 <div className="mt-5 space-y-3">
