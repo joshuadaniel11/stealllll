@@ -342,6 +342,8 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
 export function WorkoutTrackerApp() {
   const [state, setState] = useState<AppState>(createSeedState);
   const [hydrated, setHydrated] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallLaunch, setShowInstallLaunch] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [showDailyVerse, setShowDailyVerse] = useState(false);
@@ -393,6 +395,33 @@ export function WorkoutTrackerApp() {
       setShowOnboarding(true);
     }
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+
+    setIsStandalone(standalone);
+    document.body.classList.toggle("app-standalone", standalone);
+
+    if (!standalone) {
+      return;
+    }
+
+    setShowInstallLaunch(true);
+    const timeout = window.setTimeout(() => {
+      setShowInstallLaunch(false);
+    }, 1200);
+
+    return () => {
+      document.body.classList.remove("app-standalone");
+      window.clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -922,6 +951,21 @@ export function WorkoutTrackerApp() {
       startTransition(() => setActiveTab("home"));
     }, 850);
   };
+
+  if (showInstallLaunch) {
+    return (
+      <main className="theme-shell install-launch-shell flex min-h-screen items-center justify-center px-6 text-text">
+        <div className="install-launch-card animate-soft-in text-center">
+          <div className="install-launch-orb" />
+          <p className="install-launch-mark">STEAL</p>
+          <h1 className="install-launch-title">Joshua and Natasha</h1>
+          <p className="install-launch-subtitle">
+            {isStandalone ? "Ready when you are." : "Open and train beautifully."}
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   const returnToProfileEntry = () => {
     setSelectedExerciseId(null);

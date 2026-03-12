@@ -10,7 +10,7 @@ const onboardingSteps = [
     eyebrow: "Welcome",
     title: "A calmer way to train together.",
     body:
-      "STEALLLLL keeps Joshua and Natasha focused on the next workout, with a cleaner flow that feels fast and intimate instead of cluttered.",
+      "STEAL keeps Joshua and Natasha focused on the next workout, with a cleaner flow that feels fast and intimate instead of cluttered.",
   },
   {
     eyebrow: "Private by design",
