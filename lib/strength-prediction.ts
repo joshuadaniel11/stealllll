@@ -23,7 +23,7 @@ const trackedLiftsByUser: Record<UserId, LiftConfig[]> = {
     { label: "Machine Shoulder Press", aliases: ["Machine Shoulder Press", "Shoulder Press", "Dumbbell Shoulder Press"], maxWeeklyIncreaseKg: 1.5, projectedRepTarget: 8 },
   ],
   natasha: [
-    { label: "Barbell Hip Thrust", aliases: ["Barbell Hip Thrust", "Hip Thrust"], maxWeeklyIncreaseKg: 5, projectedRepTarget: 8 },
+    { label: "Machine Hip Thrust", aliases: ["Machine Hip Thrust", "Barbell Hip Thrust", "Hip Thrust"], maxWeeklyIncreaseKg: 5, projectedRepTarget: 8 },
     { label: "Leg Press (Glute Bias)", aliases: ["Leg Press (Glute Bias)", "Leg Press"], maxWeeklyIncreaseKg: 7.5, projectedRepTarget: 10 },
     { label: "Wide-Grip Lat Pulldown", aliases: ["Wide-Grip Lat Pulldown", "Lat Pulldown"], maxWeeklyIncreaseKg: 2.5, projectedRepTarget: 10 },
     { label: "Seated Dumbbell Shoulder Press", aliases: ["Seated Dumbbell Shoulder Press", "Shoulder Press"], maxWeeklyIncreaseKg: 1.25, projectedRepTarget: 10 },

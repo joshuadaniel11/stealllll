@@ -10,6 +10,7 @@ import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay } from
 
 const substitutionHints: Record<string, string[]> = {
     "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
+    "Machine Hip Thrust": ["Smith Machine Hip Thrust", "Glute Bridge Machine", "Leg Press High Foot Placement"],
     "Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
     "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
     "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],

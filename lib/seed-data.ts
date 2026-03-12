@@ -45,10 +45,10 @@ const natashaPlan: WorkoutPlanDay[] = [
     dayLabel: "Day 1",
     durationMinutes: 60,
     exercises: [
-      { id: "barbell-hip-thrust", name: "Barbell Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8-10", restSeconds: 120, note: "Pause at the top for a full second.", progressionNote: "Add weight when all four sets reach 10 strong reps.", favorite: true },
+      { id: "machine-hip-thrust-day1", name: "Machine Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8-10", restSeconds: 120, note: "Pause at the top for a full second.", progressionNote: "Add weight when all four sets reach 10 strong reps.", favorite: true },
       { id: "romanian-dumbbell-deadlift", name: "Dumbbell Romanian Deadlift", muscleGroup: "Hamstrings", sets: 3, repRange: "10-12", restSeconds: 90, note: "Soft knees, long hamstring stretch." },
       { id: "seated-leg-curl", name: "Seated Leg Curl", muscleGroup: "Hamstrings", sets: 3, repRange: "10-12", restSeconds: 90 },
-      { id: "smith-bulgarian-split-squat", name: "Smith Bulgarian Split Squat", muscleGroup: "Glutes", sets: 3, repRange: "8-10", restSeconds: 90, note: "Slight forward lean to bias glutes." },
+      { id: "glute-bridge-machine-day1", name: "Glute Bridge Machine", muscleGroup: "Glutes", sets: 3, repRange: "10-12", restSeconds: 90, note: "Stay tucked and squeeze hard at the top." },
       { id: "cable-glute-kickback", name: "Cable Glute Kickback", muscleGroup: "Glutes", sets: 3, repRange: "12-15", restSeconds: 60 },
       { id: "weighted-plank", name: "Weighted Plank", muscleGroup: "Core", sets: 3, repRange: "30-45", restSeconds: 60, note: "Seconds per set. Keep ribs tucked." },
     ],
@@ -77,7 +77,7 @@ const natashaPlan: WorkoutPlanDay[] = [
     dayLabel: "Day 3",
     durationMinutes: 60,
     exercises: [
-      { id: "smith-squat", name: "Smith Machine Squat", muscleGroup: "Quads", sets: 4, repRange: "8-10", restSeconds: 120 },
+      { id: "pendulum-squat-day3", name: "Pendulum Squat", muscleGroup: "Quads", sets: 4, repRange: "8-10", restSeconds: 120, note: "Let the machine guide the path and stay deep." },
       { id: "leg-press-glute-bias", name: "Leg Press (Glute Bias)", muscleGroup: "Glutes", sets: 3, repRange: "10-12", restSeconds: 90 },
       { id: "walking-lunge", name: "Walking Dumbbell Lunge", muscleGroup: "Glutes", sets: 3, repRange: "10-12", restSeconds: 90 },
       { id: "leg-extension", name: "Leg Extension", muscleGroup: "Quads", sets: 3, repRange: "12-15", restSeconds: 60 },
@@ -227,7 +227,7 @@ const profiles: Profile[] = [
       { dayLabel: "Friday", title: "Shoulder Ease", focus: "Chest and shoulders", durationMinutes: 8, bendSearch: "chest shoulders", note: "✨😏 Open the chest and shoulders until everything feels elegant and easy. Stay loose through the upper body and give Joshua that irresistible soft-but-dangerous look." },
       { dayLabel: "Saturday", title: "Full Body Unwind", focus: "Whole body", durationMinutes: 12, bendSearch: "full body recovery", note: "🔥✨ Finish the week with a full-body Bend flow and let every part of you loosen up. Relax into it, move slow, and keep Joshua craving the way your body looks and feels." },
     ],
-    favoriteExerciseIds: ["barbell-hip-thrust", "lat-pulldown", "abductor-machine"],
+    favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown", "abductor-machine"],
   },
   {
     id: "joshua",
