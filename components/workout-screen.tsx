@@ -105,6 +105,33 @@ function getPreviewTease(profileId: string, workoutId: string) {
   );
 }
 
+function getLoadCue(repRange?: string) {
+  if (!repRange) {
+    return "Moderate load";
+  }
+
+  const lowerRange = repRange.toLowerCase();
+  const firstNumber = Number.parseInt(lowerRange, 10);
+
+  if (Number.isNaN(firstNumber)) {
+    return "Moderate load";
+  }
+
+  if (lowerRange.includes("30-45")) {
+    return "Light load";
+  }
+
+  if (firstNumber <= 8) {
+    return "Heavy load";
+  }
+
+  if (firstNumber <= 12) {
+    return "Moderate load";
+  }
+
+  return "Light load";
+}
+
 export function WorkoutScreen({
   profile,
   todaysWorkoutId,
@@ -230,7 +257,7 @@ export function WorkoutScreen({
                           {exercise.sets} x {exercise.repRange}
                         </p>
                       </div>
-                      {exercise.note ? <p className="medium-label mt-2 text-muted">{exercise.note}</p> : null}
+                      <p className="medium-label mt-2 text-muted">Targets: {exercise.muscleGroup}</p>
                     </div>
                     </ScrollReveal>
                   ))}
@@ -272,6 +299,7 @@ export function WorkoutScreen({
       (previousSet.weight > 0 || previousSet.reps > 0),
   );
   const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
+  const loadCue = getLoadCue(currentTemplate?.repRange);
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -312,6 +340,7 @@ export function WorkoutScreen({
           <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
             <p className="text-sm text-muted">Target</p>
             <p className="mt-2 text-2xl font-semibold text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
+            <p className="mt-1 text-sm text-muted">{loadCue}</p>
           </div>
         </div>
 
