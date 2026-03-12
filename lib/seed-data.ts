@@ -23,12 +23,43 @@ const targetLabels: Record<string, string> = {
   "Full Body": "Targets full-body power and coordination.",
 };
 
+function getLoadGuidance(exercise: ExerciseTemplate) {
+  const lowerRange = exercise.repRange.toLowerCase();
+  const firstNumber = Number.parseInt(lowerRange, 10);
+
+  if (Number.isNaN(firstNumber)) {
+    return "Use a load you can control cleanly and keep it steady across straight sets. Increase next session only after the full target is reached with solid form.";
+  }
+
+  if (lowerRange.includes("30-45")) {
+    return "Use a challenging but controlled load that lets you stay braced for the full timed set. Keep the load steady across sets and only increase next session after every set is completed cleanly.";
+  }
+
+  if (firstNumber <= 8) {
+    return "Use a heavy working weight. The first set should feel like you have about 1 to 3 reps left in reserve. Keep the same load across straight sets; only reduce slightly if reps or form fall off hard. Increase next session after you hit the top of the range on every set with clean form.";
+  }
+
+  if (firstNumber <= 10) {
+    return "Use a moderately heavy working weight. The first set should feel challenging but controlled, with about 1 to 3 reps left in reserve. Keep the load steady across straight sets and increase next session after all sets reach the top of the range cleanly.";
+  }
+
+  if (firstNumber <= 15) {
+    return "Use a moderate to lighter load that still makes the last few reps work. Keep the same load across straight sets; this is usually not something to increase set-to-set. Increase next session once all sets reach the top of the range with good control.";
+  }
+
+  return "Use a lighter, controlled load or effort that keeps movement crisp while the set still feels hard by the end. Keep the load steady across straight sets and only progress next session after every set is completed strongly.";
+}
+
 function withTargetNotes(exercises: ExerciseTemplate[]) {
   return exercises.map((exercise) => ({
     ...exercise,
-    note: exercise.note
-      ? `${targetLabels[exercise.muscleGroup]} ${exercise.note}`
-      : targetLabels[exercise.muscleGroup],
+    note: [
+      targetLabels[exercise.muscleGroup],
+      getLoadGuidance(exercise),
+      exercise.note,
+    ]
+      .filter(Boolean)
+      .join(" "),
   }));
 }
 
