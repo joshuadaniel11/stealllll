@@ -358,6 +358,7 @@ export function WorkoutTrackerApp() {
     previousNextWorkoutId: string | null;
   } | null>(null);
   const [hasEnteredProfile, setHasEnteredProfile] = useState(false);
+  const [profileEntryTransition, setProfileEntryTransition] = useState<UserId | null>(null);
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
 
@@ -909,13 +910,17 @@ export function WorkoutTrackerApp() {
   };
 
   const enterProfile = (profileId: UserId) => {
-    setSelectedExerciseId(null);
-    setWorkoutPreviewId(null);
-    setShowSettings(false);
-    setState((current) => ({ ...current, selectedUserId: profileId }));
-    setHasEnteredProfile(true);
+    setProfileEntryTransition(profileId);
     softHaptic(8);
-    startTransition(() => setActiveTab("home"));
+    window.setTimeout(() => {
+      setSelectedExerciseId(null);
+      setWorkoutPreviewId(null);
+      setShowSettings(false);
+      setState((current) => ({ ...current, selectedUserId: profileId }));
+      setHasEnteredProfile(true);
+      setProfileEntryTransition(null);
+      startTransition(() => setActiveTab("home"));
+    }, 850);
   };
 
   const returnToProfileEntry = () => {
@@ -927,7 +932,20 @@ export function WorkoutTrackerApp() {
   };
 
   if (!hasEnteredProfile) {
-    return <ProfileEntryScreen profiles={state.profiles} onSelect={enterProfile} />;
+    return profileEntryTransition ? (
+      <main className="theme-shell flex min-h-screen items-center justify-center px-6 text-text">
+        <div className="profile-entry-transition animate-soft-in text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/46">
+            STEAL
+          </p>
+          <h1 className="mt-5 text-5xl font-semibold tracking-[-0.08em] text-white">
+            let&apos;s get hot
+          </h1>
+        </div>
+      </main>
+    ) : (
+      <ProfileEntryScreen profiles={state.profiles} onSelect={enterProfile} />
+    );
   }
 
   return (
@@ -944,7 +962,7 @@ export function WorkoutTrackerApp() {
           <Card className={clsx("hero-shell animate-fade-up px-5 py-5", compactHeader ? "py-4" : "py-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className={clsx("hero-subtle text-sm text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEALLLLL</p>
+                <p className={clsx("hero-subtle text-sm font-semibold text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEAL</p>
                 <h1
                   className={clsx(
                     "hero-title mt-2 text-[32px] font-semibold tracking-[-0.06em] text-text",

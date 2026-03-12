@@ -18,8 +18,8 @@ export function ProfileEntryScreen({
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-md flex-col justify-between">
         <div className="pt-8 text-center">
           <ScrollReveal delay={0} y={16} scale={0.996}>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-white/46">
-              STEALLLLL
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/46">
+              STEAL
             </p>
           </ScrollReveal>
           <ScrollReveal delay={50} y={18} scale={0.994}>

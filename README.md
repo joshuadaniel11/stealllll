@@ -1,4 +1,4 @@
-# STEALLLLL
+# STEAL
 
 A mobile-first couple workout tracker for Joshua and Natasha, built with Next.js, TypeScript, Tailwind CSS, and Recharts.
 
