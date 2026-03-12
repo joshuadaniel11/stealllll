@@ -90,6 +90,37 @@ function getDaysSinceLastWorkout(sessions: WorkoutSession[]) {
   return Math.floor((today.getTime() - lastSessionDate.getTime()) / 86400000);
 }
 
+function getWeddingCountdown() {
+  const today = new Date();
+  const weddingDate = new Date("2026-11-02T00:00:00");
+
+  if (today >= weddingDate) {
+    return { months: 0, days: 0, label: "The day is here." };
+  }
+
+  const cursor = new Date(today);
+  let months = 0;
+
+  while (true) {
+    const next = new Date(cursor);
+    next.setMonth(next.getMonth() + 1);
+    if (next <= weddingDate) {
+      months += 1;
+      cursor.setMonth(cursor.getMonth() + 1);
+      continue;
+    }
+    break;
+  }
+
+  const days = Math.max(0, Math.floor((weddingDate.getTime() - cursor.getTime()) / 86400000));
+  const label =
+    months === 0 && days <= 14
+      ? "Almost there."
+      : "Counting down to your wedding day together.";
+
+  return { months, days, label };
+}
+
 function getTodayStretch(profile: Profile) {
   const today = days[new Date().getDay()];
   return profile.stretchPlan.find((stretch) => stretch.dayLabel === today) ?? profile.stretchPlan[0];
@@ -403,6 +434,7 @@ export function WorkoutTrackerApp() {
     () => getStrengthPredictions(selectedProfile.id, userSessions),
     [selectedProfile.id, userSessions],
   );
+  const weddingCountdown = useMemo(() => getWeddingCountdown(), []);
   const weeklyCount = getWorkoutsCompletedThisWeek(userSessions);
   const dynamicWeeklySummary = useMemo(
     () => getDynamicWeeklySummary(selectedProfile, userSessions),
@@ -932,21 +964,22 @@ export function WorkoutTrackerApp() {
         <div className="animate-page-in">
           {activeTab === "home" && (
             <HomeScreen
-              profile={selectedProfile}
-              todaysWorkout={todaysWorkout}
-              activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
-              workoutRhythmNote={workoutRhythmNote}
-              weeklyCount={weeklyCount}
-              streak={streak}
-              pbCount={state.personalBests[selectedProfile.id].length}
-              strengthPredictions={strengthPredictions}
-              dailyVerse={dailyVerse}
-              dailyStretch={todaysStretch}
-              stretchCompletedToday={stretchCompletedToday}
-              sharedSummary={state.sharedSummary}
-              recentWorkouts={recentWorkouts}
-              onOpenDailyVerse={() => setShowDailyVerse(true)}
-              onToggleStretch={toggleStretchCompletion}
+                profile={selectedProfile}
+                todaysWorkout={todaysWorkout}
+                activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
+                workoutRhythmNote={workoutRhythmNote}
+                weeklyCount={weeklyCount}
+                streak={streak}
+                pbCount={state.personalBests[selectedProfile.id].length}
+                strengthPredictions={strengthPredictions}
+                dailyVerse={dailyVerse}
+                dailyStretch={todaysStretch}
+                stretchCompletedToday={stretchCompletedToday}
+                sharedSummary={state.sharedSummary}
+                recentWorkouts={recentWorkouts}
+                weddingCountdown={weddingCountdown}
+                onOpenDailyVerse={() => setShowDailyVerse(true)}
+                onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}
               onResumeWorkout={() => setActiveTab("workout")}
               onPreviewWorkout={() => {

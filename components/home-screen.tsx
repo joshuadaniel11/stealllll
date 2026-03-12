@@ -76,6 +76,7 @@ export function HomeScreen({
   stretchCompletedToday,
   sharedSummary,
   recentWorkouts,
+  weddingCountdown,
   onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
@@ -98,6 +99,7 @@ export function HomeScreen({
   stretchCompletedToday: boolean;
   sharedSummary: SharedSummary;
   recentWorkouts: WorkoutSession[];
+  weddingCountdown: { months: number; days: number; label: string };
   onOpenDailyVerse: () => void;
   onToggleStretch: () => void;
   onStartWorkout: () => void;
@@ -115,6 +117,16 @@ export function HomeScreen({
   return (
     <div className="space-y-3">
       <ScrollReveal delay={0} y={14} scale={0.995}>
+        <div className="px-2 pt-1 text-center">
+          <p className="caption-text text-muted">Until November 2, 2026</p>
+          <h2 className="mt-2 text-[2.3rem] font-semibold leading-[0.95] tracking-[-0.07em] text-text">
+            {weddingCountdown.months} months • {weddingCountdown.days} days
+          </h2>
+          <p className="caption-text mt-2 text-muted">{weddingCountdown.label}</p>
+        </div>
+      </ScrollReveal>
+
+      <ScrollReveal delay={30} y={14} scale={0.995}>
         <Card className="px-5 py-5">
           <p className="text-sm text-muted">{profile.name}</p>
           <p className="medium-label mt-3 max-w-[29ch] font-medium text-text">{smallDailyMessage}</p>
@@ -124,7 +136,7 @@ export function HomeScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={40} y={14} scale={0.995}>
+      <ScrollReveal delay={60} y={14} scale={0.995}>
         <Card className="px-5 py-6">
           <p className="text-sm text-muted">Today</p>
           <h2 className="large-title mt-2 font-semibold text-text">{activeWorkoutName ?? todaysWorkout.name}</h2>
@@ -197,7 +209,7 @@ export function HomeScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={70} y={12} scale={0.996}>
+      <ScrollReveal delay={90} y={12} scale={0.996}>
         <div className="grid grid-cols-3 gap-2.5">
           <MiniMetric label="This week" value={`${weeklyCount}`} />
           <MiniMetric label="Streak" value={`${streak}`} />
@@ -205,11 +217,11 @@ export function HomeScreen({
         </div>
       </ScrollReveal>
 
-      <ScrollReveal delay={100} y={12} scale={0.996}>
+      <ScrollReveal delay={120} y={12} scale={0.996}>
         <DailyStretchCard stretch={dailyStretch} completed={stretchCompletedToday} onToggle={onToggleStretch} />
       </ScrollReveal>
 
-      <ScrollReveal delay={130} y={12} scale={0.996}>
+      <ScrollReveal delay={150} y={12} scale={0.996}>
         <Card className="px-5 py-4">
           <button
             className="flex w-full items-center justify-between text-left"
