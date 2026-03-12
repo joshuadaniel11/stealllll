@@ -4,21 +4,21 @@
 
 :root {
   color-scheme: dark;
-  --surface: #020305;
-  --card: rgba(12, 14, 20, 0.68);
-  --card-strong: rgba(18, 20, 27, 0.82);
-  --stroke: rgba(255, 255, 255, 0.08);
-  --text: #f6f7fb;
-  --muted: #b1b8c5;
-  --accent: #e6a2bb;
-  --accent-soft: rgba(230, 162, 187, 0.12);
+  --surface: #020204;
+  --card: rgba(13, 11, 16, 0.72);
+  --card-strong: rgba(20, 17, 24, 0.86);
+  --stroke: rgba(255, 255, 255, 0.07);
+  --text: #f8f5f7;
+  --muted: #b8afb8;
+  --accent: #df7d9f;
+  --accent-soft: rgba(223, 125, 159, 0.14);
   --success: #5f9b82;
   --warning: #b88a59;
-  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.32);
-  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 12px 28px rgba(230, 162, 187, 0.08);
-  --page-glow-top: radial-gradient(circle at top, rgba(230, 162, 187, 0.08), transparent 18%);
-  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(230, 162, 187, 0.05), transparent 14%);
+  --shadow-card: 0 22px 56px rgba(0, 0, 0, 0.36);
+  --shadow-soft: 0 12px 26px rgba(0, 0, 0, 0.24);
+  --shadow-glow: 0 12px 30px rgba(223, 125, 159, 0.1);
+  --page-glow-top: radial-gradient(circle at top, rgba(223, 125, 159, 0.09), transparent 18%);
+  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(223, 125, 159, 0.06), transparent 14%);
   --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.02), transparent 28%);
 }
 
@@ -58,7 +58,8 @@ body {
 
 .glass {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 24%),
     var(--card);
   backdrop-filter: blur(30px) saturate(135%);
   position: relative;
@@ -77,9 +78,9 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 22%),
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 28%);
-  opacity: 0.72;
+  opacity: 0.76;
   pointer-events: none;
   transition: opacity 320ms ease;
 }
@@ -146,53 +147,81 @@ body {
 }
 
 .theme-joshua {
-  --surface: #000000;
-  --card: rgba(8, 8, 10, 0.78);
-  --card-strong: rgba(13, 13, 16, 0.88);
-  --stroke: rgba(255, 255, 255, 0.09);
+  --surface: #030304;
+  --card: rgba(10, 9, 11, 0.8);
+  --card-strong: rgba(18, 15, 18, 0.9);
+  --stroke: rgba(255, 255, 255, 0.08);
   --text: #ffffff;
-  --muted: #d6d9df;
-  --accent: rgba(255, 255, 255, 0.14);
-  --accent-soft: rgba(255, 255, 255, 0.08);
-  --shadow-card: 0 18px 52px rgba(0, 0, 0, 0.46);
-  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.26);
-  --shadow-glow: 0 10px 26px rgba(255, 255, 255, 0.05);
-  --page-glow-top: radial-gradient(circle at top, rgba(255, 255, 255, 0.03), transparent 16%);
-  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.02), transparent 14%);
-  --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.02), transparent 30%);
+  --muted: #d2c8cc;
+  --accent: #b94657;
+  --accent-soft: rgba(185, 70, 87, 0.16);
+  --shadow-card: 0 20px 56px rgba(0, 0, 0, 0.48);
+  --shadow-soft: 0 12px 26px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 14px 28px rgba(185, 70, 87, 0.08);
+  --page-glow-top: radial-gradient(circle at top, rgba(185, 70, 87, 0.08), transparent 17%);
+  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(185, 70, 87, 0.05), transparent 14%);
+  --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.015), transparent 30%);
 }
 
 .theme-natasha {
-  --muted: #b8b1bc;
-  --accent: #ec9fba;
-  --accent-soft: rgba(236, 159, 186, 0.12);
+  --surface: #040204;
+  --card: rgba(16, 10, 17, 0.76);
+  --card-strong: rgba(26, 15, 24, 0.88);
+  --stroke: rgba(255, 214, 228, 0.08);
+  --muted: #c7aebb;
+  --accent: #ef6f9a;
+  --accent-soft: rgba(239, 111, 154, 0.16);
   --success: #6a9d87;
   --warning: #b48b63;
-  --shadow-glow: 0 12px 28px rgba(236, 159, 186, 0.08);
-  --page-glow-top: radial-gradient(circle at top, rgba(236, 159, 186, 0.08), transparent 18%);
-  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(236, 159, 186, 0.05), transparent 14%);
+  --shadow-glow: 0 14px 30px rgba(239, 111, 154, 0.12);
+  --page-glow-top: radial-gradient(circle at top, rgba(239, 111, 154, 0.11), transparent 19%);
+  --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(239, 111, 154, 0.08), transparent 14%);
 }
 
 .theme-joshua .glass {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 80%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 22%),
+    radial-gradient(circle at top right, rgba(185, 70, 87, 0.06), transparent 24%),
+    var(--card);
+}
+
+.theme-natasha .glass {
+  background:
+    linear-gradient(180deg, rgba(255, 226, 236, 0.05), transparent 22%),
+    radial-gradient(circle at top right, rgba(239, 111, 154, 0.08), transparent 24%),
     var(--card);
 }
 
 .theme-joshua .bg-accent {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)) !important;
-  color: #ffffff !important;
+    linear-gradient(180deg, rgba(205, 95, 111, 0.98), rgba(140, 32, 47, 0.98)) !important;
+  color: #fff6f7 !important;
+  box-shadow: 0 12px 30px rgba(122, 24, 40, 0.28);
+}
+
+.theme-natasha .bg-accent {
+  background:
+    linear-gradient(180deg, rgba(249, 117, 167, 0.98), rgba(191, 48, 107, 0.98)) !important;
+  color: #fff7fa !important;
+  box-shadow: 0 12px 30px rgba(191, 48, 107, 0.28);
 }
 
 .theme-joshua .bg-accentSoft,
 .theme-joshua .bg-accentSoft\/70 {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(185, 70, 87, 0.14) !important;
+}
+
+.theme-natasha .bg-accentSoft,
+.theme-natasha .bg-accentSoft\/70 {
+  background-color: rgba(239, 111, 154, 0.16) !important;
 }
 
 .theme-joshua .text-accent {
-  color: #ffffff !important;
+  color: #ffd7df !important;
+}
+
+.theme-natasha .text-accent {
+  color: #ffbfd4 !important;
 }
 
 .hairline {
@@ -402,10 +431,27 @@ h3 {
     transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.theme-joshua .hero-shell,
+.theme-joshua .tabbar-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 22%),
+    radial-gradient(circle at top right, rgba(185, 70, 87, 0.09), transparent 32%),
+    rgba(10, 9, 12, 0.82);
+}
+
+.theme-natasha .hero-shell,
+.theme-natasha .tabbar-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 228, 236, 0.05), transparent 22%),
+    radial-gradient(circle at top right, rgba(239, 111, 154, 0.11), transparent 32%),
+    rgba(16, 10, 17, 0.82);
+}
+
 .entry-shell {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
-    rgba(10, 12, 16, 0.72);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 24%),
+    radial-gradient(circle at top, rgba(255, 123, 164, 0.1), transparent 34%),
+    rgba(10, 12, 16, 0.74);
   backdrop-filter: blur(30px) saturate(130%);
 }
 
@@ -441,14 +487,18 @@ h3 {
 
 .entry-choice-joshua {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 30%),
-    rgba(7, 8, 11, 0.82);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+    radial-gradient(circle at top right, rgba(185, 70, 87, 0.12), transparent 32%),
+    rgba(7, 8, 11, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .entry-choice-natasha {
   background:
-    linear-gradient(180deg, rgba(236, 159, 186, 0.065), transparent 30%),
-    rgba(11, 9, 12, 0.82);
+    linear-gradient(180deg, rgba(255, 228, 236, 0.06), transparent 24%),
+    radial-gradient(circle at top right, rgba(239, 111, 154, 0.14), transparent 32%),
+    rgba(15, 8, 13, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .entry-choice-label {
@@ -526,6 +576,16 @@ h3 {
   min-width: 76px;
   border-radius: 24px;
   padding: 0.7rem 0.9rem;
+}
+
+.theme-joshua .tabbar-button-active {
+  background: rgba(185, 70, 87, 0.16);
+  color: #fff7f8;
+}
+
+.theme-natasha .tabbar-button-active {
+  background: rgba(239, 111, 154, 0.18);
+  color: #fff7fb;
 }
 
 .tabbar-button-active {
