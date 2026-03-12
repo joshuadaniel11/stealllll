@@ -180,7 +180,7 @@ export function WorkoutScreen({
                   <div>
                     <p className="text-base font-medium">{workout.name}</p>
                     <p className="caption-text mt-1 text-muted">
-                      {workout.dayLabel} • {workout.exercises.length} exercises
+                      {workout.dayLabel} - {workout.exercises.length} exercises
                     </p>
                   </div>
                   <div className="flex gap-2">

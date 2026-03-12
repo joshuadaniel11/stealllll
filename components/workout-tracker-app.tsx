@@ -977,6 +977,7 @@ export function WorkoutTrackerApp() {
               </div>
               <button
                 className="rounded-[28px] bg-[var(--card-strong)] p-3 text-muted"
+                aria-label="Settings"
                 onClick={() => setShowSettings(true)}
               >
                 <Settings className="h-5 w-5" />
@@ -1038,7 +1039,6 @@ export function WorkoutTrackerApp() {
             <ProgressScreen
               profile={selectedProfile}
               totalWorkouts={userSessions.length}
-              streak={streak}
               weeklySummary={dynamicWeeklySummary}
               trendData={trendData}
               measurements={state.measurements[selectedProfile.id]}
