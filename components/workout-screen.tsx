@@ -173,12 +173,14 @@ export function WorkoutScreen({
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
       setCurrentExerciseIndex(0);
       setShowExitConfirmation(false);
+      setShowExercisePicker(false);
       return;
     }
     setLocalPreviewWorkoutId(null);
@@ -307,6 +309,7 @@ export function WorkoutScreen({
   );
   const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
   const loadCue = getLoadCue(currentTemplate?.repRange);
+  const completedExerciseCount = activeWorkout.exercises.filter(isExerciseComplete).length;
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -337,47 +340,21 @@ export function WorkoutScreen({
           <p className="caption-text mt-3 text-muted">Final exercise in this session.</p>
         )}
 
-        <div className="mt-6">
-          <p className="text-sm text-muted">Exercise list</p>
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            {activeWorkout.exercises.map((exercise, index) => {
-              const done = isExerciseComplete(exercise);
-              const selected = index === currentExerciseIndex;
-
-              return (
-                <button
-                  key={exercise.exerciseId}
-                  className={`flex items-center justify-between rounded-[22px] px-4 py-3 text-left transition ${
-                    done
-                      ? "bg-white text-black"
-                      : selected
-                        ? "bg-accentSoft text-text"
-                        : "bg-[var(--card-strong)] text-text"
-                  }`}
-                  onClick={() => setCurrentExerciseIndex(index)}
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {index + 1}. {exercise.exerciseName}
-                    </p>
-                    <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
-                      {done ? "Done" : `Targets ${exercise.muscleGroup}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {done ? (
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
-                        <Check className="h-4 w-4" />
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted">{exercise.sets.length} sets</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+        <button
+          className="mt-6 flex w-full items-center justify-between rounded-[24px] bg-[var(--card-strong)] px-4 py-4 text-left"
+          onClick={() => setShowExercisePicker(true)}
+        >
+          <div>
+            <p className="text-sm text-muted">Exercise chooser</p>
+            <p className="mt-1 text-base font-medium text-text">
+              {completedExerciseCount} of {activeWorkout.exercises.length} exercises done
+            </p>
           </div>
-        </div>
+          <div className="flex items-center gap-2 text-sm text-muted">
+            Pick exercise
+            <ChevronRight className="h-4 w-4" />
+          </div>
+        </button>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
@@ -529,6 +506,70 @@ export function WorkoutScreen({
         onClose={() => setShowExitConfirmation(false)}
         onConfirm={onCancelWorkout}
       />
+
+      {showExercisePicker ? (
+        <div className="sheet-backdrop">
+          <div className="sheet-panel sheet-detent-large animate-sheet-up">
+            <Card className="sheet-card bg-[var(--surface)]">
+              <div className="sheet-drag-handle" />
+              <p className="text-sm text-muted">Exercise chooser</p>
+              <h3 className="large-title mt-2 font-semibold text-text">{activeWorkout.workoutName}</h3>
+              <p className="mt-2 text-sm text-muted">
+                Tap any exercise to bring it forward for logging.
+              </p>
+
+              <div className="mt-5 grid grid-cols-1 gap-2">
+                {activeWorkout.exercises.map((exercise, index) => {
+                  const done = isExerciseComplete(exercise);
+                  const selected = index === currentExerciseIndex;
+
+                  return (
+                    <button
+                      key={exercise.exerciseId}
+                      className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
+                        done
+                          ? "bg-white text-black"
+                          : selected
+                            ? "bg-accentSoft text-text"
+                            : "bg-[var(--card-strong)] text-text"
+                      }`}
+                      onClick={() => {
+                        setCurrentExerciseIndex(index);
+                        setShowExercisePicker(false);
+                      }}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {index + 1}. {exercise.exerciseName}
+                        </p>
+                        <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
+                          {done ? "Done" : `Targets ${exercise.muscleGroup}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {done ? (
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
+                            <Check className="h-4 w-4" />
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted">{exercise.sets.length} sets</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="mt-6 w-full rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-text"
+                onClick={() => setShowExercisePicker(false)}
+              >
+                Close
+              </button>
+            </Card>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

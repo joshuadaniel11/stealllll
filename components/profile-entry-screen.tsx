@@ -23,7 +23,7 @@ export function ProfileEntryScreen({
             </p>
           </ScrollReveal>
           <ScrollReveal delay={50} y={18} scale={0.994}>
-            <h1 className="mt-5 text-5xl font-semibold tracking-[-0.07em] text-white">
+            <h1 className="mx-auto mt-5 max-w-sm text-center text-5xl font-semibold tracking-[-0.07em] text-white">
               Choose your side.
             </h1>
           </ScrollReveal>
