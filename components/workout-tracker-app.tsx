@@ -1024,6 +1024,7 @@ export function WorkoutTrackerApp() {
               previewWorkoutId={workoutPreviewId}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
+              userSessions={userSessions}
                 exerciseLibrary={state.exerciseLibrary}
                 onStartWorkout={startWorkout}
                 onUpdateSet={updateSet}

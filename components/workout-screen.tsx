@@ -6,7 +6,8 @@ import { Check, ChevronRight } from "lucide-react";
 import { ExitSessionModal } from "@/components/exit-session-modal";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
-import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay } from "@/lib/types";
+import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
+import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 const substitutionHints: Record<string, string[]> = {
     "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
@@ -143,6 +144,7 @@ export function WorkoutScreen({
   previewWorkoutId,
   activeWorkout,
   activeWorkoutTemplate,
+  userSessions,
   exerciseLibrary,
     onStartWorkout,
     onUpdateSet,
@@ -157,6 +159,7 @@ export function WorkoutScreen({
   previewWorkoutId?: string | null;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
+  userSessions: WorkoutSession[];
   exerciseLibrary: ExerciseLibraryItem[];
   onStartWorkout: (workout: WorkoutPlanDay) => void;
     onUpdateSet: (
@@ -311,6 +314,9 @@ export function WorkoutScreen({
   const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
   const loadCue = getLoadCue(currentTemplate?.repRange);
   const completedExerciseCount = activeWorkout.exercises.filter(isExerciseComplete).length;
+  const suggestedStart = currentTemplate ? getSuggestedStartingWeight(currentTemplate, userSessions) : null;
+  const previousBestScore = getPreviousBestScore(currentExercise.exerciseName, userSessions);
+  const currentExerciseHasPr = currentExercise.sets.some((set) => isPersonalBestSet(set, previousBestScore));
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -345,6 +351,9 @@ export function WorkoutScreen({
       <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Workout mode</p>
         <h1 className="mt-2 text-[1.9rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">{currentExercise.exerciseName}</h1>
+        {currentExerciseHasPr ? (
+          <p className="mt-1 text-sm font-medium text-accent">PR hit on this exercise</p>
+        ) : null}
         {nextExerciseName ? (
           <p className="caption-text mt-2 text-muted">
             Next up: <span className="text-text">{nextExerciseName}</span>
@@ -385,6 +394,12 @@ export function WorkoutScreen({
         <p className="mt-2 text-sm text-muted">
           {currentExerciseComplete ? "Exercise complete. Pick another one from the list above." : `Targets ${currentExercise.muscleGroup}`}
         </p>
+        {suggestedStart ? (
+          <p className="mt-1 text-sm text-muted">
+            Suggested start: <span className="text-text">{suggestedStart.suggestedWeight}kg</span> from last time&apos;s{" "}
+            {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
+          </p>
+        ) : null}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3">
@@ -464,6 +479,11 @@ export function WorkoutScreen({
                 <p className="mt-1 text-xs">
                   {set.completed ? `${set.weight > 0 ? `${set.weight}kg` : "Bodyweight"} x ${set.reps}` : "Waiting"}
                 </p>
+                {isPersonalBestSet(set, previousBestScore) ? (
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+                    PR
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>
