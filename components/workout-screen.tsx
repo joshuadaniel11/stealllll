@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 
 import { ExitSessionModal } from "@/components/exit-session-modal";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -70,6 +70,10 @@ function getNextExerciseIndex(exercises: ActiveWorkout["exercises"], currentInde
 function getFirstPendingExerciseIndex(exercises: ActiveWorkout["exercises"]) {
   const index = exercises.findIndex((exercise) => exercise.sets.some((set) => !set.completed));
   return index === -1 ? 0 : index;
+}
+
+function isExerciseComplete(exercise: ActiveWorkout["exercises"][number]) {
+  return exercise.sets.every((set) => set.completed);
 }
 
 function getPreviewTease(profileId: string, workoutId: string) {
@@ -293,6 +297,8 @@ export function WorkoutScreen({
   const previousSet = currentSetIndex > 0 ? currentExercise.sets[currentSetIndex - 1] : null;
   const hasNextExercise = currentExerciseIndex < activeWorkout.exercises.length - 1;
   const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
+  const currentExerciseComplete = isExerciseComplete(currentExercise);
+  const workoutComplete = activeWorkout.exercises.every(isExerciseComplete);
   const canCompleteSet = Boolean(currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed);
   const canCopyPreviousSet = Boolean(
     previousSet &&
@@ -331,6 +337,48 @@ export function WorkoutScreen({
           <p className="caption-text mt-3 text-muted">Final exercise in this session.</p>
         )}
 
+        <div className="mt-6">
+          <p className="text-sm text-muted">Exercise list</p>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {activeWorkout.exercises.map((exercise, index) => {
+              const done = isExerciseComplete(exercise);
+              const selected = index === currentExerciseIndex;
+
+              return (
+                <button
+                  key={exercise.exerciseId}
+                  className={`flex items-center justify-between rounded-[22px] px-4 py-3 text-left transition ${
+                    done
+                      ? "bg-white text-black"
+                      : selected
+                        ? "bg-accentSoft text-text"
+                        : "bg-[var(--card-strong)] text-text"
+                  }`}
+                  onClick={() => setCurrentExerciseIndex(index)}
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {index + 1}. {exercise.exerciseName}
+                    </p>
+                    <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
+                      {done ? "Done" : `Targets ${exercise.muscleGroup}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {done ? (
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
+                        <Check className="h-4 w-4" />
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">{exercise.sets.length} sets</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
             <p className="text-sm text-muted">Set</p>
@@ -344,6 +392,9 @@ export function WorkoutScreen({
             <p className="mt-1 text-sm text-muted">{loadCue}</p>
           </div>
         </div>
+        <p className="mt-3 text-sm text-muted">
+          {currentExerciseComplete ? "Exercise complete. Pick another one from the list above." : `Targets ${currentExercise.muscleGroup}`}
+        </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <label className="rounded-[28px] bg-[var(--card-strong)] px-4 py-5">
@@ -462,7 +513,10 @@ export function WorkoutScreen({
           <p className="caption-text mt-1 text-muted">{nextExerciseName ?? "Session finish next"}</p>
         </button>
         <button
-          className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
+          className={`rounded-[28px] px-4 py-4 text-sm font-semibold ${
+            workoutComplete ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
+          }`}
+          disabled={!workoutComplete}
           onClick={onCompleteWorkout}
         >
           Finish Workout
