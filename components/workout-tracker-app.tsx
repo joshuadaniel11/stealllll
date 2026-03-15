@@ -1122,14 +1122,14 @@ export function WorkoutTrackerApp() {
     <main
       style={{ "--parallax-shift": `${Math.min(scrollY * 0.08, 18)}px` } as CSSProperties}
       className={clsx(
-        "theme-shell min-h-screen px-4 pb-32 pt-5 text-text transition-colors duration-500 sm:px-6",
+        "theme-shell min-h-screen px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+0.9rem)] text-text transition-colors duration-500 sm:px-6",
         isJoshuaTheme ? "theme-joshua" : "",
         isNatashaTheme ? "theme-natasha" : "",
       )}
     >
       <div className="mx-auto flex max-w-md flex-col gap-5">
         {!immersiveWorkoutMode ? (
-          <Card className={clsx("hero-shell animate-fade-up px-5 py-5", compactHeader ? "py-4" : "py-5")}>
+          <Card className={clsx("hero-shell animate-fade-up px-5 py-5", compactHeader ? "py-3.5" : "py-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className={clsx("hero-subtle text-sm font-semibold text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEAL</p>
