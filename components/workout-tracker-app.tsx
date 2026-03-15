@@ -8,6 +8,7 @@ import { BibleVerseModal } from "@/components/bible-verse-modal";
 import { CompletionCelebration } from "@/components/completion-celebration";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
 import { HomeScreen } from "@/components/home-screen";
+import { EditWorkoutModal } from "@/components/edit-workout-modal";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { ProfileEntryScreen } from "@/components/profile-entry-screen";
 import { ProgressScreen } from "@/components/progress-screen";
@@ -18,7 +19,7 @@ import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getLastExerciseSets } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
-import { deserializeState, loadState, saveState } from "@/lib/storage";
+import { deserializeState, loadRememberedProfile, loadState, saveRememberedProfile, saveState } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
 import type {
   ActiveWorkout,
@@ -353,6 +354,7 @@ export function WorkoutTrackerApp() {
   const [completionMessage, setCompletionMessage] = useState("");
   const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [toastActionLabel, setToastActionLabel] = useState<string | null>(null);
   const [toastActionKind, setToastActionKind] = useState<"undo-schedule" | null>(null);
   const [pendingScheduleUndo, setPendingScheduleUndo] = useState<{
@@ -387,9 +389,21 @@ export function WorkoutTrackerApp() {
 
   useEffect(() => {
     const localState = loadState();
+    const rememberedProfile = loadRememberedProfile();
     if (localState) {
       const seed = createSeedState();
-      setState(mergeStateWithSeed(seed, localState));
+      const mergedState = mergeStateWithSeed(seed, localState);
+      setState((current) => ({
+        ...current,
+        ...mergedState,
+        selectedUserId: rememberedProfile ?? mergedState.selectedUserId,
+      }));
+      if (rememberedProfile) {
+        setHasEnteredProfile(true);
+      }
+    } else if (rememberedProfile) {
+      setState((current) => ({ ...current, selectedUserId: rememberedProfile }));
+      setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
       setShowOnboarding(true);
@@ -429,6 +443,13 @@ export function WorkoutTrackerApp() {
       saveState(state);
     }
   }, [state, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    saveRememberedProfile(hasEnteredProfile ? state.selectedUserId : null);
+  }, [hasEnteredProfile, hydrated, state.selectedUserId]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -496,6 +517,11 @@ export function WorkoutTrackerApp() {
       null
     );
   }, [selectedExerciseId, selectedProfile, state.exerciseLibrary]);
+
+  const editingSession = useMemo(
+    () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
+    [editingSessionId, state.sessions],
+  );
 
   const trendData = useMemo(
     () =>
@@ -1031,7 +1057,19 @@ export function WorkoutTrackerApp() {
     setWorkoutPreviewId(null);
     setShowSettings(false);
     setHasEnteredProfile(false);
+    saveRememberedProfile(null);
     softHaptic(6);
+  };
+
+  const saveEditedSession = (updatedSession: WorkoutSession) => {
+    setState((current) => ({
+      ...current,
+      sessions: current.sessions.map((session) =>
+        session.id === updatedSession.id ? updatedSession : session,
+      ),
+    }));
+    setEditingSessionId(null);
+    showToast("Workout changes saved.");
   };
 
   if (!hasEnteredProfile) {
@@ -1149,9 +1187,11 @@ export function WorkoutTrackerApp() {
               measurements={state.measurements[selectedProfile.id]}
               userSessions={userSessions}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
+              recentSessions={userSessions.slice(0, 4)}
               onSaveMeasurement={saveMeasurement}
               onExportData={exportData}
               onImportData={importData}
+              onEditSession={setEditingSessionId}
             />
           )}
 
@@ -1185,6 +1225,11 @@ export function WorkoutTrackerApp() {
         />
       )}
       <SessionSummaryModal summary={sessionSummary} onClose={() => setSessionSummary(null)} />
+      <EditWorkoutModal
+        session={editingSession}
+        onClose={() => setEditingSessionId(null)}
+        onSave={saveEditedSession}
+      />
 
       {!immersiveWorkoutMode ? (
         <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">

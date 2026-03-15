@@ -2,6 +2,7 @@ import type { AppState } from "@/lib/types";
 
 const STORAGE_KEY = "workout-together-state-v2-clean-start";
 const STORAGE_VERSION = 1;
+const PROFILE_KEY = "workout-together-last-profile";
 
 type StoredStateEnvelope = {
   version: number;
@@ -60,4 +61,26 @@ export function saveState(state: AppState) {
   };
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+export function loadRememberedProfile(): AppState["selectedUserId"] | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(PROFILE_KEY);
+  return value === "joshua" || value === "natasha" ? value : null;
+}
+
+export function saveRememberedProfile(userId: AppState["selectedUserId"] | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!userId) {
+    window.localStorage.removeItem(PROFILE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(PROFILE_KEY, userId);
 }

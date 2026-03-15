@@ -16,6 +16,10 @@ import {
 import { Card, MiniMetric } from "@/components/ui";
 import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
+}
+
 export function ProgressScreen({
   profile,
   totalWorkouts,
@@ -23,10 +27,12 @@ export function ProgressScreen({
   trendData,
   measurements,
   userSessions,
+  recentSessions,
   stretchCompletions,
   onSaveMeasurement,
   onExportData,
   onImportData,
+  onEditSession,
 }: {
   profile: Profile;
   totalWorkouts: number;
@@ -34,10 +40,12 @@ export function ProgressScreen({
   trendData: Array<{ date: string; volume: number }>;
   measurements: MeasurementEntry[];
   userSessions: WorkoutSession[];
+  recentSessions: WorkoutSession[];
   stretchCompletions: StretchCompletion[];
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onExportData: () => void;
   onImportData: (file: File | null) => void;
+  onEditSession: (sessionId: string) => void;
 }) {
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
@@ -239,6 +247,52 @@ export function ProgressScreen({
           </div>
           <div className="mt-4 rounded-[24px] bg-black/5 p-4 text-sm text-muted dark:bg-white/5">
             {profile.name} is trending well with {weeklySummary.consistencyLabel.toLowerCase()}.
+          </div>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={225}>
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted">Recent sessions</p>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Saved workouts</h3>
+            </div>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {recentSessions.length} tracked
+            </div>
+          </div>
+          <div className="mt-4 space-y-3">
+            {recentSessions.length ? (
+              recentSessions.map((session) => (
+                <div key={session.id} className="rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-text">{session.workoutName}</p>
+                        {session.partial ? (
+                          <span className="rounded-full bg-accentSoft px-2.5 py-1 text-[11px] font-medium text-accent">
+                            Partial
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="caption-text mt-1 text-muted">
+                        {formatDate(session.performedAt)} • {session.durationMinutes} min •{" "}
+                        {session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets
+                      </p>
+                    </div>
+                    <button
+                      className="rounded-[18px] bg-[var(--card-strong)] px-3 py-2 text-sm font-medium text-text"
+                      onClick={() => onEditSession(session.id)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">Complete a workout and your saved sessions will show up here.</div>
+            )}
           </div>
         </Card>
       </ScrollReveal>
