@@ -6,20 +6,24 @@ import type { Profile } from "@/lib/types";
 
 export function SettingsModal({
   profile,
+  isProfileLocked,
   onClose,
   onExport,
   onImport,
   onResetProfile,
   onResetAll,
   onChooseProfile,
+  onToggleProfileLock,
 }: {
   profile: Profile;
+  isProfileLocked: boolean;
   onClose: () => void;
   onExport: () => void;
   onImport: (file: File | null) => void;
   onResetProfile: () => void;
   onResetAll: () => void;
   onChooseProfile: () => void;
+  onToggleProfileLock: () => void;
 }) {
   return (
     <div className="sheet-backdrop">
@@ -59,14 +63,32 @@ export function SettingsModal({
                       </p>
                     </div>
                   </div>
-                  <button className="grouped-row" onClick={onChooseProfile}>
+                  <button className="grouped-row" onClick={onToggleProfileLock}>
+                    <span className="row-icon">
+                      <Shield className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text">
+                        {isProfileLocked ? `Unlock ${profile.name} on this phone` : `Lock this phone to ${profile.name}`}
+                      </p>
+                      <p className="caption-text mt-1 text-muted">
+                        {isProfileLocked
+                          ? "Let this phone choose between Joshua and Natasha again."
+                          : "Open straight into this profile every time on this phone."}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted" />
+                  </button>
+                  <button className={`grouped-row ${isProfileLocked ? "opacity-60" : ""}`} onClick={onChooseProfile} disabled={isProfileLocked}>
                     <span className="row-icon">
                       <UserRound className="h-4 w-4" />
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Choose profile</p>
                       <p className="caption-text mt-1 text-muted">
-                        Go back to the opening screen and enter through Joshua or Natasha.
+                        {isProfileLocked
+                          ? "Unlock this phone first if you want to switch between profiles."
+                          : "Go back to the opening screen and enter through Joshua or Natasha."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />

@@ -5,6 +5,22 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui";
 import type { WorkoutSession } from "@/lib/types";
 
+function toDateTimeLocalValue(value: string) {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalValue(value: string) {
+  return new Date(value).toISOString();
+}
+
+function normalizeWorkoutName(workoutName: string, partial: boolean) {
+  const cleaned = workoutName.replace(/\s*\(Partial\)$/i, "");
+  return partial ? `${cleaned} (Partial)` : cleaned;
+}
+
 function cloneSession(session: WorkoutSession) {
   return {
     ...session,
@@ -55,6 +71,46 @@ export function EditWorkoutModal({
           </div>
 
           <div className="mt-5 space-y-4">
+            <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+              <div className="grid grid-cols-1 gap-3">
+                <label className="rounded-[18px] bg-black/10 px-3 py-3 dark:bg-white/5">
+                  <span className="caption-text text-muted">Workout date and time</span>
+                  <input
+                    className="mt-1 w-full bg-transparent text-base font-semibold text-text outline-none"
+                    type="datetime-local"
+                    value={toDateTimeLocalValue(draft.performedAt)}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              performedAt: fromDateTimeLocalValue(event.target.value),
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </label>
+                {draft.partial ? (
+                  <button
+                    className="rounded-[18px] bg-black/10 px-4 py-3 text-sm font-medium text-text dark:bg-white/5"
+                    onClick={() =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              partial: false,
+                              workoutName: normalizeWorkoutName(current.workoutName, false),
+                            }
+                          : current,
+                      )
+                    }
+                  >
+                    Mark this as a full workout
+                  </button>
+                ) : null}
+              </div>
+            </div>
             {draft.exercises.map((exercise, exerciseIndex) => (
               <div key={`${exercise.exerciseId}-${exerciseIndex}`} className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
@@ -123,7 +179,12 @@ export function EditWorkoutModal({
             </button>
             <button
               className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
-              onClick={() => onSave(draft)}
+              onClick={() =>
+                onSave({
+                  ...draft,
+                  workoutName: normalizeWorkoutName(draft.workoutName, Boolean(draft.partial)),
+                })
+              }
             >
               Save changes
             </button>

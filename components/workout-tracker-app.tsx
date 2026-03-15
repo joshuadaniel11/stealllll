@@ -19,7 +19,15 @@ import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getLastExerciseSets } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
-import { deserializeState, loadRememberedProfile, loadState, saveRememberedProfile, saveState } from "@/lib/storage";
+import {
+  deserializeState,
+  loadLockedProfile,
+  loadRememberedProfile,
+  loadState,
+  saveLockedProfile,
+  saveRememberedProfile,
+  saveState,
+} from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
 import type {
   ActiveWorkout,
@@ -345,6 +353,7 @@ export function WorkoutTrackerApp() {
   const [hydrated, setHydrated] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallLaunch, setShowInstallLaunch] = useState(false);
+  const [lockedProfile, setLockedProfile] = useState<UserId | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [showDailyVerse, setShowDailyVerse] = useState(false);
@@ -389,20 +398,23 @@ export function WorkoutTrackerApp() {
 
   useEffect(() => {
     const localState = loadState();
+    const deviceLockedProfile = loadLockedProfile();
     const rememberedProfile = loadRememberedProfile();
+    const initialProfile = deviceLockedProfile ?? rememberedProfile;
+    setLockedProfile(deviceLockedProfile);
     if (localState) {
       const seed = createSeedState();
       const mergedState = mergeStateWithSeed(seed, localState);
       setState((current) => ({
         ...current,
         ...mergedState,
-        selectedUserId: rememberedProfile ?? mergedState.selectedUserId,
+        selectedUserId: initialProfile ?? mergedState.selectedUserId,
       }));
-      if (rememberedProfile) {
+      if (initialProfile) {
         setHasEnteredProfile(true);
       }
-    } else if (rememberedProfile) {
-      setState((current) => ({ ...current, selectedUserId: rememberedProfile }));
+    } else if (initialProfile) {
+      setState((current) => ({ ...current, selectedUserId: initialProfile }));
       setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
@@ -448,8 +460,8 @@ export function WorkoutTrackerApp() {
     if (!hydrated) {
       return;
     }
-    saveRememberedProfile(hasEnteredProfile ? state.selectedUserId : null);
-  }, [hasEnteredProfile, hydrated, state.selectedUserId]);
+    saveRememberedProfile(lockedProfile ? null : hasEnteredProfile ? state.selectedUserId : null);
+  }, [hasEnteredProfile, hydrated, lockedProfile, state.selectedUserId]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -1056,9 +1068,26 @@ export function WorkoutTrackerApp() {
     setSelectedExerciseId(null);
     setWorkoutPreviewId(null);
     setShowSettings(false);
+    if (lockedProfile) {
+      return;
+    }
     setHasEnteredProfile(false);
     saveRememberedProfile(null);
     softHaptic(6);
+  };
+
+  const toggleProfileLock = () => {
+    if (lockedProfile === selectedProfile.id) {
+      setLockedProfile(null);
+      saveLockedProfile(null);
+      showToast("This phone can switch between profiles again.");
+      return;
+    }
+
+    setLockedProfile(selectedProfile.id);
+    saveLockedProfile(selectedProfile.id);
+    setHasEnteredProfile(true);
+    showToast(`This phone is now locked to ${selectedProfile.name}.`);
   };
 
   const saveEditedSession = (updatedSession: WorkoutSession) => {
@@ -1210,12 +1239,14 @@ export function WorkoutTrackerApp() {
       {showSettings && (
         <SettingsModal
           profile={selectedProfile}
+          isProfileLocked={lockedProfile === selectedProfile.id}
           onClose={() => setShowSettings(false)}
           onExport={exportData}
           onImport={importData}
           onResetProfile={resetProfileData}
           onResetAll={resetAllData}
           onChooseProfile={returnToProfileEntry}
+          onToggleProfileLock={toggleProfileLock}
         />
       )}
       {showWorkoutFeelingPrompt && (

@@ -3,6 +3,7 @@ import type { AppState } from "@/lib/types";
 const STORAGE_KEY = "workout-together-state-v2-clean-start";
 const STORAGE_VERSION = 1;
 const PROFILE_KEY = "workout-together-last-profile";
+const PROFILE_LOCK_KEY = "workout-together-profile-lock";
 
 type StoredStateEnvelope = {
   version: number;
@@ -83,4 +84,26 @@ export function saveRememberedProfile(userId: AppState["selectedUserId"] | null)
   }
 
   window.localStorage.setItem(PROFILE_KEY, userId);
+}
+
+export function loadLockedProfile(): AppState["selectedUserId"] | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(PROFILE_LOCK_KEY);
+  return value === "joshua" || value === "natasha" ? value : null;
+}
+
+export function saveLockedProfile(userId: AppState["selectedUserId"] | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!userId) {
+    window.localStorage.removeItem(PROFILE_LOCK_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(PROFILE_LOCK_KEY, userId);
 }

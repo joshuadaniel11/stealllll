@@ -277,8 +277,7 @@ export function ProgressScreen({
                         ) : null}
                       </div>
                       <p className="caption-text mt-1 text-muted">
-                        {formatDate(session.performedAt)} • {session.durationMinutes} min •{" "}
-                        {session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets
+                        {[formatDate(session.performedAt), `${session.durationMinutes} min`, `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`].join(" • ")}
                       </p>
                     </div>
                     <button
