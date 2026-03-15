@@ -377,11 +377,11 @@ export function WorkoutScreen({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
-      <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
+      <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-3.5 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Workout mode</p>
-        <h1 className="mt-2 text-[1.9rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">{currentExercise.exerciseName}</h1>
+        <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">{currentExercise.exerciseName}</h1>
         {currentExerciseHasPr ? (
           <p className="mt-1 text-sm font-medium text-accent">PR hit on this exercise</p>
         ) : null}
@@ -394,7 +394,7 @@ export function WorkoutScreen({
         )}
 
         <button
-          className="mt-4 flex w-full items-center justify-between rounded-[22px] bg-[var(--card-strong)] px-4 py-3 text-left"
+          className="mt-3 flex w-full items-center justify-between rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5 text-left"
           onClick={() => setShowExercisePicker(true)}
         >
           <div>
@@ -409,16 +409,16 @@ export function WorkoutScreen({
           </div>
         </button>
 
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-2.5">
             <p className="text-sm text-muted">Set</p>
-            <p className="mt-1.5 text-[2rem] font-semibold text-text">
+            <p className="mt-1 text-[1.8rem] font-semibold text-text">
               {Math.min(currentSetIndex + 1, currentExercise.sets.length)} of {currentExercise.sets.length}
             </p>
           </div>
-          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-2.5">
             <p className="text-sm text-muted">Target</p>
-            <p className="mt-1.5 text-[2rem] font-semibold text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
+            <p className="mt-1 text-[1.8rem] font-semibold text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
             <p className="mt-1 text-sm text-muted">{loadCue}</p>
           </div>
         </div>
@@ -432,12 +432,12 @@ export function WorkoutScreen({
           </p>
         ) : null}
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3">
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5">
             <span className="text-sm text-muted">Weight</span>
             <input
               ref={weightInputRef}
-              className="mt-1.5 w-full bg-transparent text-[2rem] font-semibold tracking-[-0.05em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[1.8rem] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="decimal"
               type="number"
               value={currentSet?.weight || ""}
@@ -453,11 +453,11 @@ export function WorkoutScreen({
               }}
             />
           </label>
-          <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3">
+          <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5">
             <span className="text-sm text-muted">Reps</span>
             <input
               ref={repsInputRef}
-              className="mt-1.5 w-full bg-transparent text-[2rem] font-semibold tracking-[-0.05em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[1.8rem] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="numeric"
               type="number"
               value={currentSet?.reps || ""}
@@ -477,7 +477,7 @@ export function WorkoutScreen({
 
           {currentSetIndex > 0 ? (
             <button
-              className={`mt-3 w-full rounded-[20px] px-4 py-2.5 text-sm font-medium transition-all ${
+              className={`mt-2.5 w-full rounded-[20px] px-4 py-2 text-sm font-medium transition-all ${
                 canCopyPreviousSet ? "bg-[var(--card-strong)] text-text" : "bg-[var(--card-strong)] text-muted"
               }`}
               disabled={!canCopyPreviousSet}
@@ -490,7 +490,7 @@ export function WorkoutScreen({
           ) : null}
 
           {substitutions.length ? (
-          <div className="mt-3">
+          <div className="mt-2.5">
             <p className="text-sm text-muted">Quick swap</p>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {substitutions.map((option) => (
@@ -506,13 +506,13 @@ export function WorkoutScreen({
           </div>
         ) : null}
 
-        <div className="mt-3">
+        <div className="mt-2.5">
           <p className="text-sm text-muted">Completed sets</p>
-          <div className="hide-scrollbar mt-1.5 flex gap-2 overflow-x-auto pb-1">
+          <div className="hide-scrollbar mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
             {currentExercise.sets.map((set, index) => (
               <div
                 key={set.id}
-                className={`min-w-[88px] rounded-[20px] px-3 py-3 text-sm ${
+                className={`min-w-[84px] rounded-[20px] px-3 py-2.5 text-sm ${
                   set.completed
                     ? "bg-white text-black"
                     : index === currentSetIndex
@@ -535,7 +535,7 @@ export function WorkoutScreen({
         </div>
 
         <button
-          className={`mt-4 w-full rounded-[26px] px-5 py-4 text-base font-semibold ${
+          className={`mt-3 w-full rounded-[26px] px-5 py-3.5 text-base font-semibold ${
             canCompleteSet ? "bg-white text-black shadow-[var(--shadow-soft)]" : "bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canCompleteSet}
@@ -549,7 +549,7 @@ export function WorkoutScreen({
       <ScrollReveal delay={50} y={10} scale={0.998}>
       <div className="grid grid-cols-3 gap-2">
         <button
-          className="rounded-[22px] bg-[var(--card-strong)] px-3 py-3 text-sm font-medium text-muted"
+          className="rounded-[22px] bg-[var(--card-strong)] px-3 py-2.5 text-sm font-medium text-muted"
           onClick={() => {
             setShowExercisePicker(false);
             setShowExitConfirmation(true);
@@ -558,7 +558,7 @@ export function WorkoutScreen({
           Exit Session
         </button>
         <button
-          className="rounded-[22px] bg-[var(--card-strong)] px-3 py-3 text-sm font-medium text-text"
+          className="rounded-[22px] bg-[var(--card-strong)] px-3 py-2.5 text-sm font-medium text-text"
           onClick={() => setShowExercisePicker(true)}
         >
           <div className="flex items-center justify-center gap-2">
@@ -570,7 +570,7 @@ export function WorkoutScreen({
           </p>
         </button>
         <button
-          className={`rounded-[22px] px-3 py-3 text-sm font-semibold ${
+          className={`rounded-[22px] px-3 py-2.5 text-sm font-semibold ${
             workoutComplete ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!workoutComplete}

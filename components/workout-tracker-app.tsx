@@ -479,7 +479,7 @@ export function WorkoutTrackerApp() {
       setToastActionLabel(null);
       setToastActionKind(null);
       setPendingScheduleUndo(null);
-    }, toastActionKind ? 4200 : 1800);
+    }, toastActionKind ? 3600 : 1250);
     return () => window.clearTimeout(timeout);
   }, [showCompletionCelebration, toastActionKind]);
 
