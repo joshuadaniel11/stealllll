@@ -25,18 +25,20 @@ test("core app flow works across the main screens", async ({ page }) => {
 
   await page.getByRole("button", { name: "Begin" }).first().click();
   await expect(page.getByText("Workout mode")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resume workout" })).toBeVisible();
+  await page.getByRole("button", { name: "Resume workout" }).click();
   await expect(page.getByRole("button", { name: "Exit Session" })).toBeVisible();
 
   await page.getByRole("button", { name: "Exit Session" }).click();
-  await expect(page.getByText("Leave without saving?")).toBeVisible();
-  await expect(page.getByRole("button", { name: "No, keep session" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Yes, exit" })).toBeVisible();
-  await page.getByRole("button", { name: "No, keep session" }).click();
+  await expect(page.getByText("Leave this workout?")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Keep session" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exit without saving" })).toBeVisible();
+  await page.getByRole("button", { name: "Keep session" }).click();
 
   await expect(page.getByText("Workout mode")).toBeVisible();
 
   await page.getByRole("button", { name: "Exit Session" }).click();
-  await page.getByRole("button", { name: "Yes, exit" }).click();
+  await page.getByRole("button", { name: "Exit without saving" }).click();
   await expect(page.locator("h1").filter({ hasText: "Joshua" }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Settings" }).click({ force: true });

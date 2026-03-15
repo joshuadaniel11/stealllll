@@ -7,6 +7,7 @@ export type SessionSummary = {
   durationMinutes: number;
   completedSets: number;
   feeling: "Strong" | "Solid" | "Tough";
+  partial?: boolean;
 };
 
 function getAfterWorkoutTease(summary: SessionSummary) {
@@ -55,7 +56,7 @@ export function SessionSummaryModal({
           <div className="sheet-drag-handle" />
           <ScrollReveal delay={0} y={18} scale={0.994}>
             <div>
-              <p className="text-sm text-muted">Session complete</p>
+              <p className="text-sm text-muted">{summary.partial ? "Partial session saved" : "Session complete"}</p>
               <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
             </div>
           </ScrollReveal>

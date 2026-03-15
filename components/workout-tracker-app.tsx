@@ -613,6 +613,64 @@ export function WorkoutTrackerApp() {
     startTransition(() => setActiveTab("home"));
   };
 
+  const savePartialWorkout = () => {
+    if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
+      return;
+    }
+
+    const completedSets = state.activeWorkout.exercises.reduce(
+      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
+      0,
+    );
+
+    if (completedSets === 0) {
+      cancelWorkout();
+      return;
+    }
+
+    const durationMinutes = Math.max(10, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000));
+    const completedSession: WorkoutSession = {
+      id: `session-${Date.now()}`,
+      userId: state.activeWorkout.userId,
+      workoutDayId: state.activeWorkout.workoutDayId,
+      workoutName: `${state.activeWorkout.workoutName} (Partial)`,
+      performedAt: new Date().toISOString(),
+      durationMinutes,
+      partial: true,
+      feeling: "Solid",
+      exercises: state.activeWorkout.exercises
+        .map((exercise) => ({
+          ...exercise,
+          sets: exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)),
+        }))
+        .filter((exercise) => exercise.sets.length > 0),
+    };
+
+    setState((current) => ({
+      ...current,
+      sessions: [completedSession, ...current.sessions],
+      activeWorkout: null,
+      workoutOverrides: {
+        ...current.workoutOverrides,
+        [selectedProfile.id]: {
+          nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    setSessionSummary({
+      userId: completedSession.userId,
+      workoutName: completedSession.workoutName,
+      durationMinutes,
+      completedSets,
+      feeling: "Solid",
+      partial: true,
+    });
+    showToast("Progress saved and session closed.");
+    softHaptic([8, 28, 8]);
+    startTransition(() => setActiveTab("home"));
+  };
+
   const completeWorkout = (feeling: WorkoutSession["feeling"]) => {
     if (!state.activeWorkout) {
       return;
@@ -660,6 +718,7 @@ export function WorkoutTrackerApp() {
       durationMinutes,
       completedSets,
       feeling,
+      partial: false,
     });
     softHaptic([10, 36, 12]);
     startTransition(() => setActiveTab("home"));
@@ -1076,6 +1135,7 @@ export function WorkoutTrackerApp() {
                 onCompleteSet={completeSet}
                 onSwapExercise={swapExercise}
                 onCompleteWorkout={openWorkoutCompletionPrompt}
+                onSaveAndExitWorkout={savePartialWorkout}
               onCancelWorkout={cancelWorkout}
             />
           )}

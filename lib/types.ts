@@ -56,6 +56,7 @@ export type WorkoutSession = {
   workoutName: string;
   performedAt: string;
   durationMinutes: number;
+  partial?: boolean;
   exercises: WorkoutSessionExercise[];
   feeling: "Strong" | "Solid" | "Tough";
 };

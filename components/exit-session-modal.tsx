@@ -2,11 +2,15 @@ import { Card } from "@/components/ui";
 
 export function ExitSessionModal({
   open,
-  onConfirm,
+  canSaveProgress,
+  onSaveProgress,
+  onDiscard,
   onClose,
 }: {
   open: boolean;
-  onConfirm: () => void;
+  canSaveProgress: boolean;
+  onSaveProgress: () => void;
+  onDiscard: () => void;
   onClose: () => void;
 }) {
   if (!open) {
@@ -20,23 +24,32 @@ export function ExitSessionModal({
           <div className="sheet-drag-handle" />
           <div>
             <p className="text-sm text-muted">Exit session</p>
-            <h3 className="large-title mt-2 font-semibold text-text">Leave without saving?</h3>
+            <h3 className="large-title mt-2 font-semibold text-text">Leave this workout?</h3>
             <p className="medium-label mt-3 text-muted">
-              This clears the current workout and takes you back out of Workout Mode.
+              Save your completed sets so far, or leave without saving and clear the session.
             </p>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 pb-[calc(env(safe-area-inset-bottom,0px)+4px)]">
+          <div className="mt-6 grid grid-cols-1 gap-3 pb-[calc(env(safe-area-inset-bottom,0px)+4px)]">
             <button
               className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
               onClick={onClose}
             >
-              No, keep session
+              Keep session
+            </button>
+            <button
+              className={`rounded-[28px] px-4 py-4 text-sm font-semibold ${
+                canSaveProgress ? "sheet-action-primary" : "sheet-action-secondary opacity-60"
+              }`}
+              disabled={!canSaveProgress}
+              onClick={onSaveProgress}
+            >
+              Save progress and exit
             </button>
             <button
               className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
-              onClick={onConfirm}
+              onClick={onDiscard}
             >
-              Yes, exit
+              Exit without saving
             </button>
           </div>
         </Card>

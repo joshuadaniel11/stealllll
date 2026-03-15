@@ -150,8 +150,9 @@ export function WorkoutScreen({
     onUpdateSet,
     onCopyPreviousSet,
     onCompleteSet,
-    onSwapExercise,
-    onCompleteWorkout,
+  onSwapExercise,
+  onCompleteWorkout,
+  onSaveAndExitWorkout,
   onCancelWorkout,
 }: {
   profile: Profile;
@@ -172,6 +173,7 @@ export function WorkoutScreen({
     onCompleteSet: (exerciseIndex: number, setIndex: number) => void;
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
   onCompleteWorkout: () => void;
+  onSaveAndExitWorkout: () => void;
   onCancelWorkout: () => void;
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -505,7 +507,10 @@ export function WorkoutScreen({
       <div className="grid grid-cols-3 gap-2">
         <button
           className="rounded-[22px] bg-[var(--card-strong)] px-3 py-3 text-sm font-medium text-muted"
-          onClick={() => setShowExitConfirmation(true)}
+          onClick={() => {
+            setShowExercisePicker(false);
+            setShowExitConfirmation(true);
+          }}
         >
           Exit Session
         </button>
@@ -536,7 +541,17 @@ export function WorkoutScreen({
       <ExitSessionModal
         open={showExitConfirmation}
         onClose={() => setShowExitConfirmation(false)}
-        onConfirm={onCancelWorkout}
+        canSaveProgress={activeWorkout.exercises.some((exercise) =>
+          exercise.sets.some((set) => set.completed && (set.reps > 0 || set.weight > 0)),
+        )}
+        onSaveProgress={() => {
+          setShowExitConfirmation(false);
+          onSaveAndExitWorkout();
+        }}
+        onDiscard={() => {
+          setShowExitConfirmation(false);
+          onCancelWorkout();
+        }}
       />
 
       {showExercisePicker ? (
@@ -592,12 +607,23 @@ export function WorkoutScreen({
                 })}
               </div>
 
-              <button
-                className="mt-6 w-full rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-text"
-                onClick={() => setShowExercisePicker(false)}
-              >
-                Close
-              </button>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-text"
+                  onClick={() => setShowExercisePicker(false)}
+                >
+                  Resume workout
+                </button>
+                <button
+                  className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
+                  onClick={() => {
+                    setShowExercisePicker(false);
+                    setShowExitConfirmation(true);
+                  }}
+                >
+                  Exit session
+                </button>
+              </div>
             </Card>
           </div>
         </div>
