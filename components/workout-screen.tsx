@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 
 import { ExitSessionModal } from "@/components/exit-session-modal";
@@ -180,6 +180,11 @@ export function WorkoutScreen({
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
+  const weightInputRef = useRef<HTMLInputElement | null>(null);
+  const repsInputRef = useRef<HTMLInputElement | null>(null);
+  const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
+  const focusSetIndex = focusExercise ? getFirstIncompleteSetIndex(focusExercise.sets) : 0;
+  const focusSet = focusExercise?.sets[focusSetIndex];
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
@@ -198,6 +203,30 @@ export function WorkoutScreen({
       setLocalPreviewWorkoutId(previewWorkoutId ?? null);
     }
   }, [activeWorkout, previewWorkoutId, profile.id]);
+
+  useEffect(() => {
+    if (!activeWorkout || activeWorkout.userId !== profile.id || showExercisePicker) {
+      return;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      if (focusSet?.weight && focusSet.weight > 0) {
+        repsInputRef.current?.focus();
+        return;
+      }
+      weightInputRef.current?.focus();
+    }, 120);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [
+    activeWorkout?.id,
+    activeWorkout?.userId,
+    currentExerciseIndex,
+    focusSet?.id,
+    focusSet?.weight,
+    profile.id,
+    showExercisePicker,
+  ]);
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
@@ -407,6 +436,7 @@ export function WorkoutScreen({
             <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3">
             <span className="text-sm text-muted">Weight</span>
             <input
+              ref={weightInputRef}
               className="mt-1.5 w-full bg-transparent text-[2rem] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="decimal"
               type="number"
@@ -415,11 +445,18 @@ export function WorkoutScreen({
               onChange={(event) =>
                 onUpdateSet(currentExerciseIndex, currentSetIndex, "weight", Number(event.target.value))
               }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  repsInputRef.current?.focus();
+                }
+              }}
             />
           </label>
           <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-3">
             <span className="text-sm text-muted">Reps</span>
             <input
+              ref={repsInputRef}
               className="mt-1.5 w-full bg-transparent text-[2rem] font-semibold tracking-[-0.05em] text-text outline-none"
               inputMode="numeric"
               type="number"
@@ -428,6 +465,12 @@ export function WorkoutScreen({
               onChange={(event) =>
                 onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", Number(event.target.value))
               }
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && canCompleteSet) {
+                  event.preventDefault();
+                  handleCompleteSet();
+                }
+              }}
             />
             </label>
           </div>

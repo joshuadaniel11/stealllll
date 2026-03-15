@@ -63,11 +63,15 @@ export function EditWorkoutModal({
                 Fix weights or reps if something was logged wrong.
               </p>
             </div>
-            {draft.partial ? (
-              <span className="rounded-full bg-accentSoft px-3 py-1 text-xs font-medium text-accent">
-                Partial
-              </span>
-            ) : null}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                draft.partial
+                  ? "bg-accentSoft text-accent"
+                  : "bg-black/10 text-text dark:bg-white/10"
+              }`}
+            >
+              {draft.partial ? "Partial" : "Full"}
+            </span>
           </div>
 
           <div className="mt-5 space-y-4">

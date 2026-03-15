@@ -36,7 +36,7 @@ export function SettingsModal({
               <div>
                 <p className="text-sm font-medium text-muted">Settings</p>
                 <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Quiet, private, simple.</h2>
-                <p className="caption-text mt-2 text-muted">Everything important for this phone, without extra noise.</p>
+                <p className="caption-text mt-2 text-muted">Everything important for this phone.</p>
               </div>
               <button
                 className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
@@ -58,9 +58,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Saved on this device</p>
-                      <p className="caption-text mt-1 text-muted">
-                        Use the same browser or home screen app each time to keep this phone&apos;s progress intact.
-                      </p>
+                      <p className="caption-text mt-1 text-muted">Use the same browser or app each time on this phone.</p>
                     </div>
                   </div>
                   <button className="grouped-row" onClick={onToggleProfileLock}>
@@ -73,8 +71,8 @@ export function SettingsModal({
                       </p>
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
-                          ? "Let this phone choose between Joshua and Natasha again."
-                          : "Open straight into this profile every time on this phone."}
+                          ? "Let this phone choose between profiles again."
+                          : "Open straight into this profile every time."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
@@ -87,8 +85,8 @@ export function SettingsModal({
                       <p className="text-sm font-medium text-text">Choose profile</p>
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
-                          ? "Unlock this phone first if you want to switch between profiles."
-                          : "Go back to the opening screen and enter through Joshua or Natasha."}
+                          ? "Unlock this phone first to switch profiles."
+                          : "Go back to the opening screen."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
@@ -107,7 +105,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Export a backup</p>
-                      <p className="caption-text mt-1 text-muted">Keep a private copy of this phone&apos;s progress.</p>
+                      <p className="caption-text mt-1 text-muted">Save a private copy of this phone&apos;s progress.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                   </button>
@@ -118,7 +116,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Import a backup</p>
-                      <p className="caption-text mt-1 text-muted">Restore a previously exported file on this phone.</p>
+                      <p className="caption-text mt-1 text-muted">Restore a previously exported file.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                     <input
@@ -142,7 +140,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Reset {profile.name}</p>
-                      <p className="caption-text mt-1 text-muted">Clear only this profile&apos;s saved training history.</p>
+                      <p className="caption-text mt-1 text-muted">Clear only this profile&apos;s history.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                   </button>
@@ -153,7 +151,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Reset all data</p>
-                      <p className="caption-text mt-1 text-muted">Return the whole app to a clean start on this device.</p>
+                      <p className="caption-text mt-1 text-muted">Reset the whole app on this device.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                   </button>

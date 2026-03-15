@@ -270,14 +270,22 @@ export function ProgressScreen({
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-text">{session.workoutName}</p>
-                        {session.partial ? (
-                          <span className="rounded-full bg-accentSoft px-2.5 py-1 text-[11px] font-medium text-accent">
-                            Partial
-                          </span>
-                        ) : null}
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                            session.partial
+                              ? "bg-accentSoft text-accent"
+                              : "bg-black/10 text-text dark:bg-white/10"
+                          }`}
+                        >
+                          {session.partial ? "Partial" : "Full"}
+                        </span>
                       </div>
                       <p className="caption-text mt-1 text-muted">
-                        {[formatDate(session.performedAt), `${session.durationMinutes} min`, `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`].join(" • ")}
+                        {[
+                          formatDate(session.performedAt),
+                          `${session.durationMinutes} min`,
+                          `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`,
+                        ].join(" • ")}
                       </p>
                     </div>
                     <button
