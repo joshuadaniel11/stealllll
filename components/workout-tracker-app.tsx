@@ -1098,7 +1098,7 @@ export function WorkoutTrackerApp() {
       ),
     }));
     setEditingSessionId(null);
-    showToast("Workout changes saved.");
+    showToast("Workout changes saved to progress.");
   };
 
   if (!hasEnteredProfile) {

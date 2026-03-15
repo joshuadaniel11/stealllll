@@ -34,18 +34,27 @@ test("core app flow works across the main screens", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Keep session" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exit without saving" })).toBeVisible();
   await page.getByRole("button", { name: "Keep session" }).click();
+  await expect(page.getByText("Leave this workout?")).not.toBeVisible();
 
   await expect(page.getByText("Workout mode")).toBeVisible();
 
+  await page.locator('input[type="number"]').nth(0).fill("22");
+  await page.locator('input[type="number"]').nth(1).fill("8");
+  await page.getByRole("button", { name: "Complete Set" }).click();
   await page.getByRole("button", { name: "Exit Session" }).click();
-  await page.getByRole("button", { name: "Exit without saving" }).click();
+  await page.getByRole("button", { name: "Save progress and exit" }).click();
+  await expect(page.getByText("Partial session saved")).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator("h1").filter({ hasText: "Joshua" }).first()).toBeVisible();
-
-  await page.getByRole("button", { name: "Settings" }).click({ force: true });
-  await expect(page.getByText("Quiet, private, simple.")).toBeVisible();
-  await page.getByRole("button", { name: "Close" }).click();
+  await page.waitForTimeout(2200);
 
   await page.getByRole("button", { name: "Progress" }).click();
   await expect(page.getByRole("heading", { name: "Joshua's summary" })).toBeVisible();
   await expect(page.getByText("Leading indicator")).toBeVisible();
+  await page.getByRole("button", { name: "Edit" }).first().click();
+  await expect(page.getByText("Edit workout")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+  await page.getByRole("button", { name: "Mark this as a full workout" }).click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Workout changes saved to progress.")).toBeVisible();
 });
