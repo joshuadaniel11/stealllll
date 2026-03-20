@@ -26,7 +26,6 @@ export type ExerciseTemplate = {
   muscleGroup: MuscleGroup;
   sets: number;
   repRange: string;
-  restSeconds: 60 | 90 | 120;
   note?: string;
   progressionNote?: string;
   favorite?: boolean;

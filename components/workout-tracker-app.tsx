@@ -22,10 +22,8 @@ import { createSeedState } from "@/lib/seed-data";
 import {
   deserializeState,
   loadLockedProfile,
-  loadRememberedProfile,
   loadState,
   saveLockedProfile,
-  saveRememberedProfile,
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
@@ -348,6 +346,10 @@ function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppSta
   };
 }
 
+function normalizeCompletedWorkoutName(workoutName: string) {
+  return workoutName.replace(/\s*\(Partial\)$/i, "");
+}
+
 export function WorkoutTrackerApp() {
   const [state, setState] = useState<AppState>(createSeedState);
   const [hydrated, setHydrated] = useState(false);
@@ -399,8 +401,6 @@ export function WorkoutTrackerApp() {
   useEffect(() => {
     const localState = loadState();
     const deviceLockedProfile = loadLockedProfile();
-    const rememberedProfile = loadRememberedProfile();
-    const initialProfile = deviceLockedProfile ?? rememberedProfile;
     setLockedProfile(deviceLockedProfile);
     if (localState) {
       const seed = createSeedState();
@@ -408,13 +408,13 @@ export function WorkoutTrackerApp() {
       setState((current) => ({
         ...current,
         ...mergedState,
-        selectedUserId: initialProfile ?? mergedState.selectedUserId,
+        selectedUserId: deviceLockedProfile ?? mergedState.selectedUserId,
       }));
-      if (initialProfile) {
+      if (deviceLockedProfile) {
         setHasEnteredProfile(true);
       }
-    } else if (initialProfile) {
-      setState((current) => ({ ...current, selectedUserId: initialProfile }));
+    } else if (deviceLockedProfile) {
+      setState((current) => ({ ...current, selectedUserId: deviceLockedProfile }));
       setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
@@ -455,13 +455,6 @@ export function WorkoutTrackerApp() {
       saveState(state);
     }
   }, [state, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    saveRememberedProfile(lockedProfile ? null : hasEnteredProfile ? state.selectedUserId : null);
-  }, [hasEnteredProfile, hydrated, lockedProfile, state.selectedUserId]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -697,6 +690,8 @@ export function WorkoutTrackerApp() {
       },
     }));
     setSessionSummary({
+      sessionId: completedSession.id,
+      workoutDayId: completedSession.workoutDayId,
       userId: completedSession.userId,
       workoutName: completedSession.workoutName,
       durationMinutes,
@@ -1072,7 +1067,6 @@ export function WorkoutTrackerApp() {
       return;
     }
     setHasEnteredProfile(false);
-    saveRememberedProfile(null);
     softHaptic(6);
   };
 
@@ -1090,15 +1084,67 @@ export function WorkoutTrackerApp() {
     showToast(`This phone is now locked to ${selectedProfile.name}.`);
   };
 
-  const saveEditedSession = (updatedSession: WorkoutSession) => {
-    setState((current) => ({
-      ...current,
-      sessions: current.sessions.map((session) =>
-        session.id === updatedSession.id ? updatedSession : session,
-      ),
-    }));
+  const saveEditedSession = (updatedSession: WorkoutSession, options?: { countAsDone?: boolean }) => {
+    setState((current) => {
+      const existingSession = current.sessions.find((session) => session.id === updatedSession.id);
+      const shouldAdvanceCycle =
+        Boolean(options?.countAsDone) || Boolean(existingSession?.partial && updatedSession.partial === false);
+
+      return {
+        ...current,
+        sessions: current.sessions.map((session) =>
+          session.id === updatedSession.id ? updatedSession : session,
+        ),
+        workoutOverrides: shouldAdvanceCycle
+          ? {
+              ...current.workoutOverrides,
+              [updatedSession.userId]: {
+                nextWorkoutId: null,
+                updatedAt: new Date().toISOString(),
+              },
+            }
+          : current.workoutOverrides,
+      };
+    });
     setEditingSessionId(null);
-    showToast("Workout changes saved to progress.");
+    showToast(options?.countAsDone ? "Workout marked done. Moving to the next day." : "Workout changes saved to progress.");
+  };
+
+  const markPartialSessionComplete = (summary: SessionSummary) => {
+    if (!summary.sessionId) {
+      setSessionSummary(null);
+      return;
+    }
+
+    setState((current) => {
+      const targetSession = current.sessions.find((session) => session.id === summary.sessionId);
+      if (!targetSession) {
+        return current;
+      }
+
+      const updatedSession: WorkoutSession = {
+        ...targetSession,
+        partial: false,
+        workoutName: normalizeCompletedWorkoutName(targetSession.workoutName),
+      };
+
+      return {
+        ...current,
+        sessions: current.sessions.map((session) =>
+          session.id === summary.sessionId ? updatedSession : session,
+        ),
+        workoutOverrides: {
+          ...current.workoutOverrides,
+          [targetSession.userId]: {
+            nextWorkoutId: null,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    });
+
+    setSessionSummary(null);
+    showToast("Workout counted as done. Moving to the next day.");
   };
 
   if (!hasEnteredProfile) {
@@ -1255,7 +1301,11 @@ export function WorkoutTrackerApp() {
           onClose={() => setShowWorkoutFeelingPrompt(false)}
         />
       )}
-      <SessionSummaryModal summary={sessionSummary} onClose={() => setSessionSummary(null)} />
+      <SessionSummaryModal
+        summary={sessionSummary}
+        onClose={() => setSessionSummary(null)}
+        onMarkComplete={markPartialSessionComplete}
+      />
       <EditWorkoutModal
         session={editingSession}
         onClose={() => setEditingSessionId(null)}

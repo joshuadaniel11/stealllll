@@ -2,6 +2,8 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 
 export type SessionSummary = {
+  sessionId?: string;
+  workoutDayId?: string;
   userId: "joshua" | "natasha";
   workoutName: string;
   durationMinutes: number;
@@ -41,9 +43,11 @@ function getAfterWorkoutTease(summary: SessionSummary) {
 export function SessionSummaryModal({
   summary,
   onClose,
+  onMarkComplete,
 }: {
   summary: SessionSummary | null;
   onClose: () => void;
+  onMarkComplete?: (summary: SessionSummary) => void;
 }) {
   if (!summary) {
     return null;
@@ -80,12 +84,22 @@ export function SessionSummaryModal({
             <p className="mt-5 text-sm leading-6 text-muted">{getAfterWorkoutTease(summary)}</p>
           </ScrollReveal>
           <ScrollReveal delay={120} y={14} scale={0.996}>
-            <button
-              className="sheet-action-primary mt-6 w-full rounded-[28px] px-4 py-4 text-sm font-semibold"
-              onClick={onClose}
-            >
-              Done
-            </button>
+            <div className={`mt-6 grid gap-3 ${summary.partial ? "grid-cols-2" : "grid-cols-1"}`}>
+              {summary.partial ? (
+                <button
+                  className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                  onClick={() => onMarkComplete?.(summary)}
+                >
+                  Count as done
+                </button>
+              ) : null}
+              <button
+                className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                onClick={onClose}
+              >
+                Done
+              </button>
+            </div>
           </ScrollReveal>
         </Card>
       </div>

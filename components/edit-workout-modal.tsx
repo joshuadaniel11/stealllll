@@ -38,7 +38,7 @@ export function EditWorkoutModal({
 }: {
   session: WorkoutSession | null;
   onClose: () => void;
-  onSave: (session: WorkoutSession) => void;
+  onSave: (session: WorkoutSession, options?: { countAsDone?: boolean }) => void;
 }) {
   const [draft, setDraft] = useState<WorkoutSession | null>(session ? cloneSession(session) : null);
 
@@ -96,22 +96,39 @@ export function EditWorkoutModal({
                   />
                 </label>
                 {draft.partial ? (
-                  <button
-                    className="rounded-[18px] bg-black/10 px-4 py-3 text-sm font-medium text-text dark:bg-white/5"
-                    onClick={() =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              partial: false,
-                              workoutName: normalizeWorkoutName(current.workoutName, false),
-                            }
-                          : current,
-                      )
-                    }
-                  >
-                    Mark this as a full workout
-                  </button>
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      className="rounded-[18px] bg-black/10 px-4 py-3 text-sm font-medium text-text dark:bg-white/5"
+                      onClick={() =>
+                        setDraft((current) =>
+                          current
+                            ? {
+                                ...current,
+                                partial: false,
+                                workoutName: normalizeWorkoutName(current.workoutName, false),
+                              }
+                            : current,
+                        )
+                      }
+                    >
+                      Mark this as a full workout
+                    </button>
+                    <button
+                      className="rounded-[18px] bg-[var(--accentSoft)] px-4 py-3 text-sm font-semibold text-accent"
+                      onClick={() =>
+                        onSave(
+                          {
+                            ...draft,
+                            partial: false,
+                            workoutName: normalizeWorkoutName(draft.workoutName, false),
+                          },
+                          { countAsDone: true },
+                        )
+                      }
+                    >
+                      Count this as done and move on
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
