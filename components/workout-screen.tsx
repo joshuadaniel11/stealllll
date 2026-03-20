@@ -496,9 +496,9 @@ export function WorkoutScreen({
   return (
     <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
-      <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-3.5 shadow-[var(--shadow-card)]">
+      <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Workout mode</p>
-        <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">{currentExercise.exerciseName}</h1>
+        <h1 className="mt-1.5 text-[1.95rem] font-semibold leading-[0.98] tracking-[-0.07em] text-text">{currentExercise.exerciseName}</h1>
         {currentExerciseHasPr ? (
           <p className="mt-1 text-sm font-medium text-accent">PR hit on this exercise</p>
         ) : null}
@@ -510,21 +510,23 @@ export function WorkoutScreen({
           <p className="caption-text mt-2 text-muted">Final exercise in this session.</p>
         )}
 
-        <button
-          className="mt-3 flex w-full items-center justify-between rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5 text-left"
-          onClick={() => setShowExercisePicker(true)}
-        >
-          <div>
-            <p className="text-sm text-muted">Exercise chooser</p>
-            <p className="mt-1 text-sm font-medium text-text">
-              {completedExerciseCount} of {activeWorkout.exercises.length} exercises done
-            </p>
+        <div className="mt-3 rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted">Session progress</p>
+              <p className="mt-1 text-sm font-medium text-text">
+                {completedExerciseCount} of {activeWorkout.exercises.length} exercises done
+              </p>
+            </div>
+            <button
+              className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-2 text-sm text-text"
+              onClick={() => setShowExercisePicker(true)}
+            >
+              Pick exercise
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            Pick exercise
-            <ChevronRight className="h-4 w-4" />
-          </div>
-        </button>
+        </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-2.5">
@@ -549,12 +551,12 @@ export function WorkoutScreen({
           </p>
         ) : null}
 
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
-            <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5">
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
             <span className="text-sm text-muted">Weight</span>
             <input
               ref={weightInputRef}
-              className="mt-1 w-full bg-transparent text-[1.8rem] font-semibold tracking-[-0.05em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[2.2rem] font-semibold tracking-[-0.06em] text-text outline-none"
               inputMode="decimal"
               type="number"
               value={currentSet?.weight || ""}
@@ -570,11 +572,11 @@ export function WorkoutScreen({
               }}
             />
           </label>
-          <label className="rounded-[22px] bg-[var(--card-strong)] px-4 py-2.5">
+          <label className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
             <span className="text-sm text-muted">Reps</span>
             <input
               ref={repsInputRef}
-              className="mt-1 w-full bg-transparent text-[1.8rem] font-semibold tracking-[-0.05em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[2.2rem] font-semibold tracking-[-0.06em] text-text outline-none"
               inputMode="numeric"
               type="number"
               value={currentSet?.reps || ""}
@@ -652,7 +654,7 @@ export function WorkoutScreen({
         </div>
 
         <button
-          className={`mt-3 w-full rounded-[26px] px-5 py-3.5 text-base font-semibold ${
+          className={`mt-3 w-full rounded-[28px] px-5 py-4 text-base font-semibold ${
             canCompleteSet ? "bg-white text-black shadow-[var(--shadow-soft)]" : "bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canCompleteSet}

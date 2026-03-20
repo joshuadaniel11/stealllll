@@ -122,32 +122,30 @@ export function ProgressScreen({
           detail: `Pressing frequency and upper-body volume are stacking up for a thicker chest and a look Natasha is going to feel the second she is close.`,
         };
 
-  const smartCards =
+  const primarySignal =
     profile.id === "natasha"
-      ? [
-          {
-            title: "Current focus",
-            value: "Back definition",
-            detail: `${backSessions} back sessions logged. Width and upper-back detail are carving in nicely and making that waist-to-shoulder line look even dirtier.`,
-          },
-          {
-            title: "Support signal",
-            value: "Hourglass shape",
-            detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing that shoulder-to-waist-to-glute contrast and making your shape harder to forget.`,
-          },
-        ]
-      : [
-          {
-            title: "Current focus",
-            value: "Strength momentum",
-            detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions feeding a load trend that keeps you looking stronger, fuller, and more dangerous.`,
-          },
-          {
-            title: "Support signal",
-            value: "Abs visibility",
-            detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions so the waistline keeps tightening up.`,
-          },
-        ];
+      ? {
+          title: "Current focus",
+          value: "Back definition",
+          detail: `${backSessions} back sessions logged. Width and upper-back detail are carving in nicely and making that waist-to-shoulder line look even dirtier.`,
+        }
+      : {
+          title: "Current focus",
+          value: "Strength momentum",
+          detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions feeding a load trend that keeps you looking stronger, fuller, and more dangerous.`,
+        };
+  const supportSignal =
+    profile.id === "natasha"
+      ? {
+          title: "Support signal",
+          value: "Hourglass shape",
+          detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing that shoulder-to-waist-to-glute contrast and making your shape harder to forget.`,
+        }
+      : {
+          title: "Support signal",
+          value: "Abs visibility",
+          detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions so the waistline keeps tightening up.`,
+        };
 
   const showingBodyMetrics = bodyweightTrend.length > 0;
   const calendarData = buildCalendarData(userSessions);
@@ -252,16 +250,17 @@ export function ProgressScreen({
       <ScrollReveal delay={120}>
         <Card>
           <p className="text-sm text-muted">Smart focus</p>
-          <div className="mt-4 grid grid-cols-1 gap-3">
-            {smartCards.map((card) => (
-              <div key={card.title} className="rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium">{card.title}</p>
-                  <p className="text-sm font-medium text-accent">{card.value}</p>
-                </div>
-                <p className="mt-2 text-sm text-muted">{card.detail}</p>
-              </div>
-            ))}
+          <div className="mt-4 rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-medium">{primarySignal.title}</p>
+              <p className="text-sm font-medium text-accent">{primarySignal.value}</p>
+            </div>
+            <p className="mt-2 text-sm text-muted">{primarySignal.detail}</p>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <MiniMetric label="Support" value={supportSignal.value} />
+            <MiniMetric label="PBs hit" value={`${weeklySummary.personalBests}`} />
+            <MiniMetric label="Muscle focus" value={weeklySummary.mostTrainedMuscleGroup} />
           </div>
         </Card>
       </ScrollReveal>
@@ -272,21 +271,6 @@ export function ProgressScreen({
 
       <ScrollReveal delay={200}>
         <Card>
-          <p className="text-sm text-muted">At a glance</p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <MiniMetric label="Completed" value={`${weeklySummary.workoutsCompleted}`} />
-            <MiniMetric label="Total sets" value={`${weeklySummary.totalSets}`} />
-            <MiniMetric label="PBs hit" value={`${weeklySummary.personalBests}`} />
-            <MiniMetric label="Muscle focus" value={weeklySummary.mostTrainedMuscleGroup} />
-          </div>
-          <div className="mt-4 rounded-[24px] bg-black/5 p-4 text-sm text-muted dark:bg-white/5">
-            {profile.name} is trending well with {weeklySummary.consistencyLabel.toLowerCase()}.
-          </div>
-        </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={225}>
-        <Card>
           <p className="text-sm text-muted">{aestheticSignal.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
             <h3 className="text-xl font-semibold tracking-[-0.03em] text-text">{aestheticSignal.value}</h3>
@@ -296,7 +280,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={250}>
+      <ScrollReveal delay={225}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -333,7 +317,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={275}>
+      <ScrollReveal delay={250}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -386,7 +370,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={300}>
+      <ScrollReveal delay={275}>
         <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
       </ScrollReveal>
     </>

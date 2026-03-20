@@ -116,6 +116,24 @@ export function HomeScreen({
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
   const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
+  const latestSession = recentWorkouts[0] ?? null;
+  const pendingPartial =
+    latestSession?.partial && latestSession.workoutDayId === todaysWorkout.id ? latestSession : null;
+  const homeStateLabel = activeWorkoutName
+    ? "Active workout"
+    : pendingPartial
+      ? "Partial workout saved"
+      : "Ready when you are";
+  const homeStateDetail = activeWorkoutName
+    ? `${activeWorkoutName} is still open on this phone. Jump back in where you left it.`
+    : pendingPartial
+      ? `You saved part of ${pendingPartial.workoutName}. Resume it when ready, or leave it and move on later.`
+      : workoutRhythmNote ?? "Today is lined up. Start clean and train with intent.";
+  const primaryActionLabel = activeWorkoutName
+    ? "Resume Workout Mode"
+    : pendingPartial
+      ? "Resume Partial Workout"
+      : "Begin Session";
 
   return (
     <div className="space-y-5 pb-28">
@@ -149,11 +167,16 @@ export function HomeScreen({
 
       <ScrollReveal delay={60}>
         <Card className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-              Today&apos;s workout
-            </p>
-            <div className="space-y-1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
+                Today&apos;s workout
+              </p>
+              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/62">
+                {homeStateLabel}
+              </span>
+            </div>
+            <div className="space-y-1.5">
               <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">
                 {todaysWorkout.name}
               </h2>
@@ -162,9 +185,7 @@ export function HomeScreen({
                 {todaysWorkout.durationMinutes} min
               </p>
             </div>
-            {workoutRhythmNote ? (
-              <p className="text-sm leading-6 text-white/58">{workoutRhythmNote}</p>
-            ) : null}
+            <p className="text-sm leading-6 text-white/58">{homeStateDetail}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-2">
@@ -175,7 +196,7 @@ export function HomeScreen({
               }
               className="rounded-[24px] bg-white px-5 py-4 text-base font-medium tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
             >
-              {activeWorkoutName ? "Resume Workout Mode" : "Begin Session"}
+              {primaryActionLabel}
             </button>
             <div className="flex items-center justify-between gap-3 text-sm text-white/70">
               <button
@@ -275,31 +296,6 @@ export function HomeScreen({
               <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
 
               <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                  Together
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-white/88">
-                    {sharedSummary.weeklyHighlight}
-                  </p>
-                  <p className="text-sm leading-6 text-white/58">
-                    {sharedSummary.recentMilestones[0] ??
-                      "Show up together and the week starts building itself."}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <MiniMetric
-                    label="Team streak"
-                    value={`${sharedSummary.teamStreak}d`}
-                  />
-                  <MiniMetric
-                    label="Combined"
-                    value={String(sharedSummary.combinedWorkouts)}
-                  />
-                </div>
-              </Card>
-
-              <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
                     Recent workouts
@@ -341,6 +337,25 @@ export function HomeScreen({
                     No sessions logged yet. Your recent workouts will appear here.
                   </p>
                 )}
+              </Card>
+
+              <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
+                  Together
+                </p>
+                <p className="text-sm font-medium text-white/88">
+                  {sharedSummary.weeklyHighlight}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <MiniMetric
+                    label="Team streak"
+                    value={`${sharedSummary.teamStreak}d`}
+                  />
+                  <MiniMetric
+                    label="Combined"
+                    value={String(sharedSummary.combinedWorkouts)}
+                  />
+                </div>
               </Card>
             </div>
           ) : null}
