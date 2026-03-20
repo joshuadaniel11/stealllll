@@ -381,6 +381,100 @@ export function WorkoutScreen({
     }
   };
 
+  if (showExercisePicker) {
+    return (
+      <>
+        <ScrollReveal delay={0} y={12} scale={0.996}>
+          <Card className="bg-[rgba(4,5,7,0.96)] px-4 py-4 shadow-[var(--shadow-card)]">
+            <p className="text-sm text-muted">Workout mode</p>
+            <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
+              {activeWorkout.workoutName}
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              Pick the exercise you want to log next. Finished ones stay marked done.
+            </p>
+
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              {activeWorkout.exercises.map((exercise, index) => {
+                const done = isExerciseComplete(exercise);
+                const selected = index === currentExerciseIndex;
+
+                return (
+                  <button
+                    key={exercise.exerciseId}
+                    className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
+                      done
+                        ? "bg-white text-black"
+                        : selected
+                          ? "bg-accentSoft text-text"
+                          : "bg-[var(--card-strong)] text-text"
+                    }`}
+                    onClick={() => {
+                      setCurrentExerciseIndex(index);
+                      setShowExercisePicker(false);
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {index + 1}. {exercise.exerciseName}
+                      </p>
+                      <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
+                        {done ? "Done" : `Targets ${exercise.muscleGroup}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {done ? (
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
+                          <Check className="h-4 w-4" />
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">{exercise.sets.length} sets</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-text"
+                onClick={() => setShowExercisePicker(false)}
+              >
+                Resume current
+              </button>
+              <button
+                className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
+                onClick={() => {
+                  setShowExercisePicker(false);
+                  setShowExitConfirmation(true);
+                }}
+              >
+                Exit session
+              </button>
+            </div>
+          </Card>
+        </ScrollReveal>
+
+        <ExitSessionModal
+          open={showExitConfirmation}
+          canSaveProgress={activeWorkout.exercises.some((exercise) =>
+            exercise.sets.some((set) => set.completed && (set.reps > 0 || set.weight > 0)),
+          )}
+          onClose={() => setShowExitConfirmation(false)}
+          onSaveProgress={() => {
+            setShowExitConfirmation(false);
+            onSaveAndExitWorkout();
+          }}
+          onDiscard={() => {
+            setShowExitConfirmation(false);
+            onCancelWorkout();
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
@@ -601,81 +695,6 @@ export function WorkoutScreen({
           onCancelWorkout();
         }}
       />
-
-      {showExercisePicker ? (
-        <div className="sheet-backdrop">
-          <div className="sheet-panel sheet-detent-large animate-sheet-up">
-            <Card className="sheet-card bg-[var(--surface)]">
-              <div className="sheet-drag-handle" />
-              <p className="text-sm text-muted">Exercise chooser</p>
-              <h3 className="large-title mt-2 font-semibold text-text">{activeWorkout.workoutName}</h3>
-              <p className="mt-2 text-sm text-muted">
-                Tap any exercise to bring it forward for logging.
-              </p>
-
-              <div className="mt-5 grid grid-cols-1 gap-2">
-                {activeWorkout.exercises.map((exercise, index) => {
-                  const done = isExerciseComplete(exercise);
-                  const selected = index === currentExerciseIndex;
-
-                  return (
-                    <button
-                      key={exercise.exerciseId}
-                      className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
-                        done
-                          ? "bg-white text-black"
-                          : selected
-                            ? "bg-accentSoft text-text"
-                            : "bg-[var(--card-strong)] text-text"
-                      }`}
-                      onClick={() => {
-                        setCurrentExerciseIndex(index);
-                        setShowExercisePicker(false);
-                      }}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">
-                          {index + 1}. {exercise.exerciseName}
-                        </p>
-                        <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
-                          {done ? "Done" : `Targets ${exercise.muscleGroup}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {done ? (
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
-                            <Check className="h-4 w-4" />
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted">{exercise.sets.length} sets</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button
-                  className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-text"
-                  onClick={() => setShowExercisePicker(false)}
-                >
-                  Resume workout
-                </button>
-                <button
-                  className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-                  onClick={() => {
-                    setShowExercisePicker(false);
-                    setShowExitConfirmation(true);
-                  }}
-                >
-                  Exit session
-                </button>
-              </div>
-            </Card>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
