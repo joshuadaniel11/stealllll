@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { Card, MiniMetric } from "@/components/ui";
+import { getAestheticSignal } from "@/lib/workout-intelligence";
 import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
 function formatDate(value: string) {
@@ -156,6 +157,7 @@ export function ProgressScreen({
     const today = new Date();
     return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   }).length;
+  const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
 
   return (
     <>
@@ -285,6 +287,17 @@ export function ProgressScreen({
 
       <ScrollReveal delay={225}>
         <Card>
+          <p className="text-sm text-muted">{aestheticSignal.title}</p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold tracking-[-0.03em] text-text">{aestheticSignal.value}</h3>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">Adaptive</div>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted">{aestheticSignal.detail}</p>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={250}>
+        <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm text-muted">Consistency</p>
@@ -320,7 +333,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={250}>
+      <ScrollReveal delay={275}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -373,7 +386,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={275}>
+      <ScrollReveal delay={300}>
         <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
       </ScrollReveal>
     </>

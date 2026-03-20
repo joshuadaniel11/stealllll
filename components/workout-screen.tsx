@@ -7,6 +7,7 @@ import { ExitSessionModal } from "@/components/exit-session-modal";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
+import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 const substitutionHints: Record<string, string[]> = {
@@ -353,6 +354,8 @@ export function WorkoutScreen({
   const suggestedStart = currentTemplate ? getSuggestedStartingWeight(currentTemplate, userSessions) : null;
   const previousBestScore = getPreviousBestScore(currentExercise.exerciseName, userSessions);
   const currentExerciseHasPr = currentExercise.sets.some((set) => isPersonalBestSet(set, previousBestScore));
+  const compressionInsight = getAdaptiveCompressionInsight(activeWorkoutTemplate, userSessions);
+  const recommendedExercise = getRecommendedExercise(activeWorkout, activeWorkoutTemplate);
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -393,11 +396,21 @@ export function WorkoutScreen({
             <p className="mt-2 text-sm text-muted">
               Pick the exercise you want to log next. Finished ones stay marked done.
             </p>
+            {compressionInsight ? (
+              <div className="mt-4 rounded-[22px] bg-[var(--card-strong)] px-4 py-4">
+                <p className="text-sm font-medium text-text">Smart short version</p>
+                <p className="mt-1 text-sm text-muted">{compressionInsight.note}</p>
+                <p className="mt-2 text-sm text-text">
+                  {compressionInsight.suggestedExerciseNames.join(" • ")}
+                </p>
+              </div>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-1 gap-2">
               {activeWorkout.exercises.map((exercise, index) => {
                 const done = isExerciseComplete(exercise);
                 const selected = index === currentExerciseIndex;
+                const recommended = recommendedExercise?.index === index;
 
                 return (
                   <button
@@ -421,6 +434,11 @@ export function WorkoutScreen({
                       <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
                         {done ? "Done" : `Targets ${exercise.muscleGroup}`}
                       </p>
+                      {!done && recommended ? (
+                        <p className={`mt-1 text-[11px] font-medium ${selected ? "text-text/80" : "text-accent"}`}>
+                          Best next
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2">
                       {done ? (
