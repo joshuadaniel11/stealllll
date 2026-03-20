@@ -25,24 +25,6 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function normalizeDisplayText(value: string) {
-  return value
-    .replaceAll("â€¢", "•")
-    .replaceAll("ðŸ‘ðŸ”¥", "🍑🔥")
-    .replaceAll("ðŸ˜ˆðŸ–¤", "😈🖤")
-    .replaceAll("âœ¨ðŸ«¦", "✨🫦")
-    .replaceAll("ðŸ’‹ðŸ¦µ", "💋🦵")
-    .replaceAll("âœ¨ðŸ˜", "✨😏")
-    .replaceAll("ðŸ”¥âœ¨", "🔥✨")
-    .replaceAll("ðŸ”¥ðŸ–¤", "🔥🖤")
-    .replaceAll("ðŸ˜ˆðŸ’ª", "😈💪")
-    .replaceAll("ðŸ–¤ðŸ’ª", "🖤💪")
-    .replaceAll("ðŸ¦µðŸ”¥", "🦵🔥")
-    .replaceAll("ðŸ«¦ðŸ¦µ", "🫦🦵")
-    .replaceAll("ðŸ’ªðŸ˜", "💪😏")
-    .replaceAll("âœ¨ðŸ”¥", "✨🔥");
-}
-
 const workoutMotivationByProfile: Record<string, Record<string, string>> = {
   natasha: {
     "natasha-glutes-hams":
@@ -133,7 +115,7 @@ export function HomeScreen({
   const [showDetails, setShowDetails] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
-  const dailyMotivation = normalizeDisplayText(getWorkoutMotivation(profile.id, todaysWorkout.id));
+  const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
 
   return (
     <div className="space-y-5 pb-28">
@@ -176,7 +158,7 @@ export function HomeScreen({
                 {todaysWorkout.name}
               </h2>
               <p className="text-sm leading-6 text-white/62">
-                {normalizeDisplayText(todaysWorkout.focus)} {"\u2022"} {todaysWorkout.exercises.length} exercises {"\u2022"}{" "}
+                {todaysWorkout.focus} {"\u2022"} {todaysWorkout.exercises.length} exercises {"\u2022"}{" "}
                 {todaysWorkout.durationMinutes} min
               </p>
             </div>
@@ -257,10 +239,7 @@ export function HomeScreen({
       {dailyStretch ? (
         <ScrollReveal delay={120}>
           <DailyStretchCard
-            stretch={{
-              ...dailyStretch,
-              note: normalizeDisplayText(dailyStretch.note),
-            }}
+            stretch={dailyStretch}
             completed={stretchCompletedToday}
             onToggle={onToggleStretch}
           />
