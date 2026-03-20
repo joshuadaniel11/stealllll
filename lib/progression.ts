@@ -85,6 +85,41 @@ export function isPersonalBestSet(set: SetLog, previousBestScore: number) {
   return getSetScore(set.weight, set.reps) > previousBestScore;
 }
 
+export function getWorkoutPrSummary(session: WorkoutSession, previousSessions: WorkoutSession[]) {
+  const prHits = session.exercises.flatMap((exercise) => {
+    const previousBest = getPreviousBestScore(exercise.exerciseName, previousSessions);
+    const bestSet = exercise.sets
+      .filter((set) => isPersonalBestSet(set, previousBest))
+      .sort((a, b) => getSetScore(b.weight, b.reps) - getSetScore(a.weight, a.reps))[0];
+
+    if (!bestSet) {
+      return [];
+    }
+
+    const priorSets = previousSessions
+      .flatMap((priorSession) =>
+        priorSession.exercises
+          .filter((item) => item.exerciseName === exercise.exerciseName)
+          .flatMap((item) => item.sets.filter((set) => set.completed && (set.weight > 0 || set.reps > 0))),
+      )
+      .sort((a, b) => getSetScore(b.weight, b.reps) - getSetScore(a.weight, a.reps));
+
+    const priorBest = priorSets[0];
+    const weightDelta = priorBest ? Math.round((bestSet.weight - priorBest.weight) * 10) / 10 : 0;
+    const deltaLabel =
+      priorBest && weightDelta > 0
+        ? `${exercise.exerciseName} up ${weightDelta}kg`
+        : `${exercise.exerciseName} hit a new best`;
+
+    return [deltaLabel];
+  });
+
+  return {
+    count: prHits.length,
+    highlights: prHits.slice(0, 2),
+  };
+}
+
 export function getExercisePerformance(
   exercise: ExerciseTemplate,
   sessions: WorkoutSession[],

@@ -17,7 +17,7 @@ import { SettingsModal } from "@/components/settings-modal";
 import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
-import { getLastExerciseSets } from "@/lib/progression";
+import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
   deserializeState,
@@ -726,6 +726,7 @@ export function WorkoutTrackerApp() {
         sets: exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)),
       })),
     };
+    const prSummary = getWorkoutPrSummary(completedSession, userSessions);
     setState((current) => ({
       ...current,
       sessions: [completedSession, ...current.sessions],
@@ -752,6 +753,8 @@ export function WorkoutTrackerApp() {
       completedSets,
       feeling,
       partial: false,
+      prCount: prSummary.count,
+      prHighlights: prSummary.highlights,
     });
     softHaptic([10, 36, 12]);
     startTransition(() => setActiveTab("home"));

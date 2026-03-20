@@ -10,6 +10,8 @@ export type SessionSummary = {
   completedSets: number;
   feeling: "Strong" | "Solid" | "Tough";
   partial?: boolean;
+  prHighlights?: string[];
+  prCount?: number;
 };
 
 function getAfterWorkoutTease(summary: SessionSummary) {
@@ -83,6 +85,22 @@ export function SessionSummaryModal({
           <ScrollReveal delay={95} y={14} scale={0.996}>
             <p className="mt-5 text-sm leading-6 text-muted">{getAfterWorkoutTease(summary)}</p>
           </ScrollReveal>
+          {summary.prCount ? (
+            <ScrollReveal delay={108} y={14} scale={0.996}>
+              <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+                <p className="text-sm text-muted">
+                  {summary.prCount} PR{summary.prCount === 1 ? "" : "s"} today
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {summary.prHighlights?.map((highlight) => (
+                    <p key={highlight} className="text-sm font-medium text-text">
+                      {highlight}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+          ) : null}
           <ScrollReveal delay={120} y={14} scale={0.996}>
             <div className={`mt-6 grid gap-3 ${summary.partial ? "grid-cols-2" : "grid-cols-1"}`}>
               {summary.partial ? (
