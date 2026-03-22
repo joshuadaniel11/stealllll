@@ -169,11 +169,20 @@ function SummaryLine({
   metrics: TrainingLoadMetric[];
   lowActivity?: boolean;
 }) {
+  const emptyLabel =
+    label === "Most trained"
+      ? lowActivity
+        ? "No meaningful load logged yet this week"
+        : "Still building"
+      : label === "Priority focus"
+        ? lowActivity
+          ? "Start with the first priority regions for this profile"
+          : "Still building"
+        : "Still building";
+
   const value = metrics.length
     ? metrics.map((metric) => metric.label).join(", ")
-    : lowActivity
-      ? "Set the first priority with this week's next session"
-      : "Still building";
+    : emptyLabel;
 
   return (
     <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3">

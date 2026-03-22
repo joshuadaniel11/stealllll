@@ -280,6 +280,12 @@ export function WorkoutTrackerApp() {
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<{
+    userId: UserId;
+    timestamp: string;
+    workoutName: string;
+    kind: "partial" | "complete" | "edit";
+  } | null>(null);
 
   const softHaptic = (pattern: number | number[]) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -300,6 +306,19 @@ export function WorkoutTrackerApp() {
     setToastActionKind(options?.actionKind ?? null);
     setPendingScheduleUndo(options?.pendingScheduleUndo ?? null);
     setShowCompletionCelebration(true);
+  };
+
+  const markTrainingStateUpdated = (
+    userId: UserId,
+    workoutName: string,
+    kind: "partial" | "complete" | "edit",
+  ) => {
+    setRecentTrainingUpdate({
+      userId,
+      workoutName,
+      kind,
+      timestamp: new Date().toISOString(),
+    });
   };
 
   useEffect(() => {
@@ -496,6 +515,8 @@ export function WorkoutTrackerApp() {
       null
     );
   }, [selectedExerciseId, selectedProfile, state.exerciseLibrary]);
+  const profileRecentTrainingUpdate =
+    recentTrainingUpdate?.userId === selectedProfile.id ? recentTrainingUpdate : null;
 
   const editingSession = useMemo(
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
@@ -658,6 +679,7 @@ export function WorkoutTrackerApp() {
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
     setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
+    markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
     showToast("Progress saved. Training state updated.");
     softHaptic([8, 28, 8]);
     startTransition(() => setActiveTab("home"));
@@ -698,6 +720,7 @@ export function WorkoutTrackerApp() {
       prCount: prSummary.count,
       prHighlights: prSummary.highlights,
     }));
+    markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "complete");
     softHaptic([10, 36, 12]);
     startTransition(() => setActiveTab("home"));
   };
@@ -1069,6 +1092,11 @@ export function WorkoutTrackerApp() {
       };
     });
     setEditingSessionId(null);
+    markTrainingStateUpdated(
+      updatedSession.userId,
+      updatedSession.workoutName,
+      options?.countAsDone ? "complete" : "edit",
+    );
     showToast(options?.countAsDone ? "Workout marked done. Moving to the next day." : "Workout changes saved to progress.");
   };
 
@@ -1077,6 +1105,11 @@ export function WorkoutTrackerApp() {
       setSessionSummary(null);
       return;
     }
+
+    const currentTargetSession = state.sessions.find((session) => session.id === summary.sessionId);
+    const currentUpdatedWorkoutName = currentTargetSession
+      ? normalizeCompletedWorkoutName(currentTargetSession.workoutName)
+      : null;
 
     setState((current) => {
       const targetSession = current.sessions.find((session) => session.id === summary.sessionId);
@@ -1106,6 +1139,9 @@ export function WorkoutTrackerApp() {
     });
 
     setSessionSummary(null);
+    if (currentTargetSession && currentUpdatedWorkoutName) {
+      markTrainingStateUpdated(currentTargetSession.userId, currentUpdatedWorkoutName, "complete");
+    }
     showToast("Workout counted as done. Moving to the next day.");
   };
 
@@ -1266,6 +1302,7 @@ export function WorkoutTrackerApp() {
                 sharedSummary={dynamicSharedSummary}
                 recentWorkouts={recentWorkouts}
                 weddingCountdown={weddingCountdown}
+                recentTrainingUpdate={profileRecentTrainingUpdate}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}
@@ -1309,6 +1346,7 @@ export function WorkoutTrackerApp() {
               trainingState={trainingState}
               measurements={state.measurements[selectedProfile.id]}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
+              recentTrainingUpdate={profileRecentTrainingUpdate}
               onOpenNextFocus={openNextFocusWorkout}
               onOpenSuggestedSession={openSuggestedFocusSession}
               onSaveMeasurement={saveMeasurement}

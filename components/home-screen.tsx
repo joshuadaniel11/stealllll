@@ -59,6 +59,27 @@ function getWorkoutMotivation(profileId: string, workoutId: string) {
   );
 }
 
+function formatRecentTrainingUpdate(update: {
+  timestamp: string;
+  workoutName: string;
+  kind: "partial" | "complete" | "edit";
+}) {
+  const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(update.timestamp).getTime()) / 60000));
+  const freshness =
+    minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
+  const actionLabel =
+    update.kind === "partial"
+      ? "Progress saved"
+      : update.kind === "edit"
+        ? "Session updated"
+        : "Workout landed";
+
+  return {
+    label: actionLabel,
+    detail: `${update.workoutName} refreshed your training view ${freshness}.`,
+  };
+}
+
 type HomeScreenProps = {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
@@ -78,6 +99,11 @@ type HomeScreenProps = {
     days: number;
     label: string;
   };
+  recentTrainingUpdate: {
+    timestamp: string;
+    workoutName: string;
+    kind: "partial" | "complete" | "edit";
+  } | null;
   onOpenDailyVerse: () => void;
   onToggleStretch: () => void;
   onStartWorkout: (workoutId?: string) => void;
@@ -103,6 +129,7 @@ export function HomeScreen({
   sharedSummary,
   recentWorkouts,
   weddingCountdown,
+  recentTrainingUpdate,
   onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
@@ -134,6 +161,7 @@ export function HomeScreen({
     : pendingPartial
       ? "Resume Partial Workout"
       : "Begin Session";
+  const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
 
   return (
     <div className="space-y-5 pb-28">
@@ -215,6 +243,20 @@ export function HomeScreen({
               </button>
             </div>
           </div>
+
+          {recentUpdateBadge ? (
+            <div className="training-refresh-chip rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/46">
+                  {recentUpdateBadge.label}
+                </p>
+                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/58">
+                  In sync
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-white/68">{recentUpdateBadge.detail}</p>
+            </div>
+          ) : null}
 
           {showMoveChoices ? (
             <div className="space-y-2 rounded-[22px] border border-white/10 bg-white/5 p-3">

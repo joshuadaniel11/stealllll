@@ -51,6 +51,7 @@ export function ProgressScreen({
   trainingState,
   measurements,
   stretchCompletions,
+  recentTrainingUpdate,
   onOpenNextFocus,
   onOpenSuggestedSession,
   onSaveMeasurement,
@@ -60,6 +61,11 @@ export function ProgressScreen({
   trainingState: ProfileTrainingState;
   measurements: MeasurementEntry[];
   stretchCompletions: StretchCompletion[];
+  recentTrainingUpdate: {
+    timestamp: string;
+    workoutName: string;
+    kind: "partial" | "complete" | "edit";
+  } | null;
   onOpenNextFocus: () => void;
   onOpenSuggestedSession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
@@ -145,9 +151,33 @@ export function ProgressScreen({
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
+  const recentUpdateLabel = recentTrainingUpdate
+    ? (() => {
+        const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
+        const freshness =
+          minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
+        return recentTrainingUpdate.kind === "partial"
+          ? `${recentTrainingUpdate.workoutName} saved ${freshness}. Your load, map, and next recommendation are already refreshed.`
+          : recentTrainingUpdate.kind === "edit"
+            ? `${recentTrainingUpdate.workoutName} was updated ${freshness}. This week's training read is already in sync.`
+            : `${recentTrainingUpdate.workoutName} landed ${freshness}. Today's summaries and next suggestions have already shifted.`;
+      })()
+    : null;
 
   return (
     <>
+      {recentUpdateLabel ? (
+        <ScrollReveal delay={0}>
+          <div className="training-refresh-chip rounded-[24px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-white/42">Training state refreshed</p>
+              <span className="rounded-full bg-accentSoft px-3 py-1 text-[11px] font-medium text-accent">Live</span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-white/76">{recentUpdateLabel}</p>
+          </div>
+        </ScrollReveal>
+      ) : null}
+
       <ScrollReveal delay={0}>
         <TrainingLoadCard
           metrics={trainingLoad.metrics}
@@ -212,8 +242,8 @@ export function ProgressScreen({
 
       <ScrollReveal delay={50}>
         <Card>
-          <p className="text-sm text-muted">Progress</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{profile.name}&apos;s summary</h2>
+          <p className="text-sm text-muted">Weekly snapshot</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{profile.name}&apos;s training read</h2>
           <p className="mt-2 text-sm leading-6 text-muted">{profile.goalSummary}</p>
           <div className="mt-4 grid grid-cols-3 gap-3">
             <MiniMetric label="Total workouts" value={`${totalWorkouts}`} />
@@ -221,7 +251,7 @@ export function ProgressScreen({
             <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
           </div>
           <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] p-4">
-            <p className="text-sm text-muted">Leading indicator</p>
+            <p className="text-sm text-muted">Best current signal</p>
             <div className="mt-2 flex items-center justify-between gap-3">
               <p className="text-base font-semibold text-text">{leadingIndicator.title}</p>
               <p className="text-sm font-medium text-accent">{leadingIndicator.value}</p>
@@ -300,7 +330,7 @@ export function ProgressScreen({
 
       <ScrollReveal delay={120}>
         <Card>
-          <p className="text-sm text-muted">Smart focus</p>
+          <p className="text-sm text-muted">Direction this week</p>
           <div className="mt-4 rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
             <div className="flex items-center justify-between gap-3">
               <p className="font-medium">{primarySignal.title}</p>
@@ -311,8 +341,9 @@ export function ProgressScreen({
           <div className="mt-3 grid grid-cols-3 gap-3">
             <MiniMetric label="Support" value={supportSignal.value} />
             <MiniMetric label="PBs hit" value={`${weeklySummary.personalBests}`} />
-            <MiniMetric label="Muscle focus" value={weeklySummary.mostTrainedMuscleGroup} />
+            <MiniMetric label="Load leader" value={weeklySummary.mostTrainedMuscleGroup} />
           </div>
+          <p className="mt-3 text-sm leading-6 text-muted">{supportSignal.detail}</p>
         </Card>
       </ScrollReveal>
 
