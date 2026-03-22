@@ -579,6 +579,18 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
   const priorityZones = new Set(PROFILE_PRIORITY_ZONES[userId]);
   const lowActivity = metrics.every((metric) => metric.effectiveSets < MOST_TRAINED_MIN_EFFECTIVE_SETS);
 
+  if (lowActivity) {
+    return {
+      mostTrained: [],
+      needsWork: PROFILE_PRIORITY_ZONES[userId]
+        .slice(0, 3)
+        .map((zone) => metrics.find((metric) => metric.id === zone))
+        .filter((metric): metric is TrainingLoadMetric => Boolean(metric)),
+      suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, true),
+      lowActivity: true,
+    };
+  }
+
   const thresholdQualified = metrics.filter(
     (metric) =>
       metric.effectiveSets >= MOST_TRAINED_MIN_EFFECTIVE_SETS || metric.percentage >= MOST_TRAINED_MIN_PERCENTAGE,
