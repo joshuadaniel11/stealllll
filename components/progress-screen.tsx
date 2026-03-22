@@ -15,10 +15,10 @@ import {
 } from "recharts";
 
 import { Card, MiniMetric } from "@/components/ui";
-import { getCurrentWeekSessions, getCurrentWeekWindow, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
+import { getCurrentWeekWindow } from "@/lib/training-load";
+import type { ProfileTrainingState } from "@/lib/profile-training-state";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
-import type { SuggestedFocusSession, SuggestedWorkoutDestination } from "@/lib/training-load";
-import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
+import type { MeasurementEntry, Profile, StretchCompletion, WorkoutSession } from "@/lib/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
@@ -26,35 +26,25 @@ function formatDate(value: string) {
 
 export function ProgressScreen({
   profile,
-  totalWorkouts,
-  weeklySummary,
-  trendData,
+  trainingState,
   measurements,
-  userSessions,
-  recentSessions,
   stretchCompletions,
-  nextFocusDestination,
-  suggestedFocusSession,
   onOpenNextFocus,
   onOpenSuggestedSession,
   onSaveMeasurement,
   onEditSession,
 }: {
   profile: Profile;
-  totalWorkouts: number;
-  weeklySummary: WeeklySummary;
-  trendData: Array<{ date: string; volume: number }>;
+  trainingState: ProfileTrainingState;
   measurements: MeasurementEntry[];
-  userSessions: WorkoutSession[];
-  recentSessions: WorkoutSession[];
   stretchCompletions: StretchCompletion[];
-  nextFocusDestination: SuggestedWorkoutDestination | null;
-  suggestedFocusSession: SuggestedFocusSession | null;
   onOpenNextFocus: () => void;
   onOpenSuggestedSession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
+  const { calendarRows, nextFocusDestination, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
+    trainingState;
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -130,9 +120,6 @@ export function ProgressScreen({
           detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
         };
 
-  const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions, profile.id);
-  const currentWeekSessions = getCurrentWeekSessions(userSessions);
-  const weeklyCalendarRows = getWeeklyCalendarRows(userSessions);
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
 
@@ -140,12 +127,12 @@ export function ProgressScreen({
     <>
       <ScrollReveal delay={0}>
         <TrainingLoadCard
-          metrics={weeklyTrainingLoad.metrics}
-          groups={weeklyTrainingLoad.groups}
-          topZones={weeklyTrainingLoad.topZones}
-          summary={weeklyTrainingLoad.summary}
-          weekLabel={weeklyTrainingLoad.week.label}
-          activeDayCount={weeklyTrainingLoad.activeDays.size}
+          metrics={trainingLoad.metrics}
+          groups={trainingLoad.groups}
+          topZones={trainingLoad.topZones}
+          summary={trainingLoad.summary}
+          weekLabel={trainingLoad.week.label}
+          activeDayCount={trainingLoad.activeDays.size}
           userId={profile.id}
           nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
           suggestedSession={suggestedFocusSession}
@@ -165,11 +152,11 @@ export function ProgressScreen({
               </p>
             </div>
             <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
-              {currentWeekSessions.length} this week
+              {weeklySummary.workoutsCompleted} this week
             </div>
           </div>
           <div className="mt-4">
-            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
+            <WeeklyTrainingCalendar rows={calendarRows} />
           </div>
         </Card>
       </ScrollReveal>

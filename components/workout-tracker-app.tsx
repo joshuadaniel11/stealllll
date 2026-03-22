@@ -18,6 +18,7 @@ import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getCoupleIntelligenceSummary } from "@/lib/couple-intelligence";
+import { getProfileSessions, getProfileTrainingState } from "@/lib/profile-training-state";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -28,7 +29,7 @@ import {
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
-import { getSuggestedFocusSession, getSuggestedWorkoutDestination, getWeeklyTrainingLoad } from "@/lib/training-load";
+import type { SuggestedFocusSession } from "@/lib/training-load";
 import type {
   ActiveWorkout,
   AppState,
@@ -56,19 +57,6 @@ const navItems = [
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
-
-const formatVolume = (session: WorkoutSession) =>
-  session.exercises.flatMap((exercise) => exercise.sets).reduce((sum, set) => sum + set.weight * set.reps, 0);
-
-function getWeekStart(date = new Date()) {
-  const next = new Date(date);
-  next.setDate(next.getDate() - next.getDay());
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
 
 function getNextWorkoutFromSessions(profile: Profile, sessions: WorkoutSession[]) {
   if (!sessions.length) {
@@ -145,77 +133,6 @@ function isSameLocalDay(a: string, b: Date) {
   return new Date(a).toDateString() === b.toDateString();
 }
 
-function getUserSessions(state: AppState, userId: UserId) {
-  return state.sessions
-    .filter((session) => session.userId === userId)
-    .sort((a, b) => +new Date(b.performedAt) - +new Date(a.performedAt));
-}
-
-function getWorkoutsCompletedThisWeek(sessions: WorkoutSession[]) {
-  const start = getWeekStart();
-  return sessions.filter((session) => new Date(session.performedAt) >= start).length;
-}
-
-function getDynamicWeeklySummary(profile: Profile, sessions: WorkoutSession[]) {
-  const weeklySessions = sessions.filter((session) => new Date(session.performedAt) >= getWeekStart());
-  const totalSets = weeklySessions.reduce(
-    (sum, session) => sum + session.exercises.reduce((exerciseSum, exercise) => exerciseSum + exercise.sets.length, 0),
-    0,
-  );
-  const totalVolume = weeklySessions.reduce((sum, session) => sum + formatVolume(session), 0);
-  const muscleCount = weeklySessions
-    .flatMap((session) => session.exercises.map((exercise) => exercise.muscleGroup))
-    .reduce<Record<string, number>>((accumulator, muscle) => {
-      accumulator[muscle] = (accumulator[muscle] ?? 0) + 1;
-      return accumulator;
-    }, {});
-  const mostTrainedMuscleGroup =
-    Object.entries(muscleCount).sort((a, b) => b[1] - a[1])[0]?.[0] ??
-    profile.workoutPlan[0].exercises[0].muscleGroup;
-  const workoutsCompleted = weeklySessions.length;
-  const consistencyLabel =
-    workoutsCompleted >= 4
-      ? "Excellent momentum this week"
-      : workoutsCompleted >= 2
-        ? "Solid consistency and steady progress"
-        : "Building rhythm with a clean start";
-
-  return {
-    userId: profile.id,
-    workoutsCompleted,
-    totalSets,
-    totalVolume,
-    personalBests: Math.max(1, Math.min(weeklySessions.length, 3)),
-    mostTrainedMuscleGroup,
-    consistencyLabel,
-  };
-}
-
-function getStreak(sessions: WorkoutSession[]) {
-  const uniqueDays = Array.from(new Set(sessions.map((session) => new Date(session.performedAt).toDateString())));
-  if (!uniqueDays.length) {
-    return 0;
-  }
-  let streak = 0;
-  let cursor = new Date();
-  while (true) {
-    if (uniqueDays.includes(cursor.toDateString())) {
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 1);
-      continue;
-    }
-    if (streak === 0) {
-      cursor.setDate(cursor.getDate() - 1);
-      if (uniqueDays.includes(cursor.toDateString())) {
-        streak += 1;
-        cursor.setDate(cursor.getDate() - 1);
-        continue;
-      }
-    }
-    break;
-  }
-  return streak;
-}
 
 function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = []): SetLog[] {
   return Array.from({ length: exercise.sets }, (_, index) => ({
@@ -260,7 +177,7 @@ function toActiveWorkout(
 
 function toSuggestedFocusActiveWorkout(
   userId: UserId,
-  session: NonNullable<ReturnType<typeof getSuggestedFocusSession>>,
+  session: SuggestedFocusSession,
   sessions: WorkoutSession[],
 ) {
   const templateExercises = session.exercises
@@ -584,7 +501,22 @@ export function WorkoutTrackerApp() {
     [state.profiles, state.selectedUserId],
   );
 
-  const userSessions = useMemo(() => getUserSessions(state, selectedProfile.id), [state, selectedProfile.id]);
+  const trainingState = useMemo(
+    () => getProfileTrainingState(selectedProfile, state.sessions, state.exerciseLibrary),
+    [selectedProfile, state.exerciseLibrary, state.sessions],
+  );
+  const {
+    nextFocusDestination,
+    recentWorkouts,
+    recentSessions,
+    streak,
+    suggestedFocusSession,
+    totalWorkouts,
+    trendData,
+    userSessions,
+    weeklyCount,
+    weeklySummary: dynamicWeeklySummary,
+  } = trainingState;
   const workoutOverride = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
   const todaysWorkout = useMemo(
     () => getTodayWorkout(selectedProfile, userSessions, workoutOverride),
@@ -613,36 +545,6 @@ export function WorkoutTrackerApp() {
     }),
     [deferredInstallPrompt, isIosInstallPath, isStandalone],
   );
-  const weeklyCount = getWorkoutsCompletedThisWeek(userSessions);
-  const dynamicWeeklySummary = useMemo(
-    () => getDynamicWeeklySummary(selectedProfile, userSessions),
-    [selectedProfile, userSessions],
-  );
-  const weeklyTrainingLoad = useMemo(
-    () => getWeeklyTrainingLoad(userSessions, selectedProfile.id),
-    [selectedProfile.id, userSessions],
-  );
-  const nextFocusDestination = useMemo(
-    () =>
-      getSuggestedWorkoutDestination(
-        selectedProfile.id,
-        selectedProfile.workoutPlan,
-        weeklyTrainingLoad.summary.suggestedNextFocus,
-      ),
-    [selectedProfile, weeklyTrainingLoad.summary.suggestedNextFocus],
-  );
-  const suggestedFocusSession = useMemo(
-    () =>
-      getSuggestedFocusSession(
-        selectedProfile.id,
-        selectedProfile.workoutPlan,
-        weeklyTrainingLoad.summary.suggestedNextFocus,
-        state.exerciseLibrary,
-      ),
-    [selectedProfile, state.exerciseLibrary, weeklyTrainingLoad.summary.suggestedNextFocus],
-  );
-  const streak = getStreak(userSessions);
-  const recentWorkouts = userSessions.slice(0, 3);
   const workoutRhythmNote = useMemo(() => {
     const gapDays = getDaysSinceLastWorkout(userSessions);
     if (gapDays === null || gapDays < 3) {
@@ -693,17 +595,6 @@ export function WorkoutTrackerApp() {
     [editingSessionId, state.sessions],
   );
 
-  const trendData = useMemo(
-    () =>
-      userSessions
-        .slice()
-        .reverse()
-        .map((session) => ({
-          date: formatDate(session.performedAt),
-          volume: formatVolume(session),
-        })),
-    [userSessions],
-  );
 
   const dailyVerse = useMemo(() => {
     const dayOfYear = Math.floor(
@@ -1056,7 +947,7 @@ export function WorkoutTrackerApp() {
       }
       const existing = next.activeWorkout.exercises[exerciseIndex];
       const targetProfile = next.profiles.find((profile) => profile.id === next.activeWorkout?.userId);
-      const targetSessions = getUserSessions(next, next.activeWorkout.userId);
+      const targetSessions = getProfileSessions(next.sessions, next.activeWorkout.userId);
       const templateForSlot = targetProfile?.workoutPlan
         .find((workout) => workout.id === next.activeWorkout?.workoutDayId)
         ?.exercises[exerciseIndex];
@@ -1538,15 +1429,9 @@ export function WorkoutTrackerApp() {
           {activeTab === "progress" && (
             <ProgressScreen
               profile={selectedProfile}
-              totalWorkouts={userSessions.length}
-              weeklySummary={dynamicWeeklySummary}
-              trendData={trendData}
+              trainingState={trainingState}
               measurements={state.measurements[selectedProfile.id]}
-              userSessions={userSessions}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
-              recentSessions={userSessions.slice(0, 4)}
-              nextFocusDestination={nextFocusDestination}
-              suggestedFocusSession={suggestedFocusSession}
               onOpenNextFocus={openNextFocusWorkout}
               onOpenSuggestedSession={openSuggestedFocusSession}
               onSaveMeasurement={saveMeasurement}
