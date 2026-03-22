@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 import { Card, MiniMetric } from "@/components/ui";
-import { getCurrentWeekSessions, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
+import { getCurrentWeekSessions, getCurrentWeekWindow, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
 import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
@@ -54,12 +54,12 @@ export function ProgressScreen({
       bodyFat: entry.bodyFatPercent,
     }));
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  weekStart.setHours(0, 0, 0, 0);
+  const currentWeek = getCurrentWeekWindow();
 
-  const weeklyStretchCount = stretchCompletions.filter((entry) => new Date(entry.date) >= weekStart).length;
-
+  const weeklyStretchCount = stretchCompletions.filter((entry) => {
+    const date = new Date(entry.date);
+    return date >= currentWeek.start && date <= currentWeek.end;
+  }).length;
   const chestSessions = userSessions.filter((session) => /chest/i.test(session.workoutName)).length;
   const backSessions = userSessions.filter((session) => /back/i.test(session.workoutName)).length;
   const gluteSessions = userSessions.filter((session) => /glutes/i.test(session.workoutName)).length;
@@ -107,6 +107,7 @@ export function ProgressScreen({
           value: "Strength momentum",
           detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions feeding a load trend that keeps you looking stronger, fuller, and more dangerous.`,
         };
+
   const supportSignal =
     profile.id === "natasha"
       ? {
@@ -124,12 +125,39 @@ export function ProgressScreen({
   const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions);
   const currentWeekSessions = getCurrentWeekSessions(userSessions);
   const weeklyCalendarRows = getWeeklyCalendarRows(userSessions);
-  const weekLabel = `${new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(weeklyTrainingLoad.weekStart)} to ${new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(weeklyTrainingLoad.weekEnd)}`;
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
 
   return (
     <>
       <ScrollReveal delay={0}>
+        <TrainingLoadCard
+          metrics={weeklyTrainingLoad.metrics}
+          groups={weeklyTrainingLoad.groups}
+          topZones={weeklyTrainingLoad.topZones}
+          weekLabel={weeklyTrainingLoad.week.label}
+          activeDayCount={weeklyTrainingLoad.activeDays.size}
+          userId={profile.id}
+        />
+      </ScrollReveal>
+
+      <ScrollReveal delay={25}>
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted">Workout calendar</p>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
+            </div>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {currentWeekSessions.length} this week
+            </div>
+          </div>
+          <div className="mt-4">
+            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
+          </div>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={50}>
         <Card>
           <p className="text-sm text-muted">Progress</p>
           <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{profile.name}&apos;s summary</h2>
@@ -150,28 +178,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={70}>
-        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} userId={profile.id} />
-      </ScrollReveal>
-
       <ScrollReveal delay={95}>
-        <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-muted">Workout calendar</p>
-              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
-            </div>
-            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
-              {currentWeekSessions.length} this week
-            </div>
-          </div>
-          <div className="mt-4">
-            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
-          </div>
-        </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={120}>
         <Card>
           <div className="flex items-center justify-between">
             <div>
@@ -238,7 +245,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={145}>
+      <ScrollReveal delay={120}>
         <Card>
           <p className="text-sm text-muted">Smart focus</p>
           <div className="mt-4 rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
@@ -256,11 +263,11 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={170}>
+      <ScrollReveal delay={145}>
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={195}>
+      <ScrollReveal delay={170}>
         <Card>
           <p className="text-sm text-muted">{aestheticSignal.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -271,7 +278,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={275}>
+      <ScrollReveal delay={245}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -292,9 +299,7 @@ export function ProgressScreen({
                         <p className="text-sm font-semibold text-text">{session.workoutName}</p>
                         <span
                           className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                            session.partial
-                              ? "bg-accentSoft text-accent"
-                              : "bg-black/10 text-text dark:bg-white/10"
+                            session.partial ? "bg-accentSoft text-accent" : "bg-black/10 text-text dark:bg-white/10"
                           }`}
                         >
                           {session.partial ? "Partial" : "Full"}
@@ -326,4 +331,3 @@ export function ProgressScreen({
     </>
   );
 }
-

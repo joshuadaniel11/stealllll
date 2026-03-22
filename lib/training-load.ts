@@ -1,5 +1,14 @@
 import type { WorkoutSession, WorkoutSessionExercise } from "@/lib/types";
 
+export type TrainingLoadGroupId =
+  | "chest"
+  | "shoulders"
+  | "arms"
+  | "back"
+  | "core"
+  | "glutes"
+  | "legs";
+
 export type TrainingLoadZone =
   | "upperChest"
   | "midChest"
@@ -27,35 +36,73 @@ export type TrainingLoadMetric = {
   percentage: number;
   overload: boolean;
   color: string;
-  group:
-    | "chest"
-    | "shoulders"
-    | "arms"
-    | "back"
-    | "core"
-    | "glutes"
-    | "legs";
+  group: TrainingLoadGroupId;
+};
+
+export type TrainingLoadGroup = {
+  id: TrainingLoadGroupId;
+  label: string;
+  targetSets: number;
+  effectiveSets: number;
+  percentage: number;
+  overload: boolean;
+  color: string;
+  zones: TrainingLoadZone[];
+};
+
+export type WeekWindow = {
+  start: Date;
+  end: Date;
+  key: string;
+  label: string;
 };
 
 export type WeeklyTrainingLoad = {
-  weekStart: Date;
-  weekEnd: Date;
+  week: WeekWindow;
   metrics: TrainingLoadMetric[];
+  groups: TrainingLoadGroup[];
+  topZones: TrainingLoadMetric[];
   activeDays: Set<string>;
 };
 
 type ZoneContribution = Partial<Record<TrainingLoadZone, number>>;
 
+type CalendarCell = {
+  key: string;
+  dayLabel: string;
+  dayNumber: number;
+  completed: boolean;
+  isToday: boolean;
+};
+
+type CalendarRow = {
+  label: string;
+  isCurrentWeek: boolean;
+  days: CalendarCell[];
+};
+
+const DAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+
+const GROUP_META: Record<TrainingLoadGroupId, { label: string; color: string }> = {
+  chest: { label: "Chest", color: "#ff9a7a" },
+  shoulders: { label: "Shoulders", color: "#ffbe67" },
+  arms: { label: "Arms", color: "#f0d15c" },
+  back: { label: "Back", color: "#5d9dff" },
+  core: { label: "Core", color: "#45d5ab" },
+  glutes: { label: "Glutes", color: "#8a6cff" },
+  legs: { label: "Legs", color: "#72cf73" },
+};
+
 const ZONE_META: Record<
   TrainingLoadZone,
-  { label: string; targetSets: number; color: string; group: TrainingLoadMetric["group"] }
+  { label: string; targetSets: number; color: string; group: TrainingLoadGroupId }
 > = {
   upperChest: { label: "Upper chest", targetSets: 6, color: "#ff9676", group: "chest" },
   midChest: { label: "Chest", targetSets: 8, color: "#ffb084", group: "chest" },
   frontDelts: { label: "Front delts", targetSets: 6, color: "#ffa65d", group: "shoulders" },
   sideDelts: { label: "Side delts", targetSets: 8, color: "#ffc35f", group: "shoulders" },
   rearDelts: { label: "Rear delts", targetSets: 8, color: "#f0d15c", group: "shoulders" },
-  biceps: { label: "Biceps", targetSets: 8, color: "#f0d15c", group: "arms" },
+  biceps: { label: "Biceps", targetSets: 8, color: "#e4d769", group: "arms" },
   triceps: { label: "Triceps", targetSets: 8, color: "#f6bf62", group: "arms" },
   lats: { label: "Lats", targetSets: 10, color: "#5b9cff", group: "back" },
   upperBack: { label: "Upper back", targetSets: 10, color: "#57c2ff", group: "back" },
@@ -103,7 +150,8 @@ const EXERCISE_RULES: Array<{ pattern: RegExp; contribution: ZoneContribution }>
     contribution: { lats: 1, biceps: 0.25, upperBack: 0.2, rearDelts: 0.1 },
   },
   {
-    pattern: /barbell row|single-arm seated row|single-arm dumbbell row|chest-supported dumbbell row|seated cable row|close-grip seated cable row|neutral-grip lat pulldown|t-bar row|machine row/i,
+    pattern:
+      /barbell row|single-arm seated row|single-arm dumbbell row|chest-supported dumbbell row|seated cable row|close-grip seated cable row|neutral-grip lat pulldown|t-bar row|machine row/i,
     contribution: { lats: 0.5, upperBack: 0.75, biceps: 0.25, lowerBack: 0.08 },
   },
   {
@@ -172,28 +220,50 @@ const EXERCISE_RULES: Array<{ pattern: RegExp; contribution: ZoneContribution }>
   },
   {
     pattern: /medicine ball slam|wall throw|sled push|goblet squat to press|thruster|full body/i,
-    contribution: { quads: 0.3, gluteMax: 0.25, frontDelts: 0.2, triceps: 0.12, abs: 0.16, upperBack: 0.1, calves: 0.08 },
+    contribution: {
+      quads: 0.3,
+      gluteMax: 0.25,
+      frontDelts: 0.2,
+      triceps: 0.12,
+      abs: 0.16,
+      upperBack: 0.1,
+      calves: 0.08,
+    },
   },
 ];
 
-function getWeekStartMonday(input = new Date()) {
-  const next = new Date(input);
-  const day = next.getDay();
+function toLocalDayKey(value: Date | string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function roundToSingleDecimal(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+export function getCurrentWeekWindow(referenceDate = new Date()): WeekWindow {
+  const start = new Date(referenceDate);
+  const day = start.getDay();
   const diff = day === 0 ? -6 : 1 - day;
-  next.setDate(next.getDate() + diff);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
+  start.setDate(start.getDate() + diff);
+  start.setHours(0, 0, 0, 0);
 
-function getWeekEndMonday(weekStart: Date) {
-  const next = new Date(weekStart);
-  next.setDate(next.getDate() + 6);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
 
-function toDayKey(value: Date | string) {
-  return new Date(value).toISOString().slice(0, 10);
+  const startLabel = new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(start);
+  const endLabel = new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(end);
+
+  return {
+    start,
+    end,
+    key: toLocalDayKey(start),
+    label: `${startLabel} to ${endLabel}`,
+  };
 }
 
 function getCompletedSetCount(exercise: WorkoutSessionExercise) {
@@ -234,24 +304,69 @@ export function getExerciseMuscleContribution(exercise: WorkoutSessionExercise):
   return matchedRule?.contribution ?? getFallbackContribution(exercise);
 }
 
-export function getCurrentWeekSessions(sessions: WorkoutSession[]) {
-  const weekStart = getWeekStartMonday();
-  const weekEnd = getWeekEndMonday(weekStart);
-
+export function getCurrentWeekSessions(sessions: WorkoutSession[], referenceDate = new Date()) {
+  const week = getCurrentWeekWindow(referenceDate);
   return sessions.filter((session) => {
     const performedAt = new Date(session.performedAt);
-    return performedAt >= weekStart && performedAt <= weekEnd;
+    return performedAt >= week.start && performedAt <= week.end;
   });
 }
 
-export function getWeeklyTrainingLoad(sessions: WorkoutSession[]): WeeklyTrainingLoad {
-  const weekStart = getWeekStartMonday();
-  const weekEnd = getWeekEndMonday(weekStart);
-  const currentWeekSessions = getCurrentWeekSessions(sessions);
-  const totals = Object.keys(ZONE_META).reduce<Record<TrainingLoadZone, number>>((accumulator, key) => {
+function buildEmptyZoneTotals() {
+  return Object.keys(ZONE_META).reduce<Record<TrainingLoadZone, number>>((accumulator, key) => {
     accumulator[key as TrainingLoadZone] = 0;
     return accumulator;
   }, {} as Record<TrainingLoadZone, number>);
+}
+
+function buildZoneMetrics(totals: Record<TrainingLoadZone, number>) {
+  return (Object.entries(ZONE_META) as Array<[TrainingLoadZone, (typeof ZONE_META)[TrainingLoadZone]]>).map(
+    ([id, meta]) => {
+      const effectiveSets = roundToSingleDecimal(totals[id]);
+      const rawPercentage = meta.targetSets ? (effectiveSets / meta.targetSets) * 100 : 0;
+
+      return {
+        id,
+        label: meta.label,
+        targetSets: meta.targetSets,
+        effectiveSets,
+        percentage: Math.min(100, Math.round(rawPercentage)),
+        overload: rawPercentage > 100,
+        color: meta.color,
+        group: meta.group,
+      };
+    },
+  );
+}
+
+function buildGroupMetrics(metrics: TrainingLoadMetric[]) {
+  return (Object.entries(GROUP_META) as Array<[TrainingLoadGroupId, (typeof GROUP_META)[TrainingLoadGroupId]]>).map(
+    ([groupId, meta]) => {
+      const groupMetrics = metrics.filter((metric) => metric.group === groupId);
+      const effectiveSets = roundToSingleDecimal(
+        groupMetrics.reduce((sum, metric) => sum + metric.effectiveSets, 0),
+      );
+      const targetSets = groupMetrics.reduce((sum, metric) => sum + metric.targetSets, 0);
+      const rawPercentage = targetSets ? (effectiveSets / targetSets) * 100 : 0;
+
+      return {
+        id: groupId,
+        label: meta.label,
+        targetSets,
+        effectiveSets,
+        percentage: Math.min(100, Math.round(rawPercentage)),
+        overload: rawPercentage > 100,
+        color: meta.color,
+        zones: groupMetrics.map((metric) => metric.id),
+      };
+    },
+  );
+}
+
+export function getWeeklyTrainingLoad(sessions: WorkoutSession[], referenceDate = new Date()): WeeklyTrainingLoad {
+  const week = getCurrentWeekWindow(referenceDate);
+  const currentWeekSessions = getCurrentWeekSessions(sessions, referenceDate);
+  const totals = buildEmptyZoneTotals();
 
   for (const session of currentWeekSessions) {
     for (const exercise of session.exercises) {
@@ -267,40 +382,34 @@ export function getWeeklyTrainingLoad(sessions: WorkoutSession[]): WeeklyTrainin
     }
   }
 
-  const metrics = (Object.entries(ZONE_META) as Array<[TrainingLoadZone, (typeof ZONE_META)[TrainingLoadZone]]>).map(
-    ([id, meta]) => {
-      const effectiveSets = Number(totals[id].toFixed(1));
-      const rawPercentage = meta.targetSets ? (effectiveSets / meta.targetSets) * 100 : 0;
-
-      return {
-        id,
-        label: meta.label,
-        targetSets: meta.targetSets,
-        effectiveSets,
-        percentage: Math.min(100, Math.round(rawPercentage)),
-        overload: rawPercentage > 100,
-        color: meta.color,
-        group: meta.group,
-      };
-    },
-  );
+  const metrics = buildZoneMetrics(totals);
+  const groups = buildGroupMetrics(metrics);
+  const topZones = [...metrics]
+    .filter((metric) => metric.effectiveSets > 0)
+    .sort((a, b) => b.percentage - a.percentage || b.effectiveSets - a.effectiveSets)
+    .slice(0, 4);
 
   return {
-    weekStart,
-    weekEnd,
+    week,
     metrics,
-    activeDays: new Set(currentWeekSessions.map((session) => toDayKey(session.performedAt))),
+    groups,
+    topZones,
+    activeDays: new Set(currentWeekSessions.map((session) => toLocalDayKey(session.performedAt))),
   };
 }
 
-export function getWeeklyCalendarRows(sessions: WorkoutSession[], weeksToShow = 6) {
-  const currentWeekStart = getWeekStartMonday();
-  const workoutDays = new Set(sessions.map((session) => toDayKey(session.performedAt)));
-  const todayKey = toDayKey(new Date());
+export function getWeeklyCalendarRows(
+  sessions: WorkoutSession[],
+  weeksToShow = 6,
+  referenceDate = new Date(),
+): CalendarRow[] {
+  const currentWeek = getCurrentWeekWindow(referenceDate);
+  const workoutDays = new Set(sessions.map((session) => toLocalDayKey(session.performedAt)));
+  const todayKey = toLocalDayKey(referenceDate);
 
   return Array.from({ length: weeksToShow }, (_, index) => {
     const offset = weeksToShow - index - 1;
-    const weekStart = new Date(currentWeekStart);
+    const weekStart = new Date(currentWeek.start);
     weekStart.setDate(weekStart.getDate() - offset * 7);
 
     return {
@@ -309,11 +418,11 @@ export function getWeeklyCalendarRows(sessions: WorkoutSession[], weeksToShow = 
       days: Array.from({ length: 7 }, (_, dayIndex) => {
         const date = new Date(weekStart);
         date.setDate(date.getDate() + dayIndex);
-        const key = toDayKey(date);
+        const key = toLocalDayKey(date);
 
         return {
           key,
-          dayLabel: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][dayIndex],
+          dayLabel: DAY_LABELS[dayIndex],
           dayNumber: date.getDate(),
           completed: workoutDays.has(key),
           isToday: key === todayKey,
