@@ -136,12 +136,14 @@ export function getProfileTrainingState(
       profile.id,
       profile.workoutPlan,
       trainingLoad.summary.suggestedNextFocus,
+      trainingLoad.recentLoad,
     ),
     suggestedFocusSession: getSuggestedFocusSession(
       profile.id,
       profile.workoutPlan,
       trainingLoad.summary.suggestedNextFocus,
       exerciseLibrary,
+      trainingLoad.recentLoad,
     ),
   };
 }

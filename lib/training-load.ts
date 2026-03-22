@@ -80,6 +80,7 @@ export type WeeklyTrainingLoad = {
   groups: TrainingLoadGroup[];
   topZones: TrainingLoadMetric[];
   activeDays: Set<string>;
+  recentLoad: RecentLoadProfile;
   summary: TrainingLoadSummary;
 };
 
@@ -132,6 +133,11 @@ export type SuggestedFocusSession = {
   isFallback: boolean;
 };
 
+export type RecentLoadProfile = {
+  zonePenalties: Record<TrainingLoadZone, number>;
+  recentSessionsConsidered: number;
+};
+
 type FocusExerciseCandidate = {
   key: string;
   exerciseId: string | null;
@@ -142,6 +148,7 @@ type FocusExerciseCandidate = {
   note?: string;
   matchedZoneIds: TrainingLoadZone[];
   totalFocusScore: number;
+  recoveryAdjustedScore: number;
   strongestZoneScore: number;
   sourceWorkoutId: string | null;
   sourceWorkoutName: string | null;
@@ -542,6 +549,68 @@ function scoreContributionForFocus(contribution: ZoneContribution, focusZoneIds:
   };
 }
 
+function buildEmptyZoneRecord() {
+  return Object.keys(TRAINING_LOAD_ZONE_META).reduce<Record<TrainingLoadZone, number>>((accumulator, key) => {
+    accumulator[key as TrainingLoadZone] = 0;
+    return accumulator;
+  }, {} as Record<TrainingLoadZone, number>);
+}
+
+function getRecentSessionWeight(performedAt: string, referenceDate: Date) {
+  const hoursSince = Math.max(0, (referenceDate.getTime() - new Date(performedAt).getTime()) / 36e5);
+
+  if (hoursSince <= 24) {
+    return 1;
+  }
+  if (hoursSince <= 48) {
+    return 0.72;
+  }
+  if (hoursSince <= 72) {
+    return 0.5;
+  }
+  return 0.32;
+}
+
+function getRecentLoadProfile(
+  userId: UserId,
+  sessions: WorkoutSession[],
+  referenceDate = new Date(),
+): RecentLoadProfile {
+  const zoneLoads = buildEmptyZoneRecord();
+  const sortedSessions = [...sessions].sort((a, b) => +new Date(b.performedAt) - +new Date(a.performedAt));
+  const recentSessions = sortedSessions.filter((session, index) => {
+    const hoursSince = Math.max(0, (referenceDate.getTime() - new Date(session.performedAt).getTime()) / 36e5);
+    return hoursSince <= 72 || index < 2;
+  });
+
+  for (const session of recentSessions) {
+    const weight = getRecentSessionWeight(session.performedAt, referenceDate);
+    for (const exercise of session.exercises) {
+      const completedSets = getCompletedSetCount(exercise);
+      if (!completedSets) {
+        continue;
+      }
+      const contribution = getExerciseMuscleContribution(exercise);
+      for (const [zoneId, zoneWeight] of Object.entries(contribution) as Array<[TrainingLoadZone, number]>) {
+        zoneLoads[zoneId] += completedSets * zoneWeight * weight;
+      }
+    }
+  }
+
+  const zonePenalties = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<
+    Record<TrainingLoadZone, number>
+  >((accumulator, zoneId) => {
+    const targetSets = getTargetSets(userId, zoneId);
+    accumulator[zoneId] = Math.min(1, zoneLoads[zoneId] / Math.max(2, targetSets * 0.8));
+    return accumulator;
+  }, {} as Record<TrainingLoadZone, number>);
+
+  return {
+    zonePenalties,
+    recentSessionsConsidered: recentSessions.length,
+  };
+}
+
 function roundDurationToFive(minutes: number) {
   return Math.max(15, Math.round(minutes / 5) * 5);
 }
@@ -639,6 +708,7 @@ function buildSuggestedNextFocus(
   userId: UserId,
   metrics: TrainingLoadMetric[],
   lowActivity: boolean,
+  recentLoad: RecentLoadProfile,
 ): NextWorkoutFocus {
   const priorityZones = PROFILE_PRIORITY_ZONES[userId];
   const priorityMetrics = priorityZones
@@ -648,11 +718,17 @@ function buildSuggestedNextFocus(
   const pickZones = (pool: TrainingLoadMetric[]) =>
     [...pool]
       .sort((a, b) => {
-        if (a.percentage !== b.percentage) {
-          return a.percentage - b.percentage;
+        const aAdjustedPercentage = a.percentage + recentLoad.zonePenalties[a.id] * 22;
+        const bAdjustedPercentage = b.percentage + recentLoad.zonePenalties[b.id] * 22;
+
+        if (aAdjustedPercentage !== bAdjustedPercentage) {
+          return aAdjustedPercentage - bAdjustedPercentage;
         }
         if (a.effectiveSets !== b.effectiveSets) {
           return a.effectiveSets - b.effectiveSets;
+        }
+        if (recentLoad.zonePenalties[a.id] !== recentLoad.zonePenalties[b.id]) {
+          return recentLoad.zonePenalties[a.id] - recentLoad.zonePenalties[b.id];
         }
         return getPriorityRank(userId, a.id) - getPriorityRank(userId, b.id);
       })
@@ -687,6 +763,7 @@ export function getSuggestedWorkoutDestination(
   userId: UserId,
   workoutPlan: WorkoutPlanDay[],
   focus: NextWorkoutFocus,
+  recentLoad?: RecentLoadProfile,
 ): SuggestedWorkoutDestination | null {
   if (!workoutPlan.length) {
     return null;
@@ -713,6 +790,10 @@ export function getSuggestedWorkoutDestination(
       index,
       matchedZoneIds,
       totalFocusScore,
+      adjustedFocusScore: totalFocusScore - focus.zoneIds.reduce(
+        (sum, zoneId) => sum + (recentLoad?.zonePenalties[zoneId] ?? 0) * (zoneScores[zoneId] > 0 ? 0.32 : 0),
+        0,
+      ),
       strongestZoneScore: Math.max(0, ...focus.zoneIds.map((zoneId) => zoneScores[zoneId])),
     };
   });
@@ -720,6 +801,9 @@ export function getSuggestedWorkoutDestination(
   const bestMatch = [...scoredWorkouts].sort((a, b) => {
     if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
       return b.matchedZoneIds.length - a.matchedZoneIds.length;
+    }
+    if (b.adjustedFocusScore !== a.adjustedFocusScore) {
+      return b.adjustedFocusScore - a.adjustedFocusScore;
     }
     if (b.totalFocusScore !== a.totalFocusScore) {
       return b.totalFocusScore - a.totalFocusScore;
@@ -754,12 +838,13 @@ export function getSuggestedFocusSession(
   workoutPlan: WorkoutPlanDay[],
   focus: NextWorkoutFocus,
   exerciseLibrary: ExerciseLibraryItem[] = [],
+  recentLoad?: RecentLoadProfile,
 ): SuggestedFocusSession | null {
   if (!focus.zoneIds.length) {
     return null;
   }
 
-  const destination = getSuggestedWorkoutDestination(userId, workoutPlan, focus);
+  const destination = getSuggestedWorkoutDestination(userId, workoutPlan, focus, recentLoad);
   const preferredWorkoutId = destination?.workoutId ?? null;
   const preferredWorkoutName = destination?.workoutName ?? null;
   const sourceWorkout = preferredWorkoutId
@@ -781,6 +866,15 @@ export function getSuggestedFocusSession(
         note: exercise.note,
         matchedZoneIds: score.matchedZoneIds,
         totalFocusScore: score.totalFocusScore,
+        recoveryAdjustedScore:
+          score.totalFocusScore *
+          Math.max(
+            0.55,
+            1 -
+              score.matchedZoneIds.reduce((sum, zoneId) => sum + (recentLoad?.zonePenalties[zoneId] ?? 0), 0) /
+                Math.max(1, score.matchedZoneIds.length) *
+                0.45,
+          ),
         strongestZoneScore: score.strongestZoneScore,
         sourceWorkoutId: workout.id,
         sourceWorkoutName: workout.name,
@@ -797,6 +891,9 @@ export function getSuggestedFocusSession(
         .sort((a, b) => {
           if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
             return b.matchedZoneIds.length - a.matchedZoneIds.length;
+          }
+          if (b.recoveryAdjustedScore !== a.recoveryAdjustedScore) {
+            return b.recoveryAdjustedScore - a.recoveryAdjustedScore;
           }
           if (b.totalFocusScore !== a.totalFocusScore) {
             return b.totalFocusScore - a.totalFocusScore;
@@ -858,6 +955,15 @@ export function getSuggestedFocusSession(
           note: exercise.cues[0],
           matchedZoneIds: score.matchedZoneIds,
           totalFocusScore: score.totalFocusScore,
+          recoveryAdjustedScore:
+            score.totalFocusScore *
+            Math.max(
+              0.55,
+              1 -
+                score.matchedZoneIds.reduce((sum, zoneId) => sum + (recentLoad?.zonePenalties[zoneId] ?? 0), 0) /
+                  Math.max(1, score.matchedZoneIds.length) *
+                  0.45,
+            ),
           strongestZoneScore: score.strongestZoneScore,
           sourceWorkoutId: null,
           sourceWorkoutName: null,
@@ -870,6 +976,9 @@ export function getSuggestedFocusSession(
       .sort((a, b) => {
         if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
           return b.matchedZoneIds.length - a.matchedZoneIds.length;
+        }
+        if (b.recoveryAdjustedScore !== a.recoveryAdjustedScore) {
+          return b.recoveryAdjustedScore - a.recoveryAdjustedScore;
         }
         if (b.totalFocusScore !== a.totalFocusScore) {
           return b.totalFocusScore - a.totalFocusScore;
@@ -941,7 +1050,11 @@ export function getSuggestedFocusSession(
   };
 }
 
-function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[]): TrainingLoadSummary {
+function buildTrainingLoadSummary(
+  userId: UserId,
+  metrics: TrainingLoadMetric[],
+  recentLoad: RecentLoadProfile,
+): TrainingLoadSummary {
   const priorityZones = new Set(PROFILE_PRIORITY_ZONES[userId]);
   const lowActivity = metrics.every((metric) => metric.effectiveSets < MOST_TRAINED_MIN_EFFECTIVE_SETS);
 
@@ -952,7 +1065,7 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
         .slice(0, 3)
         .map((zone) => metrics.find((metric) => metric.id === zone))
         .filter((metric): metric is TrainingLoadMetric => Boolean(metric)),
-      suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, true),
+      suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, true, recentLoad),
       lowActivity: true,
     };
   }
@@ -990,6 +1103,9 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
       if (a.effectiveSets !== b.effectiveSets) {
         return a.effectiveSets - b.effectiveSets;
       }
+      if (recentLoad.zonePenalties[a.id] !== recentLoad.zonePenalties[b.id]) {
+        return recentLoad.zonePenalties[a.id] - recentLoad.zonePenalties[b.id];
+      }
       return getPriorityRank(userId, a.id) - getPriorityRank(userId, b.id);
     })
     .slice(0, 3);
@@ -997,7 +1113,7 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
   return {
     mostTrained,
     needsWork,
-    suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, lowActivity),
+    suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, lowActivity, recentLoad),
     lowActivity,
   };
 }
@@ -1009,6 +1125,7 @@ export function getWeeklyTrainingLoad(
 ): WeeklyTrainingLoad {
   const week = getCurrentWeekWindow(referenceDate);
   const currentWeekSessions = getCurrentWeekSessions(sessions, referenceDate);
+  const recentLoad = getRecentLoadProfile(userId, sessions, referenceDate);
   const totals = buildEmptyZoneTotals();
   const contributorTotals = Object.keys(TRAINING_LOAD_ZONE_META).reduce<
     Record<TrainingLoadZone, Record<string, number>>
@@ -1040,7 +1157,7 @@ export function getWeeklyTrainingLoad(
     .filter((metric) => metric.effectiveSets > 0)
     .sort((a, b) => b.percentage - a.percentage || b.effectiveSets - a.effectiveSets)
     .slice(0, 5);
-  const summary = buildTrainingLoadSummary(userId, metrics);
+  const summary = buildTrainingLoadSummary(userId, metrics, recentLoad);
 
   return {
     week,
@@ -1048,6 +1165,7 @@ export function getWeeklyTrainingLoad(
     groups,
     topZones,
     activeDays: new Set(currentWeekSessions.map((session) => toLocalDayKey(session.performedAt))),
+    recentLoad,
     summary,
   };
 }
