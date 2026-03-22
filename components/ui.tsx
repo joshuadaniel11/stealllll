@@ -20,24 +20,6 @@ export function Card({
   );
 }
 
-export function StatCard({
-  label,
-  value,
-  sublabel,
-}: {
-  label: string;
-  value: string;
-  sublabel: string;
-}) {
-  return (
-    <Card className="px-4 py-4">
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{value}</p>
-      <p className="mt-1 text-sm text-muted">{sublabel}</p>
-    </Card>
-  );
-}
-
 export function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[28px] border border-stroke bg-[var(--card-strong)]/70 px-4 py-4 shadow-[var(--shadow-soft)]">

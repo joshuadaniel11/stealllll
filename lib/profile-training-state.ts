@@ -421,11 +421,3 @@ export function getProfileTrainingState(
 export function getProfileSessions(allSessions: WorkoutSession[], userId: Profile["id"]) {
   return sortSessionsDescending(allSessions.filter((session) => session.userId === userId));
 }
-
-export function getWeeklyWorkoutCount(sessions: WorkoutSession[], referenceDate = new Date()) {
-  return getCurrentWeekSessions(sessions, referenceDate).length;
-}
-
-export function getCurrentWeekLabel(referenceDate = new Date()) {
-  return getCurrentWeekWindow(referenceDate).label;
-}
