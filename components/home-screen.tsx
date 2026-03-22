@@ -8,6 +8,7 @@ import { DailyStretchCard } from "@/components/daily-stretch-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
+import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
   BibleVerse,
   Profile,
@@ -99,11 +100,7 @@ type HomeScreenProps = {
     days: number;
     label: string;
   };
-  recentTrainingUpdate: {
-    timestamp: string;
-    workoutName: string;
-    kind: "partial" | "complete" | "edit";
-  } | null;
+  recentTrainingUpdate: RecentTrainingUpdate | null;
   onOpenDailyVerse: () => void;
   onToggleStretch: () => void;
   onStartWorkout: (workoutId?: string) => void;

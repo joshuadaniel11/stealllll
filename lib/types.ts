@@ -167,6 +167,13 @@ export type WorkoutOverride = {
   updatedAt: string | null;
 };
 
+export type RecentTrainingUpdate = {
+  userId: UserId;
+  timestamp: string;
+  workoutName: string;
+  kind: "partial" | "complete" | "edit";
+};
+
 export type AppState = {
   selectedUserId: UserId;
   profiles: Profile[];

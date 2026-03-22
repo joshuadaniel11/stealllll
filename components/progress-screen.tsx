@@ -18,7 +18,7 @@ import { Card, MiniMetric } from "@/components/ui";
 import { getCurrentWeekWindow } from "@/lib/training-load";
 import type { GoalDashboardCard, ProfileTrainingState } from "@/lib/profile-training-state";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
-import type { MeasurementEntry, Profile, StretchCompletion, WorkoutSession } from "@/lib/types";
+import type { MeasurementEntry, Profile, RecentTrainingUpdate, StretchCompletion } from "@/lib/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
@@ -61,17 +61,13 @@ export function ProgressScreen({
   trainingState: ProfileTrainingState;
   measurements: MeasurementEntry[];
   stretchCompletions: StretchCompletion[];
-  recentTrainingUpdate: {
-    timestamp: string;
-    workoutName: string;
-    kind: "partial" | "complete" | "edit";
-  } | null;
+  recentTrainingUpdate: RecentTrainingUpdate | null;
   onOpenNextFocus: () => void;
   onOpenSuggestedSession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
-  const { calendarRows, nextFocusDestination, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
+  const { calendarRows, nextFocusDestination, progressSignals, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
     trainingState;
   const goalDashboard = trainingState.goalDashboard;
   const bodyweightTrend = [...measurements]
@@ -87,67 +83,6 @@ export function ProgressScreen({
     const date = new Date(entry.date);
     return date >= currentWeek.start && date <= currentWeek.end;
   }).length;
-
-  const chestSessions = userSessions.filter((session) => /chest/i.test(session.workoutName)).length;
-  const backSessions = userSessions.filter((session) => /back/i.test(session.workoutName)).length;
-  const gluteSessions = userSessions.filter((session) => /glutes/i.test(session.workoutName)).length;
-  const coreSessions = userSessions.filter((session) => /core|abs/i.test(session.workoutName)).length;
-  const shoulderSessions = userSessions.filter((session) => /shoulder/i.test(session.workoutName)).length;
-
-  const recentVolume = trendData.slice(-2).reduce((sum, item) => sum + item.volume, 0);
-  const previousVolume = trendData.slice(-4, -2).reduce((sum, item) => sum + item.volume, 0);
-  const strengthMomentumLabel =
-    trendData.length < 3 ? "Starting" : recentVolume > previousVolume ? "Rising" : recentVolume < previousVolume ? "Steadying" : "Stable";
-
-  const latestBodyFat = bodyweightTrend.at(-1)?.bodyFat;
-  const previousBodyFat = bodyweightTrend.at(-2)?.bodyFat;
-  const absVisibilityLabel =
-    latestBodyFat !== undefined && previousBodyFat !== undefined
-      ? latestBodyFat < previousBodyFat
-        ? "Leaning out"
-        : "Holding steady"
-      : coreSessions >= 2
-        ? "Core work landing"
-        : "Still building";
-
-  const leadingIndicator =
-    profile.id === "natasha"
-      ? {
-          title: "Glute growth",
-          value: `${gluteSessions} sessions`,
-          detail: `Lower-body volume is landing well, with ${weeklySummary.totalSets} total sets supporting the shape changes you actually care about.`,
-        }
-      : {
-          title: "Chest growth",
-          value: `${chestSessions} sessions`,
-          detail: `Pressing frequency and total upper-body work are stacking into a stronger chest-growth signal week to week.`,
-        };
-
-  const primarySignal =
-    profile.id === "natasha"
-      ? {
-          title: "Current focus",
-          value: "Back definition",
-          detail: `${backSessions} back sessions logged. Width and upper-back detail are carrying the current look.`,
-        }
-      : {
-          title: "Current focus",
-          value: "Strength momentum",
-          detail: `${strengthMomentumLabel} right now, based on the recent volume trend and the last ${trendData.length || 0} logged sessions.`,
-        };
-
-  const supportSignal =
-    profile.id === "natasha"
-      ? {
-          title: "Support signal",
-          value: "Hourglass shape",
-          detail: `${gluteSessions + shoulderSessions} shoulder and glute sessions are reinforcing shoulder-to-waist-to-glute contrast.`,
-        }
-      : {
-          title: "Support signal",
-          value: "Abs visibility",
-          detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
-        };
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
@@ -253,10 +188,10 @@ export function ProgressScreen({
           <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] p-4">
             <p className="text-sm text-muted">Best current signal</p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-base font-semibold text-text">{leadingIndicator.title}</p>
-              <p className="text-sm font-medium text-accent">{leadingIndicator.value}</p>
+              <p className="text-base font-semibold text-text">{progressSignals.leadingIndicator.title}</p>
+              <p className="text-sm font-medium text-accent">{progressSignals.leadingIndicator.value}</p>
             </div>
-            <p className="caption-text mt-2 text-muted">{leadingIndicator.detail}</p>
+            <p className="caption-text mt-2 text-muted">{progressSignals.leadingIndicator.detail}</p>
           </div>
         </Card>
       </ScrollReveal>
@@ -333,17 +268,17 @@ export function ProgressScreen({
           <p className="text-sm text-muted">Direction this week</p>
           <div className="mt-4 rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-medium">{primarySignal.title}</p>
-              <p className="text-sm font-medium text-accent">{primarySignal.value}</p>
+              <p className="font-medium">{progressSignals.primarySignal.title}</p>
+              <p className="text-sm font-medium text-accent">{progressSignals.primarySignal.value}</p>
             </div>
-            <p className="mt-2 text-sm text-muted">{primarySignal.detail}</p>
+            <p className="mt-2 text-sm text-muted">{progressSignals.primarySignal.detail}</p>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-3">
-            <MiniMetric label="Support" value={supportSignal.value} />
+            <MiniMetric label="Support" value={progressSignals.supportSignal.value} />
             <MiniMetric label="PBs hit" value={`${weeklySummary.personalBests}`} />
             <MiniMetric label="Load leader" value={weeklySummary.mostTrainedMuscleGroup} />
           </div>
-          <p className="mt-3 text-sm leading-6 text-muted">{supportSignal.detail}</p>
+          <p className="mt-3 text-sm leading-6 text-muted">{progressSignals.supportSignal.detail}</p>
         </Card>
       </ScrollReveal>
 

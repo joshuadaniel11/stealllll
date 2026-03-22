@@ -1,6 +1,7 @@
 import {
   getCurrentWeekSessions,
   getCurrentWeekWindow,
+  getExerciseMuscleContribution,
   getProfilePriorityZones,
   getSuggestedFocusSession,
   getSuggestedWorkoutDestination,
@@ -29,6 +30,7 @@ export type ProfileTrainingState = {
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
   goalDashboard: GoalDashboard;
+  progressSignals: ProgressSignals;
 };
 
 export type GoalDashboardCard = {
@@ -44,6 +46,18 @@ export type GoalDashboard = {
   emphasisLabel: string;
   summary: string;
   cards: GoalDashboardCard[];
+};
+
+export type ProgressSignal = {
+  title: string;
+  value: string;
+  detail: string;
+};
+
+export type ProgressSignals = {
+  leadingIndicator: ProgressSignal;
+  primarySignal: ProgressSignal;
+  supportSignal: ProgressSignal;
 };
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
@@ -130,6 +144,95 @@ function getTrendData(sessions: WorkoutSession[]) {
 
 function average(values: number[]) {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+}
+
+function getRecentZoneExposure(sessions: WorkoutSession[], limit = 8) {
+  const recentSessions = sessions.slice(0, limit);
+  const zoneExposure: Record<string, number> = {};
+
+  for (const session of recentSessions) {
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed).length;
+      if (!completedSets) {
+        continue;
+      }
+
+      const contribution = getExerciseMuscleContribution({
+        exerciseName: exercise.exerciseName,
+        muscleGroup: exercise.muscleGroup,
+      });
+
+      for (const [zoneId, score] of Object.entries(contribution)) {
+        zoneExposure[zoneId] = (zoneExposure[zoneId] ?? 0) + score * completedSets;
+      }
+    }
+  }
+
+  return zoneExposure;
+}
+
+function getExposureTotal(zoneExposure: Record<string, number>, zoneIds: string[]) {
+  return Math.round(zoneIds.reduce((sum, zoneId) => sum + (zoneExposure[zoneId] ?? 0), 0) * 10) / 10;
+}
+
+function buildProgressSignals(
+  profile: Profile,
+  sessions: WorkoutSession[],
+  trendData: TrendPoint[],
+  weeklySummary: WeeklySummary,
+  weeklyStretchCount: number,
+): ProgressSignals {
+  const zoneExposure = getRecentZoneExposure(sessions);
+  const chestExposure = getExposureTotal(zoneExposure, ["upperChest", "midChest", "lowerChest"]);
+  const backExposure = getExposureTotal(zoneExposure, ["lats", "upperBack", "midBack"]);
+  const gluteExposure = getExposureTotal(zoneExposure, ["upperGlutes", "gluteMax", "sideGlutes"]);
+  const coreExposure = getExposureTotal(zoneExposure, ["upperAbs", "lowerAbs", "obliques"]);
+  const shoulderExposure = getExposureTotal(zoneExposure, ["frontDelts", "sideDelts", "rearDelts"]);
+  const recentVolume = trendData.slice(-2).reduce((sum, item) => sum + item.volume, 0);
+  const previousVolume = trendData.slice(-4, -2).reduce((sum, item) => sum + item.volume, 0);
+  const strengthMomentumLabel =
+    trendData.length < 3 ? "Starting" : recentVolume > previousVolume ? "Rising" : recentVolume < previousVolume ? "Steadying" : "Stable";
+
+  if (profile.id === "natasha") {
+    return {
+      leadingIndicator: {
+        title: "Glute growth",
+        value: `${gluteExposure.toFixed(1)} load`,
+        detail: `Recent glute-biased work is carrying about ${gluteExposure.toFixed(1)} effective-load points, with ${weeklySummary.totalSets} total sets backing the shape work.`,
+      },
+      primarySignal: {
+        title: "Current focus",
+        value: backExposure >= shoulderExposure ? "Back definition" : "Shape balance",
+        detail:
+          backExposure >= shoulderExposure
+            ? `Back and lat work are leading at ${backExposure.toFixed(1)} recent load points, which keeps width and upper-body shape moving.`
+            : `Shoulder and upper-shape work are stacking with ${shoulderExposure.toFixed(1)} recent load points to keep silhouette contrast building.`,
+      },
+      supportSignal: {
+        title: "Support signal",
+        value: "Waist detail",
+        detail: `Core work is contributing ${coreExposure.toFixed(1)} recent load points, with ${weeklyStretchCount} stretch sessions helping the look stay consistent.`,
+      },
+    };
+  }
+
+  return {
+    leadingIndicator: {
+      title: "Chest growth",
+      value: `${chestExposure.toFixed(1)} load`,
+      detail: `Recent pressing and chest work are carrying about ${chestExposure.toFixed(1)} effective-load points, which is the clearest size signal in the current run.`,
+    },
+    primarySignal: {
+      title: "Current focus",
+      value: "Strength momentum",
+      detail: `${strengthMomentumLabel} right now, with back and shoulder support work adding ${(backExposure + shoulderExposure).toFixed(1)} recent load points around the main upper-body push.`,
+    },
+    supportSignal: {
+      title: "Support signal",
+      value: "Abs visibility",
+      detail: `Core work is contributing ${coreExposure.toFixed(1)} recent load points, with ${weeklyStretchCount} stretch sessions helping that harder look stay consistent.`,
+    },
+  };
 }
 
 function buildGoalDashboard(profile: Profile, trainingLoad: WeeklyTrainingLoad, weeklySummary: WeeklySummary, streak: number): GoalDashboard {
@@ -284,6 +387,7 @@ export function getProfileTrainingState(
   const trainingLoad = getWeeklyTrainingLoad(userSessions, profile.id, referenceDate);
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
+  const trendData = getTrendData(userSessions);
 
   return {
     userSessions,
@@ -292,7 +396,7 @@ export function getProfileTrainingState(
     streak,
     recentWorkouts: userSessions.slice(0, 3),
     recentSessions: userSessions.slice(0, 4),
-    trendData: getTrendData(userSessions),
+    trendData,
     weeklySummary,
     trainingLoad,
     calendarRows: getWeeklyCalendarRows(userSessions, 6, referenceDate),
@@ -310,6 +414,7 @@ export function getProfileTrainingState(
       trainingLoad.recentLoad,
     ),
     goalDashboard: buildGoalDashboard(profile, trainingLoad, weeklySummary, streak),
+    progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
   };
 }
 

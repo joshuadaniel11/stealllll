@@ -36,6 +36,7 @@ import type {
   ActiveWorkout,
   AppState,
   ExerciseLibraryItem,
+  RecentTrainingUpdate,
   ExerciseTemplate,
   Profile,
   SetLog,
@@ -280,12 +281,7 @@ export function WorkoutTrackerApp() {
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<{
-    userId: UserId;
-    timestamp: string;
-    workoutName: string;
-    kind: "partial" | "complete" | "edit";
-  } | null>(null);
+  const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<RecentTrainingUpdate | null>(null);
 
   const softHaptic = (pattern: number | number[]) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
