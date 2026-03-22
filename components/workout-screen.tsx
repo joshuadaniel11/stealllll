@@ -8,6 +8,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
+import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 const substitutionHints: Record<string, string[]> = {
@@ -148,6 +149,8 @@ export function WorkoutScreen({
   profile,
   todaysWorkoutId,
   previewWorkoutId,
+  suggestedFocusSession,
+  suggestedSessionPreview,
   activeWorkout,
   activeWorkoutTemplate,
   userSessions,
@@ -164,6 +167,8 @@ export function WorkoutScreen({
   profile: Profile;
   todaysWorkoutId: string;
   previewWorkoutId?: string | null;
+  suggestedFocusSession: SuggestedFocusSession | null;
+  suggestedSessionPreview: boolean;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
   userSessions: WorkoutSession[];
@@ -236,6 +241,11 @@ export function WorkoutScreen({
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
+    const showSuggestedSessionBlock =
+      suggestedSessionPreview &&
+      suggestedFocusSession &&
+      previewWorkout &&
+      previewWorkout.id === (suggestedFocusSession.sourceWorkoutId ?? previewWorkout.id);
 
     return (
       <>
@@ -292,6 +302,33 @@ export function WorkoutScreen({
                 <p className="mt-3 text-sm leading-6 text-muted">
                   {getPreviewTease(profile.id, previewWorkout.id)}
                 </p>
+
+                {showSuggestedSessionBlock ? (
+                  <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-text">Today&apos;s focus session</p>
+                        <p className="mt-1 text-sm text-muted">{suggestedFocusSession.focusText}</p>
+                      </div>
+                      <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
+                        Open workout
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {suggestedFocusSession.exercises.map((exercise) => (
+                        <div
+                          key={exercise.name}
+                          className="flex items-center justify-between rounded-[18px] border border-white/6 bg-black/10 px-3 py-2.5"
+                        >
+                          <p className="text-sm font-medium text-text">{exercise.name}</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-muted">
+                            {exercise.matchedLabels.join(" + ")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-5 space-y-3">
                   {previewWorkout.exercises.map((exercise, index) => (

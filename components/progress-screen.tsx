@@ -36,6 +36,7 @@ export function ProgressScreen({
   nextFocusDestination,
   suggestedFocusSession,
   onOpenNextFocus,
+  onOpenSuggestedSession,
   onSaveMeasurement,
   onEditSession,
 }: {
@@ -50,6 +51,7 @@ export function ProgressScreen({
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
   onOpenNextFocus: () => void;
+  onOpenSuggestedSession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
@@ -148,6 +150,7 @@ export function ProgressScreen({
           nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
           suggestedSession={suggestedFocusSession}
           onOpenNextFocus={onOpenNextFocus}
+          onOpenSuggestedSession={onOpenSuggestedSession}
         />
       </ScrollReveal>
 

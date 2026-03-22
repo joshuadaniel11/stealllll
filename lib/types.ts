@@ -159,6 +159,7 @@ export type ActiveWorkout = {
   workoutDayId: string;
   workoutName: string;
   exercises: WorkoutSessionExercise[];
+  templateExercises?: ExerciseTemplate[];
 };
 
 export type WorkoutOverride = {

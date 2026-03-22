@@ -258,6 +258,44 @@ function toActiveWorkout(
   };
 }
 
+function toSuggestedFocusActiveWorkout(
+  userId: UserId,
+  session: NonNullable<ReturnType<typeof getSuggestedFocusSession>>,
+  sessions: WorkoutSession[],
+) {
+  const templateExercises = session.exercises
+    .filter(
+      (
+        exercise,
+      ): exercise is typeof exercise & { exerciseId: string; sets: number; repRange: string } =>
+        Boolean(exercise.exerciseId) && Boolean(exercise.sets) && Boolean(exercise.repRange),
+    )
+    .map((exercise) => ({
+      id: exercise.exerciseId,
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      sets: exercise.sets,
+      repRange: exercise.repRange,
+      note: exercise.note,
+    }));
+
+  return {
+    id: `active-focus-${Date.now()}`,
+    userId,
+    startedAt: new Date().toISOString(),
+    workoutDayId: session.sourceWorkoutId ?? `focus-session-${userId}`,
+    workoutName: `${session.focusText} Focus Session`,
+    templateExercises,
+    exercises: templateExercises.map((exercise) => ({
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      note: exercise.note ?? "",
+      sets: buildEmptySets(exercise, getLastExerciseSets(exercise.name, sessions)),
+    })),
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -416,6 +454,7 @@ export function WorkoutTrackerApp() {
   const [hasEnteredProfile, setHasEnteredProfile] = useState(false);
   const [profileEntryTransition, setProfileEntryTransition] = useState<UserId | null>(null);
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
+  const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
   const [scrollY, setScrollY] = useState(0);
 
   const softHaptic = (pattern: number | number[]) => {
@@ -612,9 +651,31 @@ export function WorkoutTrackerApp() {
 
     return `It has been ${gapDays} days. Pick up with ${todaysWorkout.dayLabel} when ready.`;
   }, [todaysWorkout.dayLabel, userSessions, workoutOverride]);
-  const activeWorkoutTemplate = selectedProfile.workoutPlan.find(
-    (workout) => workout.id === state.activeWorkout?.workoutDayId,
-  );
+  const activeWorkoutTemplate = useMemo(() => {
+    const matchedWorkout = selectedProfile.workoutPlan.find(
+      (workout) => workout.id === state.activeWorkout?.workoutDayId,
+    );
+
+    if (matchedWorkout) {
+      return matchedWorkout;
+    }
+
+    if (
+      state.activeWorkout?.userId === selectedProfile.id &&
+      state.activeWorkout.templateExercises?.length
+    ) {
+      return {
+        id: state.activeWorkout.workoutDayId,
+        name: state.activeWorkout.workoutName,
+        focus: "Suggested focus session",
+        dayLabel: "Today",
+        durationMinutes: 35,
+        exercises: state.activeWorkout.templateExercises,
+      };
+    }
+
+    return undefined;
+  }, [selectedProfile.id, selectedProfile.workoutPlan, state.activeWorkout]);
 
   const selectedExercise = useMemo(() => {
     if (!selectedExerciseId) {
@@ -678,6 +739,7 @@ export function WorkoutTrackerApp() {
         current.exerciseSwapMemory[selectedProfile.id],
       ),
     }));
+    setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
     softHaptic(10);
     startTransition(() => setActiveTab("workout"));
@@ -1150,6 +1212,7 @@ export function WorkoutTrackerApp() {
     softHaptic(8);
     window.setTimeout(() => {
       setSelectedExerciseId(null);
+      setSuggestedSessionPreview(false);
       setWorkoutPreviewId(null);
       setShowSettings(false);
       setState((current) => ({ ...current, selectedUserId: profileId }));
@@ -1176,6 +1239,7 @@ export function WorkoutTrackerApp() {
 
   const returnToProfileEntry = () => {
     setSelectedExerciseId(null);
+    setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
     setShowSettings(false);
     if (lockedProfile) {
@@ -1298,7 +1362,59 @@ export function WorkoutTrackerApp() {
     }
 
     setSelectedExerciseId(null);
+    setSuggestedSessionPreview(false);
     setWorkoutPreviewId(nextFocusDestination.workoutId);
+    softHaptic(8);
+    startTransition(() => setActiveTab("workout"));
+  };
+
+  const openSuggestedFocusSession = () => {
+    if (!suggestedFocusSession) {
+      showToast("No suggested session is available right now.");
+      return;
+    }
+
+    if (state.activeWorkout?.userId === selectedProfile.id) {
+      showToast(`Current workout still open. ${suggestedFocusSession.actionLabel} when you're ready.`);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
+    if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
+      const activeOwner =
+        state.profiles.find((profile) => profile.id === state.activeWorkout?.userId)?.name ??
+        "The other profile";
+      showToast(`${activeOwner} still has a workout in progress on this phone.`);
+      return;
+    }
+
+    if (suggestedFocusSession.canStartDirectly) {
+      setState((current) => ({
+        ...current,
+        activeWorkout: toSuggestedFocusActiveWorkout(
+          selectedProfile.id,
+          suggestedFocusSession,
+          userSessions,
+        ),
+      }));
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
+      softHaptic(10);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
+    const fallbackWorkoutId =
+      suggestedFocusSession.sourceWorkoutId ?? nextFocusDestination?.workoutId ?? null;
+
+    if (!fallbackWorkoutId) {
+      showToast("No workout destination is available for this focus session yet.");
+      return;
+    }
+
+    setSelectedExerciseId(null);
+    setSuggestedSessionPreview(true);
+    setWorkoutPreviewId(fallbackWorkoutId);
     softHaptic(8);
     startTransition(() => setActiveTab("workout"));
   };
@@ -1387,6 +1503,7 @@ export function WorkoutTrackerApp() {
               onStartWorkout={() => startWorkout(todaysWorkout)}
               onResumeWorkout={() => setActiveTab("workout")}
               onPreviewWorkout={() => {
+                setSuggestedSessionPreview(false);
                 setWorkoutPreviewId(todaysWorkout.id);
                 startTransition(() => setActiveTab("workout"));
               }}
@@ -1401,6 +1518,8 @@ export function WorkoutTrackerApp() {
               profile={selectedProfile}
               todaysWorkoutId={todaysWorkout.id}
               previewWorkoutId={workoutPreviewId}
+              suggestedFocusSession={suggestedFocusSession}
+              suggestedSessionPreview={suggestedSessionPreview}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
               userSessions={userSessions}
@@ -1429,6 +1548,7 @@ export function WorkoutTrackerApp() {
               nextFocusDestination={nextFocusDestination}
               suggestedFocusSession={suggestedFocusSession}
               onOpenNextFocus={openNextFocusWorkout}
+              onOpenSuggestedSession={openSuggestedFocusSession}
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}
             />

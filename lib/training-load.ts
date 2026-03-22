@@ -106,9 +106,15 @@ export type SuggestedWorkoutDestination = {
 };
 
 export type SuggestedFocusSessionExercise = {
+  exerciseId: string | null;
   name: string;
+  muscleGroup: MuscleGroup;
+  sets: number | null;
+  repRange: string | null;
+  note?: string;
   matchedZoneIds: TrainingLoadZone[];
   matchedLabels: string[];
+  sourceWorkoutId: string | null;
   sourceWorkoutName: string | null;
 };
 
@@ -118,12 +124,19 @@ export type SuggestedFocusSession = {
   sourceWorkoutId: string | null;
   sourceWorkoutName: string | null;
   helperText: string;
+  actionLabel: string;
+  canStartDirectly: boolean;
   isFallback: boolean;
 };
 
 type FocusExerciseCandidate = {
   key: string;
+  exerciseId: string | null;
   name: string;
+  muscleGroup: MuscleGroup;
+  sets: number | null;
+  repRange: string | null;
+  note?: string;
   matchedZoneIds: TrainingLoadZone[];
   totalFocusScore: number;
   strongestZoneScore: number;
@@ -736,7 +749,12 @@ export function getSuggestedFocusSession(
 
       return {
         key: `template-${workout.id}-${exercise.id}`,
+        exerciseId: exercise.id,
         name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        sets: exercise.sets,
+        repRange: exercise.repRange,
+        note: exercise.note,
         matchedZoneIds: score.matchedZoneIds,
         totalFocusScore: score.totalFocusScore,
         strongestZoneScore: score.strongestZoneScore,
@@ -808,7 +826,12 @@ export function getSuggestedFocusSession(
 
         return {
           key: `library-${exercise.id}`,
+          exerciseId: exercise.id,
           name: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          sets: null,
+          repRange: null,
+          note: exercise.cues[0],
           matchedZoneIds: score.matchedZoneIds,
           totalFocusScore: score.totalFocusScore,
           strongestZoneScore: score.strongestZoneScore,
@@ -855,18 +878,29 @@ export function getSuggestedFocusSession(
     selectedExercises.find((exercise) => exercise.sourceWorkoutId === preferredWorkoutId)?.sourceWorkoutName ??
     selectedExercises.find((exercise) => exercise.sourceWorkoutName)?.sourceWorkoutName ??
     preferredWorkoutName;
+  const canStartDirectly = selectedExercises.every(
+    (exercise) => Boolean(exercise.exerciseId) && Boolean(exercise.sets) && Boolean(exercise.repRange),
+  );
 
   return {
     focusText: focus.text,
     exercises: selectedExercises.slice(0, targetCount).map((exercise) => ({
+      exerciseId: exercise.exerciseId,
       name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      sets: exercise.sets,
+      repRange: exercise.repRange,
+      note: exercise.note,
       matchedZoneIds: exercise.matchedZoneIds,
       matchedLabels: exercise.matchedZoneIds.map(getZoneLabel),
+      sourceWorkoutId: exercise.sourceWorkoutId,
       sourceWorkoutName: exercise.sourceWorkoutName,
     })),
     sourceWorkoutId: preferredWorkoutId,
     sourceWorkoutName,
     helperText: sourceWorkoutName ? `Built from ${sourceWorkoutName}` : "Built from your current focus priorities",
+    actionLabel: canStartDirectly ? "Start session" : "Open workout",
+    canStartDirectly,
     isFallback: selectedExercises.some((exercise) => exercise.sourceWorkoutId === null),
   };
 }

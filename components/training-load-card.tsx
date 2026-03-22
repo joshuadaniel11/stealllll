@@ -224,38 +224,60 @@ function NextFocusCard({
   );
 }
 
-function SuggestedSessionCard({ session }: { session: SuggestedFocusSession | null }) {
+function SuggestedSessionCard({
+  session,
+  onOpen,
+}: {
+  session: SuggestedFocusSession | null;
+  onOpen: () => void;
+}) {
   if (!session) {
     return null;
   }
 
   return (
     <div className="rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s focus session</p>
-          <p className="mt-1 text-sm font-medium text-white/80">{session.focusText}</p>
+      <button type="button" onClick={onOpen} className="w-full text-left transition active:scale-[0.995]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s focus session</p>
+            <p className="mt-1 text-sm font-medium text-white/80">{session.focusText}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
+              {session.exercises.length} moves
+            </span>
+            <ChevronRight className="h-4 w-4 text-white/44" />
+          </div>
         </div>
-        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
-          {session.exercises.length} moves
-        </span>
-      </div>
+      </button>
 
       <div className="mt-3 space-y-2">
         {session.exercises.map((exercise) => (
-          <div
+          <button
             key={exercise.name}
-            className="flex items-center justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5"
+            type="button"
+            onClick={onOpen}
+            className="flex w-full items-center justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition active:scale-[0.995]"
           >
             <p className="text-sm font-medium text-white/84">{exercise.name}</p>
             <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">
               {exercise.matchedLabels.join(" + ")}
             </p>
-          </div>
+          </button>
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-white/34">{session.helperText}</p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{session.helperText}</p>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-white/70 transition active:scale-[0.98]"
+        >
+          {session.actionLabel}
+        </button>
+      </div>
     </div>
   );
 }
@@ -270,6 +292,7 @@ export function TrainingLoadCard({
   nextFocusHelperText,
   suggestedSession,
   onOpenNextFocus,
+  onOpenSuggestedSession,
 }: {
   metrics: TrainingLoadMetric[];
   groups: TrainingLoadGroup[];
@@ -281,6 +304,7 @@ export function TrainingLoadCard({
   nextFocusHelperText: string;
   suggestedSession: SuggestedFocusSession | null;
   onOpenNextFocus: () => void;
+  onOpenSuggestedSession: () => void;
 }) {
   const [view, setView] = useState<"front" | "back">("front");
   const [selectedZone, setSelectedZone] = useState<TrainingLoadZone | null>(null);
@@ -339,7 +363,7 @@ export function TrainingLoadCard({
           onOpen={onOpenNextFocus}
         />
 
-        <SuggestedSessionCard session={suggestedSession} />
+        <SuggestedSessionCard session={suggestedSession} onOpen={onOpenSuggestedSession} />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
