@@ -9,9 +9,17 @@ import type { Profile } from "@/lib/types";
 export function ProfileEntryScreen({
   profiles,
   onSelect,
+  canInstall,
+  installLabel,
+  installHint,
+  onInstall,
 }: {
   profiles: Profile[];
   onSelect: (profileId: Profile["id"]) => void;
+  canInstall: boolean;
+  installLabel: string;
+  installHint: string;
+  onInstall: () => void;
 }) {
   return (
     <main className="theme-shell min-h-screen px-4 py-6 text-text sm:px-6">
@@ -56,11 +64,24 @@ export function ProfileEntryScreen({
           </Card>
         </ScrollReveal>
 
-        <ScrollReveal delay={210} y={16} scale={0.996}>
-          <p className="pb-3 text-center text-xs leading-6 text-white/45">
-            Private on this phone. Clean, focused, and ready when you are.
-          </p>
-        </ScrollReveal>
+        <div className="space-y-3 pb-3">
+          {canInstall ? (
+            <ScrollReveal delay={190} y={14} scale={0.996}>
+              <button
+                type="button"
+                onClick={onInstall}
+                className="mx-auto flex w-full max-w-sm items-center justify-center rounded-[20px] border border-white/10 bg-white/6 px-4 py-3 text-sm font-medium text-white/82 transition hover:bg-white/8"
+              >
+                {installLabel}
+              </button>
+            </ScrollReveal>
+          ) : null}
+          <ScrollReveal delay={210} y={16} scale={0.996}>
+            <p className="mx-auto max-w-sm text-center text-xs leading-6 text-white/45">
+              {installHint}
+            </p>
+          </ScrollReveal>
+        </div>
       </div>
     </main>
   );

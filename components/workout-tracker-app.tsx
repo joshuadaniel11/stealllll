@@ -17,6 +17,7 @@ import { SettingsModal } from "@/components/settings-modal";
 import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
+import { getCoupleIntelligenceSummary } from "@/lib/couple-intelligence";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -40,6 +41,11 @@ import type {
 } from "@/lib/types";
 
 type TabId = "home" | "workout" | "progress";
+
+type DeferredInstallPrompt = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 
 const navItems = [
   { id: "home" as const, label: "Home", icon: Activity },
@@ -350,11 +356,45 @@ function normalizeCompletedWorkoutName(workoutName: string) {
   return workoutName.replace(/\s*\(Partial\)$/i, "");
 }
 
+function getInstallCopy(
+  canPrompt: boolean,
+  isStandalone: boolean,
+  isIos: boolean,
+) {
+  if (isStandalone) {
+    return {
+      actionLabel: "Installed",
+      helperText: "STEAL is running in standalone mode on this phone.",
+    };
+  }
+
+  if (canPrompt) {
+    return {
+      actionLabel: "Install STEAL",
+      helperText: "Install it from this browser for a cleaner launch, icon, and full-screen feel.",
+    };
+  }
+
+  if (isIos) {
+    return {
+      actionLabel: "Add STEAL to Home Screen",
+      helperText: "Open in Safari, tap Share, then Add to Home Screen for the proper iPhone app feel.",
+    };
+  }
+
+  return {
+    actionLabel: "Install from browser menu",
+    helperText: "Use your browser's install or Add to Home Screen option for the proper app shell.",
+  };
+}
+
 export function WorkoutTrackerApp() {
   const [state, setState] = useState<AppState>(createSeedState);
   const [hydrated, setHydrated] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallLaunch, setShowInstallLaunch] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
+  const [isIosInstallPath, setIsIosInstallPath] = useState(false);
   const [lockedProfile, setLockedProfile] = useState<UserId | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
@@ -401,6 +441,12 @@ export function WorkoutTrackerApp() {
   useEffect(() => {
     const localState = loadState();
     const deviceLockedProfile = loadLockedProfile();
+    const profileFromQuery =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("profile")
+        : null;
+    const launchProfile =
+      profileFromQuery === "joshua" || profileFromQuery === "natasha" ? profileFromQuery : null;
     setLockedProfile(deviceLockedProfile);
     if (localState) {
       const seed = createSeedState();
@@ -408,14 +454,17 @@ export function WorkoutTrackerApp() {
       setState((current) => ({
         ...current,
         ...mergedState,
-        selectedUserId: deviceLockedProfile ?? mergedState.selectedUserId,
+        selectedUserId: deviceLockedProfile ?? launchProfile ?? mergedState.selectedUserId,
       }));
-      if (deviceLockedProfile) {
+      if (deviceLockedProfile || launchProfile) {
         setHasEnteredProfile(true);
       }
-    } else if (deviceLockedProfile) {
-      setState((current) => ({ ...current, selectedUserId: deviceLockedProfile }));
+    } else if (deviceLockedProfile || launchProfile) {
+      setState((current) => ({ ...current, selectedUserId: deviceLockedProfile ?? launchProfile ?? current.selectedUserId }));
       setHasEnteredProfile(true);
+    }
+    if (typeof window !== "undefined" && launchProfile) {
+      window.history.replaceState({}, "", window.location.pathname);
     }
     if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
       setShowOnboarding(true);
@@ -431,21 +480,35 @@ export function WorkoutTrackerApp() {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(userAgent);
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as DeferredInstallPrompt);
+    };
+
+    const handleInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setIsStandalone(true);
+      showToast("STEAL is installed on this phone.");
+    };
 
     setIsStandalone(standalone);
+    setIsIosInstallPath(isIos);
     document.body.classList.toggle("app-standalone", standalone);
-
-    if (!standalone) {
-      return;
-    }
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+    window.addEventListener("appinstalled", handleInstalled);
 
     setShowInstallLaunch(true);
     const timeout = window.setTimeout(() => {
       setShowInstallLaunch(false);
-    }, 1200);
+    }, standalone ? 1200 : 900);
 
     return () => {
       document.body.classList.remove("app-standalone");
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+      window.removeEventListener("appinstalled", handleInstalled);
       window.clearTimeout(timeout);
     };
   }, []);
@@ -493,6 +556,23 @@ export function WorkoutTrackerApp() {
     [selectedProfile.id, userSessions],
   );
   const weddingCountdown = useMemo(() => getWeddingCountdown(), []);
+  const dynamicSharedSummary = useMemo(
+    () =>
+      getCoupleIntelligenceSummary({
+        sessions: state.sessions,
+        measurements: state.measurements,
+        weddingCountdown,
+      }),
+    [state.measurements, state.sessions, weddingCountdown],
+  );
+  const installState = useMemo(
+    () => ({
+      isStandalone,
+      canPrompt: Boolean(deferredInstallPrompt),
+      ...getInstallCopy(Boolean(deferredInstallPrompt), isStandalone, isIosInstallPath),
+    }),
+    [deferredInstallPrompt, isIosInstallPath, isStandalone],
+  );
   const weeklyCount = getWorkoutsCompletedThisWeek(userSessions);
   const dynamicWeeklySummary = useMemo(
     () => getDynamicWeeklySummary(selectedProfile, userSessions),
@@ -1073,6 +1153,21 @@ export function WorkoutTrackerApp() {
     softHaptic(6);
   };
 
+  const promptInstall = async () => {
+    if (deferredInstallPrompt) {
+      await deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice.catch(() => null);
+      setDeferredInstallPrompt(null);
+      return;
+    }
+
+    showToast(
+      isIosInstallPath
+        ? "Open this in Safari, tap Share, then Add to Home Screen."
+        : "Use your browser menu and choose Install app or Add to Home Screen.",
+    );
+  };
+
   const toggleProfileLock = () => {
     if (lockedProfile === selectedProfile.id) {
       setLockedProfile(null);
@@ -1163,7 +1258,14 @@ export function WorkoutTrackerApp() {
         </div>
       </main>
     ) : (
-      <ProfileEntryScreen profiles={state.profiles} onSelect={enterProfile} />
+      <ProfileEntryScreen
+        profiles={state.profiles}
+        onSelect={enterProfile}
+        canInstall={!installState.isStandalone}
+        installLabel={installState.actionLabel}
+        installHint={installState.helperText}
+        onInstall={promptInstall}
+      />
     );
   }
 
@@ -1219,7 +1321,7 @@ export function WorkoutTrackerApp() {
                 dailyVerse={dailyVerse}
                 dailyStretch={todaysStretch}
                 stretchCompletedToday={stretchCompletedToday}
-                sharedSummary={state.sharedSummary}
+                sharedSummary={dynamicSharedSummary}
                 recentWorkouts={recentWorkouts}
                 weddingCountdown={weddingCountdown}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
@@ -1289,7 +1391,9 @@ export function WorkoutTrackerApp() {
         <SettingsModal
           profile={selectedProfile}
           isProfileLocked={lockedProfile === selectedProfile.id}
+          installState={installState}
           onClose={() => setShowSettings(false)}
+          onInstall={promptInstall}
           onExport={exportData}
           onImport={importData}
           onResetProfile={resetProfileData}

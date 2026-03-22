@@ -348,13 +348,23 @@ export function HomeScreen({
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <MiniMetric
-                    label="Team streak"
-                    value={`${sharedSummary.teamStreak}d`}
+                    label="Shared streak"
+                    value={`${sharedSummary.teamStreak}w`}
                   />
                   <MiniMetric
-                    label="Combined"
+                    label="This week"
                     value={String(sharedSummary.combinedWorkouts)}
                   />
+                </div>
+                <div className="space-y-2">
+                  {sharedSummary.recentMilestones.slice(0, 3).map((milestone) => (
+                    <div
+                      key={milestone}
+                      className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-sm leading-6 text-white/64"
+                    >
+                      {milestone}
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>

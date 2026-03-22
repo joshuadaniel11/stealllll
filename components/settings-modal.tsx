@@ -7,7 +7,9 @@ import type { Profile } from "@/lib/types";
 export function SettingsModal({
   profile,
   isProfileLocked,
+  installState,
   onClose,
+  onInstall,
   onExport,
   onImport,
   onResetProfile,
@@ -17,7 +19,14 @@ export function SettingsModal({
 }: {
   profile: Profile;
   isProfileLocked: boolean;
+  installState: {
+    isStandalone: boolean;
+    canPrompt: boolean;
+    actionLabel: string;
+    helperText: string;
+  };
   onClose: () => void;
+  onInstall: () => void;
   onExport: () => void;
   onImport: (file: File | null) => void;
   onResetProfile: () => void;
@@ -97,6 +106,41 @@ export function SettingsModal({
 
             <ScrollReveal delay={110} y={18} scale={0.994}>
               <div>
+                <p className="caption-text px-2 pb-2 text-muted">Install</p>
+                <div className="grouped-section">
+                  <div className="grouped-row">
+                    <span className="row-icon">
+                      <Download className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text">
+                        {installState.isStandalone ? "Installed on this phone" : "Native app feel"}
+                      </p>
+                      <p className="caption-text mt-1 text-muted">{installState.helperText}</p>
+                    </div>
+                  </div>
+                  {!installState.isStandalone ? (
+                    <button className="grouped-row" onClick={onInstall}>
+                      <span className="row-icon">
+                        <Download className="h-4 w-4" />
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-text">{installState.actionLabel}</p>
+                        <p className="caption-text mt-1 text-muted">
+                          {installState.canPrompt
+                            ? "Use this browser's install flow."
+                            : "Follow the iPhone/browser steps shown above."}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={135} y={18} scale={0.994}>
+              <div>
                 <p className="caption-text px-2 pb-2 text-muted">Backups</p>
                 <div className="grouped-section">
                   <button className="grouped-row" onClick={onExport}>
@@ -130,7 +174,7 @@ export function SettingsModal({
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={160} y={18} scale={0.994}>
+            <ScrollReveal delay={185} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Resets</p>
                 <div className="grouped-section">

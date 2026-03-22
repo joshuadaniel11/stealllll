@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "STEAL",
   description: "A premium workout tracker for Joshua and Natasha.",
   manifest: "/manifest.webmanifest",
+  category: "health",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#050507",
   colorScheme: "dark",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

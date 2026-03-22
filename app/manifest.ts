@@ -2,13 +2,17 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: "STEAL",
     short_name: "STEAL",
     description: "A premium couple workout tracker for Joshua and Natasha.",
     start_url: "/",
+    scope: "/",
     display: "standalone",
+    orientation: "portrait",
     background_color: "#050507",
     theme_color: "#050507",
+    categories: ["health", "fitness", "lifestyle"],
     icons: [
       {
         src: "/icon?size=192",
@@ -30,6 +34,18 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/apple-icon",
         sizes: "180x180",
         type: "image/png",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Joshua",
+        short_name: "Joshua",
+        url: "/?profile=joshua",
+      },
+      {
+        name: "Natasha",
+        short_name: "Natasha",
+        url: "/?profile=natasha",
       },
     ],
   };
