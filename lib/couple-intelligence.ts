@@ -1,3 +1,4 @@
+import { getExerciseMuscleContribution } from "@/lib/training-load";
 import type { MeasurementEntry, SharedSummary, WorkoutSession } from "@/lib/types";
 
 function getWeekStart(date = new Date()) {
@@ -38,12 +39,39 @@ function getSharedWeekStreak(joshuaSessions: WorkoutSession[], natashaSessions: 
   return streak;
 }
 
-function getJoshuaComplement(joshuaSessions: WorkoutSession[]) {
-  const recent = joshuaSessions.slice(0, 6);
-  const chestDays = recent.filter((session) => /chest/i.test(session.workoutName)).length;
-  const backDays = recent.filter((session) => /back/i.test(session.workoutName)).length;
+function getRecentZoneExposure(sessions: WorkoutSession[], limit = 6) {
+  const recentSessions = sessions.slice(0, limit);
+  const exposure: Record<string, number> = {};
 
-  if (chestDays >= backDays) {
+  for (const session of recentSessions) {
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed).length;
+      if (!completedSets) {
+        continue;
+      }
+      const contribution = getExerciseMuscleContribution({
+        exerciseName: exercise.exerciseName,
+        muscleGroup: exercise.muscleGroup,
+      });
+      for (const [zoneId, score] of Object.entries(contribution)) {
+        exposure[zoneId] = (exposure[zoneId] ?? 0) + score * completedSets;
+      }
+    }
+  }
+
+  return exposure;
+}
+
+function getExposureTotal(exposure: Record<string, number>, zoneIds: string[]) {
+  return zoneIds.reduce((sum, zoneId) => sum + (exposure[zoneId] ?? 0), 0);
+}
+
+function getJoshuaComplement(joshuaSessions: WorkoutSession[]) {
+  const exposure = getRecentZoneExposure(joshuaSessions);
+  const chestLoad = getExposureTotal(exposure, ["upperChest", "midChest", "lowerChest", "triceps"]);
+  const backLoad = getExposureTotal(exposure, ["lats", "upperBack", "midBack", "biceps"]);
+
+  if (chestLoad >= backLoad) {
     return "Joshua's chest and arm work is leading the visual change right now.";
   }
 
@@ -51,11 +79,11 @@ function getJoshuaComplement(joshuaSessions: WorkoutSession[]) {
 }
 
 function getNatashaComplement(natashaSessions: WorkoutSession[]) {
-  const recent = natashaSessions.slice(0, 6);
-  const gluteDays = recent.filter((session) => /glute/i.test(session.workoutName)).length;
-  const backDays = recent.filter((session) => /back/i.test(session.workoutName)).length;
+  const exposure = getRecentZoneExposure(natashaSessions);
+  const gluteLoad = getExposureTotal(exposure, ["upperGlutes", "gluteMax", "sideGlutes"]);
+  const backLoad = getExposureTotal(exposure, ["lats", "upperBack", "midBack"]);
 
-  if (gluteDays >= backDays) {
+  if (gluteLoad >= backLoad) {
     return "Natasha's glute-focused work is shaping the stronger silhouette signal right now.";
   }
 

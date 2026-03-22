@@ -18,6 +18,17 @@ import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getCoupleIntelligenceSummary } from "@/lib/couple-intelligence";
+import {
+  addStretchCompletion,
+  appendSession,
+  clearActiveWorkoutForUser,
+  removeStretchCompletionsForDay,
+  replaceSession,
+  resetProfileProgressState,
+  saveMeasurementEntry,
+  setSelectedUserId,
+  setWorkoutOverride,
+} from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { getProfileSessions, getProfileTrainingState } from "@/lib/profile-training-state";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
@@ -339,7 +350,7 @@ export function WorkoutTrackerApp() {
         setHasEnteredProfile(true);
       }
     } else if (deviceLockedProfile || launchProfile) {
-      setState((current) => ({ ...current, selectedUserId: deviceLockedProfile ?? launchProfile ?? current.selectedUserId }));
+      setState((current) => setSelectedUserId(current, deviceLockedProfile ?? launchProfile ?? current.selectedUserId));
       setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && launchProfile) {
@@ -576,16 +587,7 @@ export function WorkoutTrackerApp() {
     const nextWorkout = selectedProfile.workoutPlan[(currentIndex + 1) % selectedProfile.workoutPlan.length];
     const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
 
-    setState((current) => ({
-      ...current,
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [selectedProfile.id]: {
-          nextWorkoutId: nextWorkout.id,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-    }));
+    setState((current) => setWorkoutOverride(current, selectedProfile.id, nextWorkout.id));
     showToast(`${todaysWorkout.dayLabel} was skipped. ${nextWorkout.dayLabel} is queued up next.`, {
       actionLabel: "Undo",
       actionKind: "undo-schedule",
@@ -596,16 +598,7 @@ export function WorkoutTrackerApp() {
   const moveWorkout = (workoutId: string) => {
     const workout = selectedProfile.workoutPlan.find((item) => item.id === workoutId);
     const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
-    setState((current) => ({
-      ...current,
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [selectedProfile.id]: {
-          nextWorkoutId: workoutId,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-    }));
+    setState((current) => setWorkoutOverride(current, selectedProfile.id, workoutId));
     showToast(`${workout?.dayLabel ?? "Workout"} is now lined up next.`, {
       actionLabel: "Undo",
       actionKind: "undo-schedule",
@@ -629,11 +622,7 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
       return;
     }
-    setState((current) => ({
-      ...current,
-      activeWorkout:
-        current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
-    }));
+    setState((current) => clearActiveWorkoutForUser(current, selectedProfile.id));
     setShowWorkoutFeelingPrompt(false);
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
@@ -659,18 +648,12 @@ export function WorkoutTrackerApp() {
       partial: true,
     });
 
-    setState((current) => ({
-      ...current,
-      sessions: [completedSession, ...current.sessions],
-      activeWorkout: null,
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [selectedProfile.id]: {
-          nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-    }));
+    setState((current) =>
+      appendSession(current, completedSession, {
+        clearActiveWorkoutForUser: selectedProfile.id,
+        nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
+      }),
+    );
     setShowWorkoutFeelingPrompt(false);
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
@@ -691,24 +674,14 @@ export function WorkoutTrackerApp() {
       feeling,
     });
     const prSummary = getWorkoutPrSummary(completedSession, userSessions);
-    setState((current) => ({
-      ...current,
-      sessions: [completedSession, ...current.sessions],
-      activeWorkout: null,
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [selectedProfile.id]: {
-          nextWorkoutId: null,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-      sharedSummary: {
-        ...current.sharedSummary,
-        combinedWorkouts: current.sharedSummary.combinedWorkouts + 1,
-        weeklyHighlight: `${selectedProfile.name} finished ${completedSession.workoutName.toLowerCase()} and kept the team momentum going.`,
-        recentMilestones: [`${selectedProfile.name} completed ${completedSession.workoutName}`, ...current.sharedSummary.recentMilestones.slice(0, 2)],
-      },
-    }));
+    setState((current) =>
+      appendSession(current, completedSession, {
+        clearActiveWorkoutForUser: selectedProfile.id,
+        nextWorkoutId: null,
+        updateSharedSummary: true,
+        sharedSummaryName: selectedProfile.name,
+      }),
+    );
     setShowWorkoutFeelingPrompt(false);
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
@@ -725,20 +698,7 @@ export function WorkoutTrackerApp() {
     if (!entry.bodyweightKg) {
       return;
     }
-    setState((current) => ({
-      ...current,
-      measurements: {
-        ...current.measurements,
-        [selectedProfile.id]: [
-          {
-            id: `measurement-${Date.now()}`,
-            date: new Date().toISOString(),
-            ...entry,
-          },
-          ...current.measurements[selectedProfile.id],
-        ],
-      },
-    }));
+    setState((current) => saveMeasurementEntry(current, selectedProfile.id, entry));
   };
 
   const exportData = () => {
@@ -876,21 +836,7 @@ export function WorkoutTrackerApp() {
     if (stretchCompletedToday) {
       return;
     }
-    setState((current) => ({
-      ...current,
-      stretchCompletions: {
-        ...current.stretchCompletions,
-        [selectedProfile.id]: [
-          {
-            id: `stretch-${Date.now()}`,
-            userId: selectedProfile.id,
-            date: new Date().toISOString(),
-            stretchTitle: todaysStretch.title,
-          },
-          ...current.stretchCompletions[selectedProfile.id],
-        ],
-      },
-    }));
+    setState((current) => addStretchCompletion(current, selectedProfile.id, todaysStretch.title));
     showToast(`${selectedProfile.name} finished today's Bend stretch.`);
   };
 
@@ -900,15 +846,9 @@ export function WorkoutTrackerApp() {
       return;
     }
 
-    setState((current) => ({
-      ...current,
-      stretchCompletions: {
-        ...current.stretchCompletions,
-        [selectedProfile.id]: current.stretchCompletions[selectedProfile.id].filter(
-          (entry) => !isSameLocalDay(entry.date, new Date()),
-        ),
-      },
-    }));
+    setState((current) =>
+      removeStretchCompletionsForDay(current, selectedProfile.id, (entry) => isSameLocalDay(entry.date, new Date())),
+    );
     showToast(`${selectedProfile.name}'s Bend stretch was marked undone.`);
   };
 
@@ -927,32 +867,7 @@ export function WorkoutTrackerApp() {
       return;
     }
     const seed = createSeedState();
-    setState((current) => ({
-      ...current,
-      sessions: current.sessions.filter((session) => session.userId !== selectedProfile.id),
-      personalBests: {
-        ...current.personalBests,
-        [selectedProfile.id]: seed.personalBests[selectedProfile.id],
-      },
-      measurements: {
-        ...current.measurements,
-        [selectedProfile.id]: [],
-      },
-      stretchCompletions: {
-        ...current.stretchCompletions,
-        [selectedProfile.id]: [],
-      },
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [selectedProfile.id]: seed.workoutOverrides[selectedProfile.id],
-      },
-      exerciseSwapMemory: {
-        ...current.exerciseSwapMemory,
-        [selectedProfile.id]: {},
-      },
-      activeWorkout:
-        current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
-    }));
+    setState((current) => resetProfileProgressState(current, selectedProfile.id, seed));
     showToast(`${selectedProfile.name}'s saved progress was reset on this phone.`);
     setShowSettings(false);
     startTransition(() => setActiveTab("home"));
@@ -981,16 +896,7 @@ export function WorkoutTrackerApp() {
       return;
     }
 
-    setState((current) => ({
-      ...current,
-      workoutOverrides: {
-        ...current.workoutOverrides,
-        [pendingScheduleUndo.userId]: {
-          nextWorkoutId: pendingScheduleUndo.previousNextWorkoutId,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-    }));
+    setState((current) => setWorkoutOverride(current, pendingScheduleUndo.userId, pendingScheduleUndo.previousNextWorkoutId));
     showToast("Workout order change undone.");
   };
 
@@ -1002,7 +908,7 @@ export function WorkoutTrackerApp() {
       setSuggestedSessionPreview(false);
       setWorkoutPreviewId(null);
       setShowSettings(false);
-      setState((current) => ({ ...current, selectedUserId: profileId }));
+      setState((current) => setSelectedUserId(current, profileId));
       setHasEnteredProfile(true);
       setProfileEntryTransition(null);
       startTransition(() => setActiveTab("home"));
@@ -1070,22 +976,7 @@ export function WorkoutTrackerApp() {
       const existingSession = current.sessions.find((session) => session.id === updatedSession.id);
       const shouldAdvanceCycle =
         Boolean(options?.countAsDone) || Boolean(existingSession?.partial && updatedSession.partial === false);
-
-      return {
-        ...current,
-        sessions: current.sessions.map((session) =>
-          session.id === updatedSession.id ? updatedSession : session,
-        ),
-        workoutOverrides: shouldAdvanceCycle
-          ? {
-              ...current.workoutOverrides,
-              [updatedSession.userId]: {
-                nextWorkoutId: null,
-                updatedAt: new Date().toISOString(),
-              },
-            }
-          : current.workoutOverrides,
-      };
+      return replaceSession(current, updatedSession, { advanceWorkoutCycle: shouldAdvanceCycle });
     });
     setEditingSessionId(null);
     markTrainingStateUpdated(
@@ -1119,19 +1010,7 @@ export function WorkoutTrackerApp() {
         workoutName: normalizeCompletedWorkoutName(targetSession.workoutName),
       };
 
-      return {
-        ...current,
-        sessions: current.sessions.map((session) =>
-          session.id === summary.sessionId ? updatedSession : session,
-        ),
-        workoutOverrides: {
-          ...current.workoutOverrides,
-          [targetSession.userId]: {
-            nextWorkoutId: null,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-      };
+      return replaceSession(current, updatedSession, { advanceWorkoutCycle: true });
     });
 
     setSessionSummary(null);
