@@ -16,12 +16,34 @@ import {
 
 import { Card, MiniMetric } from "@/components/ui";
 import { getCurrentWeekWindow } from "@/lib/training-load";
-import type { ProfileTrainingState } from "@/lib/profile-training-state";
+import type { GoalDashboardCard, ProfileTrainingState } from "@/lib/profile-training-state";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
 import type { MeasurementEntry, Profile, StretchCompletion, WorkoutSession } from "@/lib/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
+}
+
+function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
+  const toneClass =
+    card.tone === "positive"
+      ? "bg-emerald-400/10 text-emerald-100"
+      : card.tone === "attention"
+        ? "bg-amber-300/10 text-amber-100"
+        : "bg-white/8 text-white";
+
+  return (
+    <div className="rounded-[20px] border border-white/6 bg-white/[0.03] px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{card.label}</p>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${toneClass}`}>
+          {card.tone === "positive" ? "On track" : card.tone === "attention" ? "Watch" : "Steady"}
+        </span>
+      </div>
+      <p className="mt-2 text-lg font-semibold text-white/90">{card.value}</p>
+      <p className="mt-1 text-sm leading-6 text-white/56">{card.detail}</p>
+    </div>
+  );
 }
 
 export function ProgressScreen({
@@ -45,6 +67,7 @@ export function ProgressScreen({
 }) {
   const { calendarRows, nextFocusDestination, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
     trainingState;
+  const goalDashboard = trainingState.goalDashboard;
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -139,6 +162,32 @@ export function ProgressScreen({
           onOpenNextFocus={onOpenNextFocus}
           onOpenSuggestedSession={onOpenSuggestedSession}
         />
+      </ScrollReveal>
+
+      <ScrollReveal delay={12}>
+        <Card>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted">Goal dashboard</p>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-text">{profile.name}&apos;s focus</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">{goalDashboard.headline}</p>
+            </div>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {goalDashboard.emphasisLabel}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[22px] border border-white/6 bg-white/[0.03] px-4 py-4">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">On track / needs attention</p>
+            <p className="mt-2 text-sm leading-6 text-white/80">{goalDashboard.summary}</p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            {goalDashboard.cards.map((card) => (
+              <DashboardMetricCard key={card.label} card={card} />
+            ))}
+          </div>
+        </Card>
       </ScrollReveal>
 
       <ScrollReveal delay={25}>

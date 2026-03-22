@@ -215,6 +215,10 @@ const PROFILE_PRIORITY_ZONES: Record<UserId, TrainingLoadZone[]> = {
   ],
 };
 
+export function getProfilePriorityZones(userId: UserId) {
+  return PROFILE_PRIORITY_ZONES[userId];
+}
+
 const MOST_TRAINED_MIN_PERCENTAGE = 18;
 const MOST_TRAINED_MIN_EFFECTIVE_SETS = 1.5;
 

@@ -1,6 +1,7 @@
 import {
   getCurrentWeekSessions,
   getCurrentWeekWindow,
+  getProfilePriorityZones,
   getSuggestedFocusSession,
   getSuggestedWorkoutDestination,
   getWeeklyCalendarRows,
@@ -27,6 +28,21 @@ export type ProfileTrainingState = {
   calendarRows: ReturnType<typeof getWeeklyCalendarRows>;
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
+  goalDashboard: GoalDashboard;
+};
+
+export type GoalDashboardCard = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "neutral" | "positive" | "attention";
+};
+
+export type GoalDashboard = {
+  headline: string;
+  emphasisLabel: string;
+  summary: string;
+  cards: GoalDashboardCard[];
 };
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
@@ -111,6 +127,150 @@ function getTrendData(sessions: WorkoutSession[]) {
     }));
 }
 
+function average(values: number[]) {
+  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+}
+
+function buildGoalDashboard(profile: Profile, trainingLoad: WeeklyTrainingLoad, weeklySummary: WeeklySummary, streak: number): GoalDashboard {
+  const priorityZones = getProfilePriorityZones(profile.id);
+  const priorityMetrics = priorityZones
+    .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+    .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+
+  const priorityAverage = average(priorityMetrics.map((metric) => metric.percentage));
+  const coveredPriorityCount = priorityMetrics.filter((metric) => metric.effectiveSets > 0).length;
+  const laggingPriorityMetrics = [...priorityMetrics]
+    .sort((a, b) => a.percentage - b.percentage || a.effectiveSets - b.effectiveSets)
+    .slice(0, 3);
+  const strongestPriorityMetrics = [...priorityMetrics]
+    .filter((metric) => metric.effectiveSets > 0)
+    .sort((a, b) => b.percentage - a.percentage || b.effectiveSets - a.effectiveSets)
+    .slice(0, 2);
+
+  const weeklyExecutionTarget = profile.id === "joshua" ? 4 : 4;
+  const executionTone: GoalDashboardCard["tone"] =
+    weeklySummary.workoutsCompleted >= weeklyExecutionTarget
+      ? "positive"
+      : weeklySummary.workoutsCompleted >= 2
+        ? "neutral"
+        : "attention";
+
+  if (profile.id === "joshua") {
+    const upperBodyZones = ["upperChest", "midChest", "sideDelts", "rearDelts", "lats", "biceps", "triceps"] as const;
+    const upperBodyMetrics = upperBodyZones
+      .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+      .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+    const chestDeltLatMetrics = ["upperChest", "midChest", "sideDelts", "rearDelts", "lats"]
+      .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+      .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+    const coreMetrics = ["upperAbs", "lowerAbs"]
+      .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+      .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+
+    return {
+      headline: "Upper-body shape is the main driver this week.",
+      emphasisLabel: "Chest, delts, lats, arms, and core",
+      summary: `${
+        strongestPriorityMetrics.length
+          ? `On track with ${strongestPriorityMetrics.map((metric) => metric.label.toLowerCase()).join(" and ")}.`
+          : "Still building the main upper-body regions."
+      } ${
+        laggingPriorityMetrics.length
+          ? `${laggingPriorityMetrics.map((metric) => metric.label.toLowerCase()).join(" and ")} need more attention.`
+          : ""
+      }`,
+      cards: [
+        {
+          label: "Upper body coverage",
+          value: `${average(upperBodyMetrics.map((metric) => metric.percentage))}%`,
+          detail: `${upperBodyMetrics.filter((metric) => metric.effectiveSets > 0).length}/${upperBodyMetrics.length} key upper-body zones trained this week.`,
+          tone: average(upperBodyMetrics.map((metric) => metric.percentage)) >= 70 ? "positive" : "neutral",
+        },
+        {
+          label: "Chest / delts / lats",
+          value: `${average(chestDeltLatMetrics.map((metric) => metric.percentage))}%`,
+          detail: `${laggingPriorityMetrics.slice(0, 2).map((metric) => metric.label).join(" + ")} are the main catch-up areas.`,
+          tone: average(chestDeltLatMetrics.map((metric) => metric.percentage)) >= 65 ? "positive" : "attention",
+        },
+        {
+          label: "Core consistency",
+          value: `${average(coreMetrics.map((metric) => metric.percentage))}%`,
+          detail: `${coreMetrics.filter((metric) => metric.effectiveSets > 0).length}/${coreMetrics.length} core priority zones have work logged.`,
+          tone: average(coreMetrics.map((metric) => metric.percentage)) >= 55 ? "neutral" : "attention",
+        },
+        {
+          label: "Weekly execution",
+          value: `${weeklySummary.workoutsCompleted}/${weeklyExecutionTarget}`,
+          detail: `${trainingLoad.activeDays.size} training days and a ${streak}d streak feeding momentum.`,
+          tone: executionTone,
+        },
+        {
+          label: "Priority zones hit",
+          value: `${coveredPriorityCount}/${priorityMetrics.length}`,
+          detail: `${priorityAverage}% average completion across Joshua's main physique targets.`,
+          tone: priorityAverage >= 65 ? "positive" : "neutral",
+        },
+      ],
+    };
+  }
+
+  const gluteMetrics = ["upperGlutes", "gluteMax", "sideGlutes"]
+    .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+    .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+  const shapeMetrics = ["lats", "upperBack", "sideDelts"]
+    .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+    .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+  const coreMetrics = ["lowerAbs", "obliques"]
+    .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
+    .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
+
+  return {
+    headline: "Shape, glute emphasis, and back detail are leading this week.",
+    emphasisLabel: "Glutes, back width, waist detail, and shoulder shape",
+    summary: `${
+      strongestPriorityMetrics.length
+        ? `Glute and shape work is moving through ${strongestPriorityMetrics.map((metric) => metric.label.toLowerCase()).join(" and ")}.`
+        : "Still building Natasha's main shape drivers."
+    } ${
+      laggingPriorityMetrics.length
+        ? `${laggingPriorityMetrics.map((metric) => metric.label.toLowerCase()).join(" and ")} need more attention.`
+        : ""
+    }`,
+    cards: [
+      {
+        label: "Glute coverage",
+        value: `${average(gluteMetrics.map((metric) => metric.percentage))}%`,
+        detail: `${gluteMetrics.filter((metric) => metric.effectiveSets > 0).length}/${gluteMetrics.length} glute regions trained this week.`,
+        tone: average(gluteMetrics.map((metric) => metric.percentage)) >= 70 ? "positive" : "neutral",
+      },
+      {
+        label: "Back / shape coverage",
+        value: `${average(shapeMetrics.map((metric) => metric.percentage))}%`,
+        detail: `${shapeMetrics.filter((metric) => metric.effectiveSets > 0).length}/${shapeMetrics.length} shape-defining upper-body regions are moving.`,
+        tone: average(shapeMetrics.map((metric) => metric.percentage)) >= 60 ? "positive" : "attention",
+      },
+      {
+        label: "Core consistency",
+        value: `${average(coreMetrics.map((metric) => metric.percentage))}%`,
+        detail: `${coreMetrics.filter((metric) => metric.effectiveSets > 0).length}/${coreMetrics.length} waist-detail regions have work logged.`,
+        tone: average(coreMetrics.map((metric) => metric.percentage)) >= 55 ? "neutral" : "attention",
+      },
+      {
+        label: "Weekly execution",
+        value: `${weeklySummary.workoutsCompleted}/${weeklyExecutionTarget}`,
+        detail: `${trainingLoad.activeDays.size} training days and a ${streak}d streak this week.`,
+        tone: executionTone,
+      },
+      {
+        label: "Priority zones hit",
+        value: `${coveredPriorityCount}/${priorityMetrics.length}`,
+        detail: `${priorityAverage}% average completion across Natasha's main physique targets.`,
+        tone: priorityAverage >= 65 ? "positive" : "neutral",
+      },
+    ],
+  };
+}
+
 export function getProfileTrainingState(
   profile: Profile,
   allSessions: WorkoutSession[],
@@ -120,12 +280,13 @@ export function getProfileTrainingState(
   const userSessions = sortSessionsDescending(allSessions.filter((session) => session.userId === profile.id));
   const trainingLoad = getWeeklyTrainingLoad(userSessions, profile.id, referenceDate);
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
+  const streak = getWorkoutStreak(userSessions, referenceDate);
 
   return {
     userSessions,
     totalWorkouts: userSessions.length,
     weeklyCount: trainingLoad.activeDays.size,
-    streak: getWorkoutStreak(userSessions, referenceDate),
+    streak,
     recentWorkouts: userSessions.slice(0, 3),
     recentSessions: userSessions.slice(0, 4),
     trendData: getTrendData(userSessions),
@@ -145,6 +306,7 @@ export function getProfileTrainingState(
       exerciseLibrary,
       trainingLoad.recentLoad,
     ),
+    goalDashboard: buildGoalDashboard(profile, trainingLoad, weeklySummary, streak),
   };
 }
 
