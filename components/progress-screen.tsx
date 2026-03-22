@@ -240,7 +240,7 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={200}>
-        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} />
+        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} userId={profile.id} />
       </ScrollReveal>
 
       <ScrollReveal delay={225}>

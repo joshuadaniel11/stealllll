@@ -1,5 +1,6 @@
 import { BodyActivationVisual } from "@/components/body-activation-visual";
 import { Card } from "@/components/ui";
+import type { UserId } from "@/lib/types";
 import type { TrainingLoadMetric } from "@/lib/training-load";
 
 function LoadMetricPill({ metric }: { metric: TrainingLoadMetric }) {
@@ -28,9 +29,11 @@ function LoadMetricPill({ metric }: { metric: TrainingLoadMetric }) {
 export function TrainingLoadCard({
   metrics,
   weekLabel,
+  userId,
 }: {
   metrics: TrainingLoadMetric[];
   weekLabel: string;
+  userId: UserId;
 }) {
   return (
     <Card>
@@ -43,8 +46,8 @@ export function TrainingLoadCard({
         <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">Recovery</div>
       </div>
 
-      <div className="mt-4 grid grid-cols-[0.95fr,1.05fr] gap-3">
-        <BodyActivationVisual metrics={metrics} />
+      <div className="mt-4 grid gap-3">
+        <BodyActivationVisual metrics={metrics} userId={userId} />
         <div className="grid grid-cols-2 gap-2">
           {metrics.map((metric) => (
             <LoadMetricPill key={metric.id} metric={metric} />
