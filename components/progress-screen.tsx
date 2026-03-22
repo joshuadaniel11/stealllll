@@ -1,5 +1,7 @@
 import { MeasurementCard } from "@/components/measurement-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { TrainingLoadCard } from "@/components/training-load-card";
+import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
 import {
   Area,
   AreaChart,
@@ -13,36 +15,12 @@ import {
 } from "recharts";
 
 import { Card, MiniMetric } from "@/components/ui";
+import { getCurrentWeekSessions, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
 import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
-}
-
-function buildCalendarData(sessions: WorkoutSession[]) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
-  const workoutDays = new Set(sessions.map((session) => new Date(session.performedAt).toDateString()));
-
-  return Array.from({ length: totalCells }, (_, index) => {
-    const dayNumber = index - startOffset + 1;
-    if (dayNumber < 1 || dayNumber > lastDay.getDate()) {
-      return null;
-    }
-
-    const date = new Date(year, month, dayNumber);
-    return {
-      dayNumber,
-      completed: workoutDays.has(date.toDateString()),
-      today: date.toDateString() === now.toDateString(),
-    };
-  });
 }
 
 export function ProgressScreen({
@@ -143,13 +121,10 @@ export function ProgressScreen({
         };
 
   const showingBodyMetrics = bodyweightTrend.length > 0;
-  const calendarData = buildCalendarData(userSessions);
-  const calendarMonthLabel = new Intl.DateTimeFormat("en-NZ", { month: "long", year: "numeric" }).format(new Date());
-  const monthWorkoutCount = userSessions.filter((session) => {
-    const date = new Date(session.performedAt);
-    const today = new Date();
-    return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-  }).length;
+  const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions);
+  const currentWeekSessions = getCurrentWeekSessions(userSessions);
+  const weeklyCalendarRows = getWeeklyCalendarRows(userSessions);
+  const weekLabel = `${new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(weeklyTrainingLoad.weekStart)} to ${new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(weeklyTrainingLoad.weekEnd)}`;
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
 
   return (
@@ -265,6 +240,10 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={200}>
+        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} />
+      </ScrollReveal>
+
+      <ScrollReveal delay={225}>
         <Card>
           <p className="text-sm text-muted">{aestheticSignal.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -275,44 +254,24 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={225}>
+      <ScrollReveal delay={250}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-muted">Consistency</p>
-              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">{calendarMonthLabel}</h3>
+              <p className="text-sm text-muted">Workout calendar</p>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
             </div>
-            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">{monthWorkoutCount} days trained</div>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {currentWeekSessions.length} this week
+            </div>
           </div>
-          <div className="mt-4 grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.12em] text-muted">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-              <p key={day}>{day}</p>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-7 gap-2">
-            {calendarData.map((cell, index) =>
-              cell ? (
-                <div
-                  key={`${cell.dayNumber}-${index}`}
-                  className={`flex aspect-square items-center justify-center rounded-[18px] text-sm font-medium ${
-                    cell.completed
-                      ? "bg-accentSoft text-text"
-                      : cell.today
-                        ? "border border-stroke bg-[var(--card-strong)] text-text"
-                        : "bg-[var(--card-strong)] text-muted"
-                  }`}
-                >
-                  {cell.dayNumber}
-                </div>
-              ) : (
-                <div key={`empty-${index}`} className="aspect-square" />
-              ),
-            )}
+          <div className="mt-4">
+            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
           </div>
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={250}>
+      <ScrollReveal delay={275}>
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
