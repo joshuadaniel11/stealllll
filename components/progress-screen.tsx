@@ -146,7 +146,10 @@ export function ProgressScreen({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm text-muted">Workout calendar</p>
-              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-text">Last 6 weeks</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                A clean view of your training rhythm, with this week kept visually in focus.
+              </p>
             </div>
             <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
               {currentWeekSessions.length} this week
