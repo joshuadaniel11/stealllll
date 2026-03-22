@@ -49,22 +49,22 @@ export function ProgressScreen({
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
-      date: new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(entry.date)),
+      date: formatDate(entry.date),
       bodyweight: entry.bodyweightKg,
       bodyFat: entry.bodyFatPercent,
     }));
 
   const currentWeek = getCurrentWeekWindow();
-
   const weeklyStretchCount = stretchCompletions.filter((entry) => {
     const date = new Date(entry.date);
     return date >= currentWeek.start && date <= currentWeek.end;
   }).length;
+
   const chestSessions = userSessions.filter((session) => /chest/i.test(session.workoutName)).length;
   const backSessions = userSessions.filter((session) => /back/i.test(session.workoutName)).length;
   const gluteSessions = userSessions.filter((session) => /glutes/i.test(session.workoutName)).length;
   const coreSessions = userSessions.filter((session) => /core|abs/i.test(session.workoutName)).length;
-  const shouldersSessions = userSessions.filter((session) => /shoulder/i.test(session.workoutName)).length;
+  const shoulderSessions = userSessions.filter((session) => /shoulder/i.test(session.workoutName)).length;
 
   const recentVolume = trendData.slice(-2).reduce((sum, item) => sum + item.volume, 0);
   const previousVolume = trendData.slice(-4, -2).reduce((sum, item) => sum + item.volume, 0);
@@ -87,12 +87,12 @@ export function ProgressScreen({
       ? {
           title: "Glute growth",
           value: `${gluteSessions} sessions`,
-          detail: `Lower-body emphasis is landing well, with ${weeklySummary.totalSets} total sets helping everything look rounder, softer, and far more tempting.`,
+          detail: `Lower-body volume is landing well, with ${weeklySummary.totalSets} total sets supporting the shape changes you actually care about.`,
         }
       : {
           title: "Chest growth",
           value: `${chestSessions} sessions`,
-          detail: `Pressing frequency and upper-body volume are stacking up for a thicker chest and a look Natasha is going to feel the second she is close.`,
+          detail: `Pressing frequency and total upper-body work are stacking into a stronger chest-growth signal week to week.`,
         };
 
   const primarySignal =
@@ -100,12 +100,12 @@ export function ProgressScreen({
       ? {
           title: "Current focus",
           value: "Back definition",
-          detail: `${backSessions} back sessions logged. Width and upper-back detail are carving in nicely and making that waist-to-shoulder line look even dirtier.`,
+          detail: `${backSessions} back sessions logged. Width and upper-back detail are carrying the current look.`,
         }
       : {
           title: "Current focus",
           value: "Strength momentum",
-          detail: `${strengthMomentumLabel} right now, with ${trendData.length || 0} tracked sessions feeding a load trend that keeps you looking stronger, fuller, and more dangerous.`,
+          detail: `${strengthMomentumLabel} right now, based on the recent volume trend and the last ${trendData.length || 0} logged sessions.`,
         };
 
   const supportSignal =
@@ -113,19 +113,19 @@ export function ProgressScreen({
       ? {
           title: "Support signal",
           value: "Hourglass shape",
-          detail: `${gluteSessions + shouldersSessions} shoulder and glute sessions are reinforcing that shoulder-to-waist-to-glute contrast and making your shape harder to forget.`,
+          detail: `${gluteSessions + shoulderSessions} shoulder and glute sessions are reinforcing shoulder-to-waist-to-glute contrast.`,
         }
       : {
           title: "Support signal",
           value: "Abs visibility",
-          detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions so the waistline keeps tightening up.`,
+          detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
         };
 
-  const showingBodyMetrics = bodyweightTrend.length > 0;
   const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions);
   const currentWeekSessions = getCurrentWeekSessions(userSessions);
   const weeklyCalendarRows = getWeeklyCalendarRows(userSessions);
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
+  const showingBodyMetrics = bodyweightTrend.length > 0;
 
   return (
     <>
