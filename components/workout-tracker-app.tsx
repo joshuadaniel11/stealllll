@@ -30,6 +30,7 @@ import {
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
+import { buildCompletedSession, buildSessionSummary, countLoggedSets } from "@/lib/workout-session";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type {
   ActiveWorkout,
@@ -526,6 +527,14 @@ export function WorkoutTrackerApp() {
       return;
     }
 
+    if (state.activeWorkout?.userId === selectedProfile.id) {
+      showToast(`${state.activeWorkout.workoutName} is still open. Resume it before starting another workout.`);
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
     setState((current) => ({
       ...current,
       activeWorkout: toActiveWorkout(
@@ -591,10 +600,7 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout) {
       return;
     }
-    const completedSets = state.activeWorkout.exercises.reduce(
-      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
-      0,
-    );
+    const completedSets = countLoggedSets(state.activeWorkout.exercises);
     if (completedSets === 0) {
       showToast("Log at least one set before finishing the workout.");
       return;
@@ -612,6 +618,8 @@ export function WorkoutTrackerApp() {
         current.activeWorkout?.userId === selectedProfile.id ? null : current.activeWorkout,
     }));
     setShowWorkoutFeelingPrompt(false);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
     startTransition(() => setActiveTab("home"));
   };
 
@@ -620,10 +628,7 @@ export function WorkoutTrackerApp() {
       return;
     }
 
-    const completedSets = state.activeWorkout.exercises.reduce(
-      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
-      0,
-    );
+    const completedSets = countLoggedSets(state.activeWorkout.exercises);
 
     if (completedSets === 0) {
       cancelWorkout();
@@ -631,22 +636,11 @@ export function WorkoutTrackerApp() {
     }
 
     const durationMinutes = Math.max(10, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000));
-    const completedSession: WorkoutSession = {
-      id: `session-${Date.now()}`,
-      userId: state.activeWorkout.userId,
-      workoutDayId: state.activeWorkout.workoutDayId,
-      workoutName: `${state.activeWorkout.workoutName} (Partial)`,
-      performedAt: new Date().toISOString(),
+    const completedSession = buildCompletedSession(state.activeWorkout, {
       durationMinutes,
-      partial: true,
       feeling: "Solid",
-      exercises: state.activeWorkout.exercises
-        .map((exercise) => ({
-          ...exercise,
-          sets: exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)),
-        }))
-        .filter((exercise) => exercise.sets.length > 0),
-    };
+      partial: true,
+    });
 
     setState((current) => ({
       ...current,
@@ -660,17 +654,11 @@ export function WorkoutTrackerApp() {
         },
       },
     }));
-    setSessionSummary({
-      sessionId: completedSession.id,
-      workoutDayId: completedSession.workoutDayId,
-      userId: completedSession.userId,
-      workoutName: completedSession.workoutName,
-      durationMinutes,
-      completedSets,
-      feeling: "Solid",
-      partial: true,
-    });
-    showToast("Progress saved and session closed.");
+    setShowWorkoutFeelingPrompt(false);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
+    setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
+    showToast("Progress saved. Training state updated.");
     softHaptic([8, 28, 8]);
     startTransition(() => setActiveTab("home"));
   };
@@ -679,24 +667,11 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout) {
       return;
     }
-    const completedSets = state.activeWorkout.exercises.reduce(
-      (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
-      0,
-    );
     const durationMinutes = Math.max(25, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000));
-    const completedSession: WorkoutSession = {
-      id: `session-${Date.now()}`,
-      userId: state.activeWorkout.userId,
-      workoutDayId: state.activeWorkout.workoutDayId,
-      workoutName: state.activeWorkout.workoutName,
-      performedAt: new Date().toISOString(),
+    const completedSession = buildCompletedSession(state.activeWorkout, {
       durationMinutes,
       feeling,
-      exercises: state.activeWorkout.exercises.map((exercise) => ({
-        ...exercise,
-        sets: exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)),
-      })),
-    };
+    });
     const prSummary = getWorkoutPrSummary(completedSession, userSessions);
     setState((current) => ({
       ...current,
@@ -717,16 +692,12 @@ export function WorkoutTrackerApp() {
       },
     }));
     setShowWorkoutFeelingPrompt(false);
-    setSessionSummary({
-      userId: completedSession.userId,
-      workoutName: completedSession.workoutName,
-      durationMinutes,
-      completedSets,
-      feeling,
-      partial: false,
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
+    setSessionSummary(buildSessionSummary(completedSession, {
       prCount: prSummary.count,
       prHighlights: prSummary.highlights,
-    });
+    }));
     softHaptic([10, 36, 12]);
     startTransition(() => setActiveTab("home"));
   };
