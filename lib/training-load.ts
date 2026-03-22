@@ -123,6 +123,9 @@ export type SuggestedFocusSession = {
   exercises: SuggestedFocusSessionExercise[];
   sourceWorkoutId: string | null;
   sourceWorkoutName: string | null;
+  targetLabels: string[];
+  totalSets: number;
+  estimatedDurationMinutes: number;
   helperText: string;
   actionLabel: string;
   canStartDirectly: boolean;
@@ -539,6 +542,24 @@ function scoreContributionForFocus(contribution: ZoneContribution, focusZoneIds:
   };
 }
 
+function roundDurationToFive(minutes: number) {
+  return Math.max(15, Math.round(minutes / 5) * 5);
+}
+
+function estimateSuggestedSessionDuration(exercises: FocusExerciseCandidate[], sourceWorkout: WorkoutPlanDay | null) {
+  const templateSets = exercises.reduce((sum, exercise) => sum + (exercise.sets ?? 0), 0);
+
+  if (sourceWorkout?.durationMinutes) {
+    const sourceSetCount = sourceWorkout.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
+    if (sourceSetCount > 0 && templateSets > 0) {
+      const scaledDuration = (templateSets / sourceSetCount) * sourceWorkout.durationMinutes;
+      return roundDurationToFive(Math.max(18, scaledDuration));
+    }
+  }
+
+  return roundDurationToFive(templateSets * 2.6 + exercises.length * 1.5);
+}
+
 export function getCurrentWeekSessions(sessions: WorkoutSession[], referenceDate = new Date()) {
   const week = getCurrentWeekWindow(referenceDate);
   return sessions.filter((session) => {
@@ -741,6 +762,9 @@ export function getSuggestedFocusSession(
   const destination = getSuggestedWorkoutDestination(userId, workoutPlan, focus);
   const preferredWorkoutId = destination?.workoutId ?? null;
   const preferredWorkoutName = destination?.workoutName ?? null;
+  const sourceWorkout = preferredWorkoutId
+    ? workoutPlan.find((workout) => workout.id === preferredWorkoutId) ?? null
+    : null;
 
   const scoredTemplateExercises: FocusExerciseCandidate[] = workoutPlan.flatMap((workout, workoutIndex) =>
     workout.exercises.map((exercise, exerciseIndex) => {
@@ -881,10 +905,19 @@ export function getSuggestedFocusSession(
   const canStartDirectly = selectedExercises.every(
     (exercise) => Boolean(exercise.exerciseId) && Boolean(exercise.sets) && Boolean(exercise.repRange),
   );
+  const selectedSlice = selectedExercises.slice(0, targetCount);
+  const targetLabels = Array.from(
+    new Set([
+      ...focus.labels,
+      ...selectedSlice.flatMap((exercise) => exercise.matchedZoneIds.map(getZoneLabel)),
+    ]),
+  ).slice(0, 3);
+  const totalSets = selectedSlice.reduce((sum, exercise) => sum + (exercise.sets ?? 0), 0);
+  const estimatedDurationMinutes = estimateSuggestedSessionDuration(selectedSlice, sourceWorkout);
 
   return {
     focusText: focus.text,
-    exercises: selectedExercises.slice(0, targetCount).map((exercise) => ({
+    exercises: selectedSlice.map((exercise) => ({
       exerciseId: exercise.exerciseId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
@@ -898,6 +931,9 @@ export function getSuggestedFocusSession(
     })),
     sourceWorkoutId: preferredWorkoutId,
     sourceWorkoutName,
+    targetLabels,
+    totalSets,
+    estimatedDurationMinutes,
     helperText: sourceWorkoutName ? `Built from ${sourceWorkoutName}` : "Built from your current focus priorities",
     actionLabel: canStartDirectly ? "Start session" : "Open workout",
     canStartDirectly,
