@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BodyActivationVisual } from "@/components/body-activation-visual";
@@ -184,29 +185,41 @@ function SummaryLine({
 function NextFocusCard({
   label,
   focusText,
+  helperText,
   lowActivity,
+  onOpen,
 }: {
   label: string;
   focusText: string;
+  helperText: string;
   lowActivity?: boolean;
+  onOpen: () => void;
 }) {
   return (
-    <div className="rounded-[20px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-4">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-[20px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-4 text-left transition active:scale-[0.995]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
           <p className="mt-1 text-base font-semibold text-white/92">{focusText}</p>
         </div>
-        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
-          Next workout
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
+            Next workout
+          </span>
+          <ChevronRight className="h-4 w-4 text-white/44" />
+        </div>
       </div>
       <p className="mt-2 text-sm leading-6 text-white/56">
         {lowActivity
           ? "Starting from your highest-priority regions for this profile until more current-week data is logged."
           : "Based on the most undertrained priority regions in your current-week load."}
       </p>
-    </div>
+      <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-white/34">{helperText}</p>
+    </button>
   );
 }
 
@@ -217,6 +230,8 @@ export function TrainingLoadCard({
   weekLabel,
   activeDayCount,
   userId,
+  nextFocusHelperText,
+  onOpenNextFocus,
 }: {
   metrics: TrainingLoadMetric[];
   groups: TrainingLoadGroup[];
@@ -225,6 +240,8 @@ export function TrainingLoadCard({
   weekLabel: string;
   activeDayCount: number;
   userId: UserId;
+  nextFocusHelperText: string;
+  onOpenNextFocus: () => void;
 }) {
   const [view, setView] = useState<"front" | "back">("front");
   const [selectedZone, setSelectedZone] = useState<TrainingLoadZone | null>(null);
@@ -278,7 +295,9 @@ export function TrainingLoadCard({
         <NextFocusCard
           label="Next focus"
           focusText={summary.suggestedNextFocus.text}
+          helperText={nextFocusHelperText}
           lowActivity={summary.lowActivity}
+          onOpen={onOpenNextFocus}
         />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">

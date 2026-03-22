@@ -1,4 +1,11 @@
-import type { UserId, WorkoutSession, WorkoutSessionExercise } from "@/lib/types";
+import type {
+  ExerciseTemplate,
+  MuscleGroup,
+  UserId,
+  WorkoutPlanDay,
+  WorkoutSession,
+  WorkoutSessionExercise,
+} from "@/lib/types";
 
 export type TrainingLoadGroupId =
   | "chest"
@@ -88,6 +95,15 @@ export type NextWorkoutFocus = {
   text: string;
 };
 
+export type SuggestedWorkoutDestination = {
+  workoutId: string;
+  workoutName: string;
+  matchedZoneIds: TrainingLoadZone[];
+  matchedLabels: string[];
+  helperText: string;
+  isFallback: boolean;
+};
+
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
   front: [
     "upperChest",
@@ -150,6 +166,11 @@ const MOST_TRAINED_MIN_PERCENTAGE = 18;
 const MOST_TRAINED_MIN_EFFECTIVE_SETS = 1.5;
 
 type ZoneContribution = Partial<Record<TrainingLoadZone, number>>;
+
+type ExerciseLike = {
+  exerciseName: string;
+  muscleGroup: MuscleGroup;
+};
 
 type CalendarCell = {
   key: string;
@@ -418,7 +439,7 @@ function getCompletedSetCount(exercise: WorkoutSessionExercise) {
   return exercise.sets.filter((set) => set.completed).length;
 }
 
-function getFallbackContribution(exercise: WorkoutSessionExercise): ZoneContribution {
+function getFallbackContribution(exercise: ExerciseLike): ZoneContribution {
   switch (exercise.muscleGroup) {
     case "Chest":
       return { midChest: 0.75, upperChest: 0.2, lowerChest: 0.15, frontDelts: 0.2, triceps: 0.2 };
@@ -447,9 +468,16 @@ function getFallbackContribution(exercise: WorkoutSessionExercise): ZoneContribu
   }
 }
 
-export function getExerciseMuscleContribution(exercise: WorkoutSessionExercise): ZoneContribution {
+export function getExerciseMuscleContribution(exercise: ExerciseLike): ZoneContribution {
   const matchedRule = EXERCISE_RULES.find((rule) => rule.pattern.test(exercise.exerciseName));
   return matchedRule?.contribution ?? getFallbackContribution(exercise);
+}
+
+function getTemplateExerciseContribution(exercise: ExerciseTemplate) {
+  return getExerciseMuscleContribution({
+    exerciseName: exercise.name,
+    muscleGroup: exercise.muscleGroup,
+  });
 }
 
 export function getCurrentWeekSessions(sessions: WorkoutSession[], referenceDate = new Date()) {
@@ -572,6 +600,72 @@ function buildSuggestedNextFocus(
     zoneIds: selectedMetrics.map((metric) => metric.id),
     labels,
     text: labels.join(" + "),
+  };
+}
+
+export function getSuggestedWorkoutDestination(
+  userId: UserId,
+  workoutPlan: WorkoutPlanDay[],
+  focus: NextWorkoutFocus,
+): SuggestedWorkoutDestination | null {
+  if (!workoutPlan.length) {
+    return null;
+  }
+
+  const scoredWorkouts = workoutPlan.map((workout, index) => {
+    const zoneScores = focus.zoneIds.reduce<Record<TrainingLoadZone, number>>((accumulator, zoneId) => {
+      accumulator[zoneId] = 0;
+      return accumulator;
+    }, {} as Record<TrainingLoadZone, number>);
+
+    for (const exercise of workout.exercises) {
+      const contribution = getTemplateExerciseContribution(exercise);
+      for (const zoneId of focus.zoneIds) {
+        zoneScores[zoneId] += contribution[zoneId] ?? 0;
+      }
+    }
+
+    const matchedZoneIds = focus.zoneIds.filter((zoneId) => zoneScores[zoneId] > 0);
+    const totalFocusScore = focus.zoneIds.reduce((sum, zoneId) => sum + zoneScores[zoneId], 0);
+
+    return {
+      workout,
+      index,
+      matchedZoneIds,
+      totalFocusScore,
+      strongestZoneScore: Math.max(0, ...focus.zoneIds.map((zoneId) => zoneScores[zoneId])),
+    };
+  });
+
+  const bestMatch = [...scoredWorkouts].sort((a, b) => {
+    if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
+      return b.matchedZoneIds.length - a.matchedZoneIds.length;
+    }
+    if (b.totalFocusScore !== a.totalFocusScore) {
+      return b.totalFocusScore - a.totalFocusScore;
+    }
+    if (b.strongestZoneScore !== a.strongestZoneScore) {
+      return b.strongestZoneScore - a.strongestZoneScore;
+    }
+    return a.index - b.index;
+  })[0];
+
+  if (!bestMatch) {
+    return null;
+  }
+
+  const matchedZoneIds = bestMatch.matchedZoneIds.length ? bestMatch.matchedZoneIds : focus.zoneIds;
+  const matchedLabels = matchedZoneIds.map(getZoneLabel);
+
+  return {
+    workoutId: bestMatch.workout.id,
+    workoutName: bestMatch.workout.name,
+    matchedZoneIds,
+    matchedLabels,
+    helperText: bestMatch.matchedZoneIds.length
+      ? `Open matching workout`
+      : `Open closest workout`,
+    isFallback: bestMatch.matchedZoneIds.length === 0,
   };
 }
 

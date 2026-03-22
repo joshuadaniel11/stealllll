@@ -17,6 +17,7 @@ import {
 import { Card, MiniMetric } from "@/components/ui";
 import { getCurrentWeekSessions, getCurrentWeekWindow, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
+import type { SuggestedWorkoutDestination } from "@/lib/training-load";
 import type { MeasurementEntry, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
 function formatDate(value: string) {
@@ -32,6 +33,8 @@ export function ProgressScreen({
   userSessions,
   recentSessions,
   stretchCompletions,
+  nextFocusDestination,
+  onOpenNextFocus,
   onSaveMeasurement,
   onEditSession,
 }: {
@@ -43,6 +46,8 @@ export function ProgressScreen({
   userSessions: WorkoutSession[];
   recentSessions: WorkoutSession[];
   stretchCompletions: StretchCompletion[];
+  nextFocusDestination: SuggestedWorkoutDestination | null;
+  onOpenNextFocus: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
@@ -138,6 +143,8 @@ export function ProgressScreen({
           weekLabel={weeklyTrainingLoad.week.label}
           activeDayCount={weeklyTrainingLoad.activeDays.size}
           userId={profile.id}
+          nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
+          onOpenNextFocus={onOpenNextFocus}
         />
       </ScrollReveal>
 

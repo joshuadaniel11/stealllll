@@ -28,6 +28,7 @@ import {
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
+import { getSuggestedWorkoutDestination, getWeeklyTrainingLoad } from "@/lib/training-load";
 import type {
   ActiveWorkout,
   AppState,
@@ -577,6 +578,19 @@ export function WorkoutTrackerApp() {
   const dynamicWeeklySummary = useMemo(
     () => getDynamicWeeklySummary(selectedProfile, userSessions),
     [selectedProfile, userSessions],
+  );
+  const weeklyTrainingLoad = useMemo(
+    () => getWeeklyTrainingLoad(userSessions, selectedProfile.id),
+    [selectedProfile.id, userSessions],
+  );
+  const nextFocusDestination = useMemo(
+    () =>
+      getSuggestedWorkoutDestination(
+        selectedProfile.id,
+        selectedProfile.workoutPlan,
+        weeklyTrainingLoad.summary.suggestedNextFocus,
+      ),
+    [selectedProfile, weeklyTrainingLoad.summary.suggestedNextFocus],
   );
   const streak = getStreak(userSessions);
   const recentWorkouts = userSessions.slice(0, 3);
@@ -1253,6 +1267,32 @@ export function WorkoutTrackerApp() {
     showToast("Workout counted as done. Moving to the next day.");
   };
 
+  const openNextFocusWorkout = () => {
+    if (!nextFocusDestination) {
+      showToast("No matching workout is available right now.");
+      return;
+    }
+
+    if (state.activeWorkout?.userId === selectedProfile.id) {
+      showToast(`Current workout still open. ${nextFocusDestination.workoutName} is the best next match.`);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
+    if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
+      const activeOwner =
+        state.profiles.find((profile) => profile.id === state.activeWorkout?.userId)?.name ??
+        "The other profile";
+      showToast(`${activeOwner} still has a workout in progress on this phone.`);
+      return;
+    }
+
+    setSelectedExerciseId(null);
+    setWorkoutPreviewId(nextFocusDestination.workoutId);
+    softHaptic(8);
+    startTransition(() => setActiveTab("workout"));
+  };
+
   if (!hasEnteredProfile) {
     return profileEntryTransition ? (
       <main className="theme-shell flex min-h-screen items-center justify-center px-6 text-text">
@@ -1376,6 +1416,8 @@ export function WorkoutTrackerApp() {
               userSessions={userSessions}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
               recentSessions={userSessions.slice(0, 4)}
+              nextFocusDestination={nextFocusDestination}
+              onOpenNextFocus={openNextFocusWorkout}
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}
             />
