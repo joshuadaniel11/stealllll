@@ -26,6 +26,7 @@ test("core app flow works across the main screens", async ({ page }) => {
   await startFresh(page);
 
   await expect(page.getByText("Choose your side.")).toBeVisible();
+  await expect(page.getByText(/install|home screen|native app feel/i)).toBeVisible();
   await page.getByRole("button", { name: "Joshua" }).click();
 
   await expect(page.getByText("let's get hot")).toBeVisible();
@@ -74,6 +75,13 @@ test("core app flow works across the main screens", async ({ page }) => {
   await page.getByRole("button", { name: "Mark this as a full workout" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Workout changes saved to progress.")).toBeVisible();
+  await expect(page.getByText("Full").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByText("Native app feel")).toBeVisible();
+  await expect(page.getByText(/install|home screen|browser/i)).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
 });
 
 test("profile lock remembers the chosen profile after reload", async ({ page }) => {

@@ -1369,8 +1369,6 @@ export function WorkoutTrackerApp() {
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
               recentSessions={userSessions.slice(0, 4)}
               onSaveMeasurement={saveMeasurement}
-              onExportData={exportData}
-              onImportData={importData}
               onEditSession={setEditingSessionId}
             />
           )}

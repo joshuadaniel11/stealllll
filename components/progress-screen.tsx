@@ -1,4 +1,3 @@
-import { DataPortabilityCard } from "@/components/data-portability-card";
 import { MeasurementCard } from "@/components/measurement-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import {
@@ -56,8 +55,6 @@ export function ProgressScreen({
   recentSessions,
   stretchCompletions,
   onSaveMeasurement,
-  onExportData,
-  onImportData,
   onEditSession,
 }: {
   profile: Profile;
@@ -69,8 +66,6 @@ export function ProgressScreen({
   recentSessions: WorkoutSession[];
   stretchCompletions: StretchCompletion[];
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
-  onExportData: () => void;
-  onImportData: (file: File | null) => void;
   onEditSession: (sessionId: string) => void;
 }) {
   const bodyweightTrend = [...measurements]
@@ -368,10 +363,6 @@ export function ProgressScreen({
             )}
           </div>
         </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={275}>
-        <DataPortabilityCard onExport={onExportData} onImport={onImportData} />
       </ScrollReveal>
     </>
   );
