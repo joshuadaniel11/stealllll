@@ -3,80 +3,112 @@ import type { TrainingLoadMetric, TrainingLoadZone } from "@/lib/training-load";
 
 type BodyView = "front" | "back";
 type BodyVariant = "male" | "female";
-type ZoneShape = { zone: TrainingLoadZone; d: string };
 
-const FRONT_ZONES: ZoneShape[] = [
-  { zone: "frontDelts", d: "M28 58C31 50 39 46 45 50L40 68L30 68Z" },
-  { zone: "frontDelts", d: "M92 58C89 50 81 46 75 50L80 68L90 68Z" },
-  { zone: "sideDelts", d: "M24 62L31 58L35 74L26 77L20 70Z" },
-  { zone: "sideDelts", d: "M96 62L89 58L85 74L94 77L100 70Z" },
-  { zone: "upperChest", d: "M43 56L60 54L59 70L40 71L38 62Z" },
-  { zone: "upperChest", d: "M77 56L60 54L61 70L80 71L82 62Z" },
-  { zone: "midChest", d: "M41 73L59 73L57 92L39 90Z" },
-  { zone: "midChest", d: "M79 73L61 73L63 92L81 90Z" },
-  { zone: "lowerChest", d: "M42 94L57 94L55 106L43 106Z" },
-  { zone: "lowerChest", d: "M78 94L63 94L65 106L77 106Z" },
-  { zone: "biceps", d: "M22 78L34 76L37 118L27 121L20 108Z" },
-  { zone: "biceps", d: "M98 78L86 76L83 118L93 121L100 108Z" },
-  { zone: "triceps", d: "M28 80L35 79L39 120L31 123L26 109Z" },
-  { zone: "triceps", d: "M92 80L85 79L81 120L89 123L94 109Z" },
-  { zone: "forearms", d: "M24 120L35 121L33 157L25 157L21 142Z" },
-  { zone: "forearms", d: "M96 120L85 121L87 157L95 157L99 142Z" },
-  { zone: "obliques", d: "M42 108L50 108L48 144L40 138L38 120Z" },
-  { zone: "obliques", d: "M78 108L70 108L72 144L80 138L82 120Z" },
-  { zone: "upperAbs", d: "M52 108L68 108L68 126L52 126Z" },
-  { zone: "lowerAbs", d: "M52 128L68 128L67 148L53 148Z" },
-  { zone: "sideGlutes", d: "M36 146L44 144L45 162L36 166L33 154Z" },
-  { zone: "sideGlutes", d: "M84 146L76 144L75 162L84 166L87 154Z" },
-  { zone: "quads", d: "M42 160L57 160L54 208L40 208Z" },
-  { zone: "quads", d: "M78 160L63 160L66 208L80 208Z" },
-  { zone: "calves", d: "M40 208L53 208L50 238L40 238Z" },
-  { zone: "calves", d: "M80 208L67 208L70 238L80 238Z" },
+type PathShape = {
+  kind: "path";
+  zone: TrainingLoadZone;
+  d: string;
+};
+
+type EllipseShape = {
+  kind: "ellipse";
+  zone: TrainingLoadZone;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  rotate?: number;
+};
+
+type ShapeDef = PathShape | EllipseShape;
+
+const FRONT_ZONES_MALE: ShapeDef[] = [
+  { kind: "path", zone: "frontDelts", d: "M34 56C34 49 40 44 46 46C49 47 51 50 51 54L48 70C43 69 38 66 34 56Z" },
+  { kind: "path", zone: "frontDelts", d: "M86 56C86 49 80 44 74 46C71 47 69 50 69 54L72 70C77 69 82 66 86 56Z" },
+  { kind: "ellipse", zone: "sideDelts", cx: 31, cy: 63, rx: 7.5, ry: 12, rotate: -12 },
+  { kind: "ellipse", zone: "sideDelts", cx: 89, cy: 63, rx: 7.5, ry: 12, rotate: 12 },
+  { kind: "path", zone: "upperChest", d: "M44 57C49 53 56 51 60 51C64 51 71 53 76 57L72 71C68 68 64 66 60 66C56 66 52 68 48 71Z" },
+  { kind: "path", zone: "midChest", d: "M45 73C49 69 54 68 60 68C66 68 71 69 75 73L72 89C68 87 64 86 60 86C56 86 52 87 48 89Z" },
+  { kind: "path", zone: "lowerChest", d: "M48 91C51 89 55 88 60 88C65 88 69 89 72 91L69 102C66 101 63 100 60 100C57 100 54 101 51 102Z" },
+  { kind: "ellipse", zone: "biceps", cx: 23, cy: 92, rx: 8, ry: 18, rotate: -8 },
+  { kind: "ellipse", zone: "biceps", cx: 97, cy: 92, rx: 8, ry: 18, rotate: 8 },
+  { kind: "ellipse", zone: "triceps", cx: 29, cy: 95, rx: 6.5, ry: 19, rotate: -4 },
+  { kind: "ellipse", zone: "triceps", cx: 91, cy: 95, rx: 6.5, ry: 19, rotate: 4 },
+  { kind: "ellipse", zone: "forearms", cx: 25, cy: 131, rx: 6.5, ry: 20, rotate: -4 },
+  { kind: "ellipse", zone: "forearms", cx: 95, cy: 131, rx: 6.5, ry: 20, rotate: 4 },
+  { kind: "path", zone: "obliques", d: "M43 108C46 106 49 105 52 106L50 144C45 140 42 131 41 120Z" },
+  { kind: "path", zone: "obliques", d: "M77 108C74 106 71 105 68 106L70 144C75 140 78 131 79 120Z" },
+  { kind: "path", zone: "upperAbs", d: "M53 107C55 105 58 104 60 104C62 104 65 105 67 107L67 126C65 127 63 128 60 128C57 128 55 127 53 126Z" },
+  { kind: "path", zone: "lowerAbs", d: "M53 128C55 127 58 126 60 126C62 126 65 127 67 128L66 149C64 150 62 151 60 151C58 151 56 150 54 149Z" },
+  { kind: "ellipse", zone: "sideGlutes", cx: 45, cy: 161, rx: 8, ry: 12, rotate: -18 },
+  { kind: "ellipse", zone: "sideGlutes", cx: 75, cy: 161, rx: 8, ry: 12, rotate: 18 },
+  { kind: "ellipse", zone: "quads", cx: 49, cy: 193, rx: 10, ry: 29, rotate: -3 },
+  { kind: "ellipse", zone: "quads", cx: 71, cy: 193, rx: 10, ry: 29, rotate: 3 },
+  { kind: "ellipse", zone: "calves", cx: 48, cy: 237, rx: 8.5, ry: 22, rotate: -2 },
+  { kind: "ellipse", zone: "calves", cx: 72, cy: 237, rx: 8.5, ry: 22, rotate: 2 },
 ];
 
-const BACK_ZONES: ZoneShape[] = [
-  { zone: "rearDelts", d: "M28 58C31 50 39 46 45 50L40 68L30 68Z" },
-  { zone: "rearDelts", d: "M92 58C89 50 81 46 75 50L80 68L90 68Z" },
-  { zone: "upperBack", d: "M44 54L76 54L72 78L48 78Z" },
-  { zone: "lats", d: "M41 80L50 80L48 132L36 126L33 100Z" },
-  { zone: "lats", d: "M79 80L70 80L72 132L84 126L87 100Z" },
-  { zone: "midBack", d: "M51 80L69 80L68 116L52 116Z" },
-  { zone: "lowerBack", d: "M50 118L70 118L69 144L51 144Z" },
-  { zone: "triceps", d: "M26 78L36 77L39 120L31 123L24 107Z" },
-  { zone: "triceps", d: "M94 78L84 77L81 120L89 123L96 107Z" },
-  { zone: "biceps", d: "M22 82L30 82L34 118L27 120L21 106Z" },
-  { zone: "biceps", d: "M98 82L90 82L86 118L93 120L99 106Z" },
-  { zone: "forearms", d: "M24 120L34 120L32 157L24 157L20 140Z" },
-  { zone: "forearms", d: "M96 120L86 120L88 157L96 157L100 140Z" },
-  { zone: "upperGlutes", d: "M44 144L58 144L56 156L44 156Z" },
-  { zone: "upperGlutes", d: "M76 144L62 144L64 156L76 156Z" },
-  { zone: "gluteMax", d: "M43 158L58 158L56 176L42 176Z" },
-  { zone: "gluteMax", d: "M77 158L62 158L64 176L78 176Z" },
-  { zone: "sideGlutes", d: "M37 154L43 150L43 174L36 176L33 165Z" },
-  { zone: "sideGlutes", d: "M83 154L77 150L77 174L84 176L87 165Z" },
-  { zone: "hamstrings", d: "M42 178L56 178L53 220L40 220Z" },
-  { zone: "hamstrings", d: "M78 178L64 178L67 220L80 220Z" },
-  { zone: "calves", d: "M40 220L52 220L49 238L40 238Z" },
-  { zone: "calves", d: "M80 220L68 220L71 238L80 238Z" },
+const BACK_ZONES_MALE: ShapeDef[] = [
+  { kind: "path", zone: "rearDelts", d: "M34 56C35 49 40 45 46 46C49 47 51 50 51 54L48 70C43 69 38 66 34 56Z" },
+  { kind: "path", zone: "rearDelts", d: "M86 56C85 49 80 45 74 46C71 47 69 50 69 54L72 70C77 69 82 66 86 56Z" },
+  { kind: "path", zone: "upperBack", d: "M45 55C49 52 54 50 60 50C66 50 71 52 75 55L72 76C68 78 64 79 60 79C56 79 52 78 48 76Z" },
+  { kind: "path", zone: "lats", d: "M43 78C47 76 50 76 53 77L50 131C45 128 41 117 40 98Z" },
+  { kind: "path", zone: "lats", d: "M77 78C73 76 70 76 67 77L70 131C75 128 79 117 80 98Z" },
+  { kind: "path", zone: "midBack", d: "M53 80C55 79 58 78 60 78C62 78 65 79 67 80L67 118C65 120 63 121 60 121C57 121 55 120 53 118Z" },
+  { kind: "path", zone: "lowerBack", d: "M52 120C55 118 58 117 60 117C62 117 65 118 68 120L67 146C64 147 62 148 60 148C58 148 56 147 53 146Z" },
+  { kind: "ellipse", zone: "triceps", cx: 28, cy: 93, rx: 7, ry: 19, rotate: -5 },
+  { kind: "ellipse", zone: "triceps", cx: 92, cy: 93, rx: 7, ry: 19, rotate: 5 },
+  { kind: "ellipse", zone: "biceps", cx: 22.5, cy: 93, rx: 6, ry: 15, rotate: -8 },
+  { kind: "ellipse", zone: "biceps", cx: 97.5, cy: 93, rx: 6, ry: 15, rotate: 8 },
+  { kind: "ellipse", zone: "forearms", cx: 25, cy: 131, rx: 6.5, ry: 20, rotate: -4 },
+  { kind: "ellipse", zone: "forearms", cx: 95, cy: 131, rx: 6.5, ry: 20, rotate: 4 },
+  { kind: "path", zone: "upperGlutes", d: "M46 148C50 145 55 144 60 144C65 144 70 145 74 148L71 159C67 158 64 157 60 157C56 157 53 158 49 159Z" },
+  { kind: "ellipse", zone: "gluteMax", cx: 50, cy: 170, rx: 11, ry: 14, rotate: -12 },
+  { kind: "ellipse", zone: "gluteMax", cx: 70, cy: 170, rx: 11, ry: 14, rotate: 12 },
+  { kind: "ellipse", zone: "sideGlutes", cx: 42, cy: 167, rx: 6, ry: 11, rotate: -22 },
+  { kind: "ellipse", zone: "sideGlutes", cx: 78, cy: 167, rx: 6, ry: 11, rotate: 22 },
+  { kind: "ellipse", zone: "hamstrings", cx: 49, cy: 201, rx: 9.5, ry: 24, rotate: -3 },
+  { kind: "ellipse", zone: "hamstrings", cx: 71, cy: 201, rx: 9.5, ry: 24, rotate: 3 },
+  { kind: "ellipse", zone: "calves", cx: 48, cy: 237, rx: 8.5, ry: 21, rotate: -2 },
+  { kind: "ellipse", zone: "calves", cx: 72, cy: 237, rx: 8.5, ry: 21, rotate: 2 },
 ];
 
-const FEMALE_FRONT_ZONES: ZoneShape[] = FRONT_ZONES.map((shape) => ({
-  ...shape,
-  d: shape.d
-    .replace(/42 160/g, "43 164")
-    .replace(/57 160/g, "56 164")
-    .replace(/78 160/g, "77 164")
-    .replace(/63 160/g, "64 164"),
-}));
+const FRONT_ZONES_FEMALE: ShapeDef[] = [
+  ...FRONT_ZONES_MALE.map((shape) => {
+    if (shape.kind === "path") {
+      return {
+        ...shape,
+        d: shape.d
+          .replace(/45 144/g, "44 146")
+          .replace(/75 161/g, "76 164")
+          .replace(/49 193/g, "50 196")
+          .replace(/71 193/g, "70 196"),
+      };
+    }
+    if (shape.zone === "sideGlutes") {
+      return { ...shape, cx: shape.cx < 60 ? 43 : 77, cy: 166, rx: 9, ry: 13 };
+    }
+    if (shape.zone === "quads") {
+      return { ...shape, cy: 197, rx: 9, ry: 28 };
+    }
+    return shape;
+  }),
+];
 
-const FEMALE_BACK_ZONES: ZoneShape[] = BACK_ZONES.map((shape) => ({
-  ...shape,
-  d: shape.d
-    .replace(/43 158/g, "44 160")
-    .replace(/58 158/g, "57 160")
-    .replace(/77 158/g, "76 160")
-    .replace(/62 158/g, "63 160"),
-}));
+const BACK_ZONES_FEMALE: ShapeDef[] = [
+  ...BACK_ZONES_MALE.map((shape) => {
+    if (shape.zone === "gluteMax" && shape.kind === "ellipse") {
+      return { ...shape, cx: shape.cx < 60 ? 49 : 71, cy: 171, rx: 12, ry: 15 };
+    }
+    if (shape.zone === "sideGlutes" && shape.kind === "ellipse") {
+      return { ...shape, cx: shape.cx < 60 ? 40 : 80, cy: 168, rx: 7, ry: 12 };
+    }
+    if (shape.zone === "hamstrings" && shape.kind === "ellipse") {
+      return { ...shape, cy: 203, rx: 9, ry: 25 };
+    }
+    return shape;
+  }),
+];
 
 function getMetricMap(metrics: TrainingLoadMetric[]) {
   return metrics.reduce<Record<TrainingLoadZone, TrainingLoadMetric>>((accumulator, metric) => {
@@ -88,61 +120,85 @@ function getMetricMap(metrics: TrainingLoadMetric[]) {
 function getZoneStyle(metric?: TrainingLoadMetric) {
   if (!metric || metric.percentage <= 0) {
     return {
-      fill: "rgba(128,128,140,0.14)",
-      stroke: "rgba(255,255,255,0.07)",
+      fill: "rgba(122,122,136,0.12)",
+      stroke: "rgba(255,255,255,0.055)",
       filter: "none",
     };
   }
 
-  const alpha = Math.max(0.34, Math.min(0.9, metric.percentage / 100));
-  const strokeAlpha = metric.overload ? 0.95 : 0.76;
-  const glow = metric.overload ? 18 : 11;
+  const alpha = Math.max(0.3, Math.min(0.82, metric.percentage / 100));
+  const strokeAlpha = metric.overload ? 0.9 : 0.68;
+  const glow = metric.overload ? 16 : 9;
 
   return {
     fill: `${metric.color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`,
     stroke: `${metric.color}${Math.round(strokeAlpha * 255).toString(16).padStart(2, "0")}`,
-    filter: `drop-shadow(0 0 ${glow}px ${metric.color}${metric.overload ? "bb" : "66"})`,
+    filter: `drop-shadow(0 0 ${glow}px ${metric.color}${metric.overload ? "88" : "4a"})`,
   };
 }
 
-function BodyShell({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const shell = "rgba(103,103,118,0.16)";
-  const shellStroke = "rgba(255,255,255,0.06)";
+function Shape({
+  shape,
+  style,
+  selected,
+  onClick,
+}: {
+  shape: ShapeDef;
+  style: { fill: string; stroke: string; filter: string };
+  selected: boolean;
+  onClick?: () => void;
+}) {
+  const commonProps = {
+    fill: style.fill,
+    stroke: selected ? "rgba(255,255,255,0.92)" : style.stroke,
+    strokeWidth: selected ? 1.7 : 1.1,
+    style: { filter: style.filter },
+    className: onClick ? "cursor-pointer transition" : undefined,
+    onClick,
+  };
+
+  if (shape.kind === "ellipse") {
+    const transform = shape.rotate ? `rotate(${shape.rotate} ${shape.cx} ${shape.cy})` : undefined;
+    return <ellipse {...commonProps} cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} transform={transform} />;
+  }
+
+  return <path {...commonProps} d={shape.d} />;
+}
+
+function BodyShell({ variant }: { variant: BodyVariant }) {
+  const shell = "rgba(101,101,114,0.14)";
+  const shellStroke = "rgba(255,255,255,0.055)";
 
   if (variant === "female") {
     return (
       <>
-        <circle cx="60" cy="20" r="12" fill={shell} stroke={shellStroke} />
-        <path d="M45 35C48 30 72 30 75 35L82 64L78 102L80 146L69 162L51 162L40 146L42 102L38 64Z" fill={shell} stroke={shellStroke} />
-        <path d="M38 54L20 78L24 92L38 82L44 64Z" fill={shell} stroke={shellStroke} />
-        <path d="M82 54L100 78L96 92L82 82L76 64Z" fill={shell} stroke={shellStroke} />
-        <path d="M24 92L35 84L39 156L32 195L22 195L20 140Z" fill={shell} stroke={shellStroke} />
-        <path d="M96 92L85 84L81 156L88 195L98 195L100 140Z" fill={shell} stroke={shellStroke} />
-        <path d="M50 162L46 248L35 248L38 190L42 162Z" fill={shell} stroke={shellStroke} />
-        <path d="M70 162L74 248L85 248L82 190L78 162Z" fill={shell} stroke={shellStroke} />
+        <circle cx="60" cy="21" r="12" fill={shell} stroke={shellStroke} />
+        <path d="M46 37C49 31 71 31 74 37L81 63C83 72 82 84 79 96L76 120C74 138 72 151 69 165C66 176 62 184 60 188C58 184 54 176 51 165C48 151 46 138 44 120L41 96C38 84 37 72 39 63Z" fill={shell} stroke={shellStroke} />
+        <path d="M39 55C31 61 24 72 21 85C19 94 21 104 26 109C30 103 34 96 37 86L42 68Z" fill={shell} stroke={shellStroke} />
+        <path d="M81 55C89 61 96 72 99 85C101 94 99 104 94 109C90 103 86 96 83 86L78 68Z" fill={shell} stroke={shellStroke} />
+        <path d="M27 109C29 126 32 142 35 159C37 171 39 183 42 198L48 248L39 248L31 205C27 184 24 165 22 144C21 130 22 118 27 109Z" fill={shell} stroke={shellStroke} />
+        <path d="M93 109C91 126 88 142 85 159C83 171 81 183 78 198L72 248L81 248L89 205C93 184 96 165 98 144C99 130 98 118 93 109Z" fill={shell} stroke={shellStroke} />
       </>
     );
   }
 
   return (
     <>
-      <circle cx="60" cy="20" r="12" fill={shell} stroke={shellStroke} />
-      <path d="M42 34C46 30 74 30 78 34L86 68L81 106L78 146L70 160L50 160L42 146L39 106L34 68Z" fill={shell} stroke={shellStroke} />
-      <path d="M34 52L15 77L20 92L35 82L42 64Z" fill={shell} stroke={shellStroke} />
-      <path d="M86 52L105 77L100 92L85 82L78 64Z" fill={shell} stroke={shellStroke} />
-      <path d="M20 92L32 84L37 156L30 195L19 195L18 138Z" fill={shell} stroke={shellStroke} />
-      <path d="M100 92L88 84L83 156L90 195L101 195L102 138Z" fill={shell} stroke={shellStroke} />
-      <path d="M50 160L46 248L34 248L38 188L42 160Z" fill={shell} stroke={shellStroke} />
-      <path d="M70 160L74 248L86 248L82 188L78 160Z" fill={shell} stroke={shellStroke} />
+      <circle cx="60" cy="21" r="12" fill={shell} stroke={shellStroke} />
+      <path d="M43 36C47 30 73 30 77 36L85 65C87 75 85 88 81 101L78 121C76 139 73 153 69 166C65 178 61 186 60 188C59 186 55 178 51 166C47 153 44 139 42 121L39 101C35 88 33 75 35 65Z" fill={shell} stroke={shellStroke} />
+      <path d="M35 54C27 60 20 72 17 86C15 96 18 107 24 112C28 105 32 97 35 87L40 68Z" fill={shell} stroke={shellStroke} />
+      <path d="M85 54C93 60 100 72 103 86C105 96 102 107 96 112C92 105 88 97 85 87L80 68Z" fill={shell} stroke={shellStroke} />
+      <path d="M24 112C27 130 30 146 33 163C35 176 38 188 41 203L47 248L37 248L29 207C25 186 21 167 19 146C18 131 19 120 24 112Z" fill={shell} stroke={shellStroke} />
+      <path d="M96 112C93 130 90 146 87 163C85 176 82 188 79 203L73 248L83 248L91 207C95 186 99 167 101 146C102 131 101 120 96 112Z" fill={shell} stroke={shellStroke} />
     </>
   );
 }
 
 function getShapes(variant: BodyVariant, view: BodyView) {
-  if (variant === "female" && view === "front") return FEMALE_FRONT_ZONES;
-  if (variant === "female" && view === "back") return FEMALE_BACK_ZONES;
-  if (variant === "male" && view === "front") return FRONT_ZONES;
-  return BACK_ZONES;
+  if (variant === "female") {
+    return view === "front" ? FRONT_ZONES_FEMALE : BACK_ZONES_FEMALE;
+  }
+  return view === "front" ? FRONT_ZONES_MALE : BACK_ZONES_MALE;
 }
 
 export function BodyActivationVisual({
@@ -163,31 +219,26 @@ export function BodyActivationVisual({
   const shapes = getShapes(variant, view);
 
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-5 py-5">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_center,rgba(113,109,255,0.16),transparent_68%)]" />
+    <div className="relative overflow-hidden rounded-[32px] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.07),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] px-5 py-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_center,rgba(102,96,255,0.12),transparent_70%)]" />
       <div className="relative flex items-center justify-center">
-        <svg viewBox="0 0 120 260" className="h-[320px] w-[150px]" aria-hidden="true">
-          <BodyShell variant={variant} view={view} />
+        <svg viewBox="0 0 120 260" className="h-[320px] w-[156px]" aria-hidden="true">
+          <BodyShell variant={variant} />
           {shapes.map((shape, index) => {
             const style = getZoneStyle(metricsByZone[shape.zone]);
-            const isSelected = selectedZone === shape.zone;
-
             return (
-              <path
+              <Shape
                 key={`${shape.zone}-${index}`}
-                d={shape.d}
-                fill={style.fill}
-                stroke={isSelected ? "rgba(255,255,255,0.94)" : style.stroke}
-                strokeWidth={isSelected ? "1.8" : "1.25"}
-                style={{ filter: style.filter }}
-                className={onSelectZone ? "cursor-pointer transition" : undefined}
-                onClick={() => onSelectZone?.(shape.zone)}
+                shape={shape}
+                style={style}
+                selected={selectedZone === shape.zone}
+                onClick={onSelectZone ? () => onSelectZone(shape.zone) : undefined}
               />
             );
           })}
         </svg>
       </div>
-      <div className="relative mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-white/36">
+      <div className="relative mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-white/34">
         <span>{view === "front" ? "Front body" : "Back body"}</span>
         <span>Current week only</span>
       </div>
