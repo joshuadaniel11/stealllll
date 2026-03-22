@@ -134,6 +134,7 @@ export function ProgressScreen({
           metrics={weeklyTrainingLoad.metrics}
           groups={weeklyTrainingLoad.groups}
           topZones={weeklyTrainingLoad.topZones}
+          summary={weeklyTrainingLoad.summary}
           weekLabel={weeklyTrainingLoad.week.label}
           activeDayCount={weeklyTrainingLoad.activeDays.size}
           userId={profile.id}

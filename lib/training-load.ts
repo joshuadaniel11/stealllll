@@ -72,6 +72,12 @@ export type WeeklyTrainingLoad = {
   groups: TrainingLoadGroup[];
   topZones: TrainingLoadMetric[];
   activeDays: Set<string>;
+  summary: TrainingLoadSummary;
+};
+
+export type TrainingLoadSummary = {
+  mostTrained: TrainingLoadMetric[];
+  needsWork: TrainingLoadMetric[];
 };
 
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
@@ -105,6 +111,30 @@ export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone
     "sideGlutes",
     "hamstrings",
     "calves",
+  ],
+};
+
+const PROFILE_PRIORITY_ZONES: Record<UserId, TrainingLoadZone[]> = {
+  joshua: [
+    "upperChest",
+    "midChest",
+    "sideDelts",
+    "rearDelts",
+    "lats",
+    "upperAbs",
+    "lowerAbs",
+    "biceps",
+    "triceps",
+  ],
+  natasha: [
+    "upperGlutes",
+    "gluteMax",
+    "sideGlutes",
+    "lats",
+    "upperBack",
+    "lowerAbs",
+    "obliques",
+    "sideDelts",
   ],
 };
 
@@ -477,6 +507,49 @@ function buildGroupMetrics(metrics: TrainingLoadMetric[]) {
   });
 }
 
+function getPriorityRank(userId: UserId, zone: TrainingLoadZone) {
+  const index = PROFILE_PRIORITY_ZONES[userId].indexOf(zone);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[]): TrainingLoadSummary {
+  const priorityZones = new Set(PROFILE_PRIORITY_ZONES[userId]);
+
+  const mostTrained = [...metrics]
+    .filter((metric) => metric.effectiveSets > 0)
+    .sort((a, b) => {
+      if (priorityZones.has(a.id) !== priorityZones.has(b.id)) {
+        return priorityZones.has(a.id) ? -1 : 1;
+      }
+      if (b.percentage !== a.percentage) {
+        return b.percentage - a.percentage;
+      }
+      if (b.effectiveSets !== a.effectiveSets) {
+        return b.effectiveSets - a.effectiveSets;
+      }
+      return a.label.localeCompare(b.label);
+    })
+    .slice(0, 3);
+
+  const needsWork = metrics
+    .filter((metric) => priorityZones.has(metric.id))
+    .sort((a, b) => {
+      if (a.percentage !== b.percentage) {
+        return a.percentage - b.percentage;
+      }
+      if (a.effectiveSets !== b.effectiveSets) {
+        return a.effectiveSets - b.effectiveSets;
+      }
+      return getPriorityRank(userId, a.id) - getPriorityRank(userId, b.id);
+    })
+    .slice(0, 3);
+
+  return {
+    mostTrained,
+    needsWork,
+  };
+}
+
 export function getWeeklyTrainingLoad(
   sessions: WorkoutSession[],
   userId: UserId,
@@ -515,6 +588,7 @@ export function getWeeklyTrainingLoad(
     .filter((metric) => metric.effectiveSets > 0)
     .sort((a, b) => b.percentage - a.percentage || b.effectiveSets - a.effectiveSets)
     .slice(0, 5);
+  const summary = buildTrainingLoadSummary(userId, metrics);
 
   return {
     week,
@@ -522,6 +596,7 @@ export function getWeeklyTrainingLoad(
     groups,
     topZones,
     activeDays: new Set(currentWeekSessions.map((session) => toLocalDayKey(session.performedAt))),
+    summary,
   };
 }
 

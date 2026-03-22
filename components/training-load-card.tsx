@@ -4,7 +4,7 @@ import { BodyActivationVisual } from "@/components/body-activation-visual";
 import { Card } from "@/components/ui";
 import { TRAINING_LOAD_VIEW_ZONES } from "@/lib/training-load";
 import type { UserId } from "@/lib/types";
-import type { TrainingLoadGroup, TrainingLoadMetric, TrainingLoadZone } from "@/lib/training-load";
+import type { TrainingLoadGroup, TrainingLoadMetric, TrainingLoadSummary, TrainingLoadZone } from "@/lib/training-load";
 
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
@@ -105,9 +105,27 @@ function TopZoneList({ zones }: { zones: TrainingLoadMetric[] }) {
   );
 }
 
+function SummaryLine({
+  label,
+  metrics,
+}: {
+  label: string;
+  metrics: TrainingLoadMetric[];
+}) {
+  const value = metrics.length ? metrics.map((metric) => metric.label).join(", ") : "Still building";
+
+  return (
+    <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
+      <p className="mt-1 text-sm font-medium text-white/84">{value}</p>
+    </div>
+  );
+}
+
 export function TrainingLoadCard({
   metrics,
   groups,
+  summary,
   weekLabel,
   activeDayCount,
   userId,
@@ -115,6 +133,7 @@ export function TrainingLoadCard({
   metrics: TrainingLoadMetric[];
   groups: TrainingLoadGroup[];
   topZones: TrainingLoadMetric[];
+  summary: TrainingLoadSummary;
   weekLabel: string;
   activeDayCount: number;
   userId: UserId;
@@ -155,6 +174,11 @@ export function TrainingLoadCard({
       </div>
 
       <div className="mt-4 grid gap-4">
+        <div className="grid gap-2">
+          <SummaryLine label="Most trained" metrics={summary.mostTrained} />
+          <SummaryLine label="Needs work" metrics={summary.needsWork} />
+        </div>
+
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
