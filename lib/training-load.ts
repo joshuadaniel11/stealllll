@@ -78,7 +78,14 @@ export type WeeklyTrainingLoad = {
 export type TrainingLoadSummary = {
   mostTrained: TrainingLoadMetric[];
   needsWork: TrainingLoadMetric[];
+  suggestedNextFocus: NextWorkoutFocus;
   lowActivity: boolean;
+};
+
+export type NextWorkoutFocus = {
+  zoneIds: TrainingLoadZone[];
+  labels: string[];
+  text: string;
 };
 
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
@@ -384,6 +391,10 @@ function getTargetSets(userId: UserId, zone: TrainingLoadZone) {
   return USER_TARGET_OVERRIDES[userId]?.[zone] ?? TRAINING_LOAD_ZONE_META[zone].targetSets;
 }
 
+function getZoneLabel(zone: TrainingLoadZone) {
+  return TRAINING_LOAD_ZONE_META[zone].label;
+}
+
 export function getCurrentWeekWindow(referenceDate = new Date()): WeekWindow {
   const start = new Date(referenceDate);
   const day = start.getDay();
@@ -516,6 +527,54 @@ function getPriorityRank(userId: UserId, zone: TrainingLoadZone) {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
+function buildSuggestedNextFocus(
+  userId: UserId,
+  metrics: TrainingLoadMetric[],
+  lowActivity: boolean,
+): NextWorkoutFocus {
+  const priorityZones = PROFILE_PRIORITY_ZONES[userId];
+  const priorityMetrics = priorityZones
+    .map((zone) => metrics.find((metric) => metric.id === zone))
+    .filter((metric): metric is TrainingLoadMetric => Boolean(metric));
+
+  const pickZones = (pool: TrainingLoadMetric[]) =>
+    [...pool]
+      .sort((a, b) => {
+        if (a.percentage !== b.percentage) {
+          return a.percentage - b.percentage;
+        }
+        if (a.effectiveSets !== b.effectiveSets) {
+          return a.effectiveSets - b.effectiveSets;
+        }
+        return getPriorityRank(userId, a.id) - getPriorityRank(userId, b.id);
+      })
+      .slice(0, 2);
+
+  const selectedMetrics = lowActivity
+    ? priorityMetrics.slice(0, 2)
+    : (() => {
+        const lagging = priorityMetrics.filter((metric) => metric.percentage < 80);
+        if (lagging.length >= 2) {
+          return pickZones(lagging);
+        }
+
+        const belowTarget = priorityMetrics.filter((metric) => metric.percentage < 100);
+        if (belowTarget.length >= 2) {
+          return pickZones(belowTarget);
+        }
+
+        return pickZones(priorityMetrics);
+      })();
+
+  const labels = selectedMetrics.map((metric) => getZoneLabel(metric.id));
+
+  return {
+    zoneIds: selectedMetrics.map((metric) => metric.id),
+    labels,
+    text: labels.join(" + "),
+  };
+}
+
 function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[]): TrainingLoadSummary {
   const priorityZones = new Set(PROFILE_PRIORITY_ZONES[userId]);
   const lowActivity = metrics.every((metric) => metric.effectiveSets < MOST_TRAINED_MIN_EFFECTIVE_SETS);
@@ -560,6 +619,7 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
   return {
     mostTrained,
     needsWork,
+    suggestedNextFocus: buildSuggestedNextFocus(userId, metrics, lowActivity),
     lowActivity,
   };
 }

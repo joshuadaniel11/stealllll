@@ -181,6 +181,35 @@ function SummaryLine({
   );
 }
 
+function NextFocusCard({
+  label,
+  focusText,
+  lowActivity,
+}: {
+  label: string;
+  focusText: string;
+  lowActivity?: boolean;
+}) {
+  return (
+    <div className="rounded-[20px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
+          <p className="mt-1 text-base font-semibold text-white/92">{focusText}</p>
+        </div>
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
+          Next workout
+        </span>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-white/56">
+        {lowActivity
+          ? "Starting from your highest-priority regions for this profile until more current-week data is logged."
+          : "Based on the most undertrained priority regions in your current-week load."}
+      </p>
+    </div>
+  );
+}
+
 export function TrainingLoadCard({
   metrics,
   groups,
@@ -245,6 +274,12 @@ export function TrainingLoadCard({
           <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
           <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
         </div>
+
+        <NextFocusCard
+          label="Next focus"
+          focusText={summary.suggestedNextFocus.text}
+          lowActivity={summary.lowActivity}
+        />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
