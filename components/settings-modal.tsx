@@ -167,7 +167,10 @@ export function SettingsModal({
                       className="hidden"
                       type="file"
                       accept="application/json"
-                      onChange={(event) => onImport(event.target.files?.[0] ?? null)}
+                      onChange={(event) => {
+                        onImport(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = "";
+                      }}
                     />
                   </label>
                 </div>

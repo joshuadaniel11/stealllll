@@ -1,10 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BodyActivationVisual } from "@/components/body-activation-visual";
 import { Card } from "@/components/ui";
 import { TRAINING_LOAD_VIEW_ZONES } from "@/lib/training-load";
 import type { UserId } from "@/lib/types";
-import type { TrainingLoadGroup, TrainingLoadMetric, TrainingLoadSummary, TrainingLoadZone } from "@/lib/training-load";
+import type {
+  TrainingLoadGroup,
+  TrainingLoadMetric,
+  TrainingLoadSummary,
+  TrainingLoadZone,
+} from "@/lib/training-load";
 
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
@@ -31,6 +36,30 @@ function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   );
 }
 
+function getZoneStatus(metric: TrainingLoadMetric) {
+  if (metric.overload || metric.percentage >= 100) {
+    return {
+      label: "Ahead",
+      toneClass: "bg-emerald-400/14 text-emerald-100",
+      note: "This region is already at or above the tuned weekly target.",
+    };
+  }
+
+  if (metric.percentage >= 65) {
+    return {
+      label: "On track",
+      toneClass: "bg-white/8 text-white",
+      note: "A small amount of extra work keeps this region in a good spot.",
+    };
+  }
+
+  return {
+    label: "Needs work",
+    toneClass: "bg-amber-300/14 text-amber-100",
+    note: "This region is still behind the tuned target for the current week.",
+  };
+}
+
 function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null }) {
   if (!metric) {
     return (
@@ -39,6 +68,8 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
       </div>
     );
   }
+
+  const status = getZoneStatus(metric);
 
   return (
     <div className="rounded-[22px] border border-white/6 bg-white/[0.03] px-4 py-4">
@@ -49,8 +80,16 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
             {metric.effectiveSets.toFixed(1)} / {metric.targetSets} target sets
           </p>
         </div>
-        <p className="text-sm font-semibold text-white">{metric.percentage}%</p>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-white">{metric.percentage}%</p>
+          <span
+            className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${status.toneClass}`}
+          >
+            {status.label}
+          </span>
+        </div>
       </div>
+      <p className="mt-3 text-sm leading-6 text-white/56">{status.note}</p>
 
       <div className="mt-3 space-y-2">
         {metric.contributors.length ? (
@@ -73,7 +112,15 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
   );
 }
 
-function TopZoneList({ zones }: { zones: TrainingLoadMetric[] }) {
+function TopZoneList({
+  zones,
+  selectedZone,
+  onSelectZone,
+}: {
+  zones: TrainingLoadMetric[];
+  selectedZone: TrainingLoadZone | null;
+  onSelectZone: (zone: TrainingLoadZone) => void;
+}) {
   if (!zones.length) {
     return (
       <div className="rounded-[20px] border border-dashed border-white/8 bg-white/[0.02] px-4 py-4 text-sm text-white/48">
@@ -85,9 +132,15 @@ function TopZoneList({ zones }: { zones: TrainingLoadMetric[] }) {
   return (
     <div className="space-y-2">
       {zones.map((zone) => (
-        <div
+        <button
           key={zone.id}
-          className="flex items-center justify-between rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3"
+          type="button"
+          onClick={() => onSelectZone(zone.id)}
+          className={`flex w-full items-center justify-between rounded-[18px] border px-3 py-3 text-left transition ${
+            selectedZone === zone.id
+              ? "border-white/18 bg-white/[0.08]"
+              : "border-white/6 bg-white/[0.03]"
+          }`}
         >
           <div className="flex items-center gap-3">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
@@ -99,7 +152,7 @@ function TopZoneList({ zones }: { zones: TrainingLoadMetric[] }) {
             </div>
           </div>
           <p className="text-sm font-semibold text-white">{zone.percentage}%</p>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -114,7 +167,11 @@ function SummaryLine({
   metrics: TrainingLoadMetric[];
   lowActivity?: boolean;
 }) {
-  const value = metrics.length ? metrics.map((metric) => metric.label).join(", ") : lowActivity ? "Set the first priority with this week’s next session" : "Still building";
+  const value = metrics.length
+    ? metrics.map((metric) => metric.label).join(", ")
+    : lowActivity
+      ? "Set the first priority with this week's next session"
+      : "Still building";
 
   return (
     <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3">
@@ -162,6 +219,14 @@ export function TrainingLoadCard({
     [metrics, selectedZone],
   );
 
+  useEffect(() => {
+    if (selectedZone && visibleTopZones.some((metric) => metric.id === selectedZone)) {
+      return;
+    }
+
+    setSelectedZone(visibleTopZones[0]?.id ?? null);
+  }, [selectedZone, visibleTopZones]);
+
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
@@ -186,7 +251,7 @@ export function TrainingLoadCard({
             <div>
               <p className="text-sm font-medium text-white/78">Worked muscle map</p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
-                Joshua and Natasha use tuned targets
+                Tap a lit zone to inspect what drove it this week
               </p>
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -214,6 +279,11 @@ export function TrainingLoadCard({
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
           />
+          <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] uppercase tracking-[0.12em] text-white/34">
+            <div className="rounded-full bg-white/[0.04] px-3 py-2 text-center">Tuned targets</div>
+            <div className="rounded-full bg-amber-300/10 px-3 py-2 text-center text-amber-100">Needs work</div>
+            <div className="rounded-full bg-emerald-400/10 px-3 py-2 text-center text-emerald-100">Ahead</div>
+          </div>
         </div>
 
         <ZoneContributorPanel metric={inspectedMetric} />
@@ -229,7 +299,11 @@ export function TrainingLoadCard({
             <p className="text-sm font-medium text-white/82">Most loaded visible zones</p>
             <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{view} side</p>
           </div>
-          <TopZoneList zones={visibleTopZones} />
+          <TopZoneList
+            zones={visibleTopZones}
+            selectedZone={selectedZone}
+            onSelectZone={setSelectedZone}
+          />
         </div>
       </div>
     </Card>

@@ -85,7 +85,7 @@ type HomeScreenProps = {
   onPreviewWorkout: (workoutId: string) => void;
   onSkipWorkout: () => void;
   onMoveWorkout: (workoutId: string) => void;
-  onOpenExercise: (exerciseName: string) => void;
+  onOpenExercise: (exerciseId: string) => void;
 };
 
 export function HomeScreen({
@@ -308,9 +308,7 @@ export function HomeScreen({
                       <button
                         key={workout.id}
                         type="button"
-                        onClick={() =>
-                          onOpenExercise(workout.exercises[0]?.exerciseName ?? "")
-                        }
+                        onClick={() => onOpenExercise(workout.exercises[0]?.exerciseId ?? "")}
                         className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
                       >
                         <div className="space-y-1">

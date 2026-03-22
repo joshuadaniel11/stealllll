@@ -636,6 +636,14 @@ export function WorkoutTrackerApp() {
   );
 
   const startWorkout = (workout: WorkoutPlanDay) => {
+    if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
+      const activeOwner =
+        state.profiles.find((profile) => profile.id === state.activeWorkout?.userId)?.name ??
+        "The other profile";
+      showToast(`${activeOwner} still has a workout in progress on this phone.`);
+      return;
+    }
+
     setState((current) => ({
       ...current,
       activeWorkout: toActiveWorkout(
