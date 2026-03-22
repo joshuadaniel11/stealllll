@@ -9,7 +9,6 @@ import { Card } from "@/components/ui";
 import { areEquivalentExerciseNames, buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
-import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 const substitutionHints: Record<string, string[]> = {
@@ -149,15 +148,11 @@ function getLoadCue(repRange?: string) {
 
 export function WorkoutScreen({
   profile,
-  todaysWorkoutId,
-  previewWorkoutId,
-  suggestedFocusSession,
-  suggestedSessionPreview,
   activeWorkout,
   activeWorkoutTemplate,
   userSessions,
   exerciseLibrary,
-    onStartWorkout,
+  onOpenTodaySession,
     onUpdateSet,
     onCopyPreviousSet,
     onCompleteSet,
@@ -167,15 +162,11 @@ export function WorkoutScreen({
   onCancelWorkout,
 }: {
   profile: Profile;
-  todaysWorkoutId: string;
-  previewWorkoutId?: string | null;
-  suggestedFocusSession: SuggestedFocusSession | null;
-  suggestedSessionPreview: boolean;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
   userSessions: WorkoutSession[];
   exerciseLibrary: ExerciseLibraryItem[];
-  onStartWorkout: (workout: WorkoutPlanDay) => void;
+  onOpenTodaySession: () => void;
     onUpdateSet: (
       exerciseIndex: number,
       setIndex: number,
@@ -192,7 +183,6 @@ export function WorkoutScreen({
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
@@ -206,16 +196,9 @@ export function WorkoutScreen({
       setShowExercisePicker(false);
       return;
     }
-    setLocalPreviewWorkoutId(null);
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
     setShowExercisePicker(true);
   }, [activeWorkout?.id, activeWorkout?.userId, profile.id]);
-
-  useEffect(() => {
-    if (!activeWorkout || activeWorkout.userId !== profile.id) {
-      setLocalPreviewWorkoutId(previewWorkoutId ?? null);
-    }
-  }, [activeWorkout, previewWorkoutId, profile.id]);
 
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id || showExercisePicker) {
@@ -242,160 +225,22 @@ export function WorkoutScreen({
   ]);
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
-    const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
-    const showSuggestedSessionBlock =
-      suggestedSessionPreview &&
-      suggestedFocusSession &&
-      previewWorkout &&
-      previewWorkout.id === (suggestedFocusSession.sourceWorkoutId ?? previewWorkout.id);
-
     return (
-      <>
-        <ScrollReveal delay={0} y={14} scale={0.996}>
+      <ScrollReveal delay={0} y={14} scale={0.996}>
         <Card>
-          <p className="text-sm text-muted">Workout plan</p>
-          <h2 className="large-title mt-2 font-semibold text-text">Choose a day</h2>
-          <div className="mt-4 space-y-3">
-            {profile.workoutPlan.map((workout) => (
-              <div
-                key={workout.id}
-                className={`rounded-[28px] px-4 py-4 transition duration-300 ${
-                  workout.id === todaysWorkoutId ? "bg-accentSoft text-text" : "bg-[var(--card-strong)] text-text"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-base font-medium">{workout.name}</p>
-                    <p className="caption-text mt-1 text-muted">
-                      {workout.dayLabel} - {workout.exercises.length} exercises
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="rounded-[22px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
-                      onClick={() => setLocalPreviewWorkoutId(workout.id)}
-                    >
-                      Preview
-                    </button>
-                    <button
-                      className="rounded-[22px] bg-white px-3 py-2 text-sm font-semibold text-black"
-                      onClick={() => onStartWorkout(workout)}
-                    >
-                      Begin
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-muted">Workout mode</p>
+          <h2 className="large-title mt-2 font-semibold text-text">Start from Today&apos;s Session</h2>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            This tab is now only for an active session. Use Today&apos;s Session to open the single recommended plan for this profile.
+          </p>
+          <button
+            className="mt-5 w-full rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
+            onClick={onOpenTodaySession}
+          >
+            Open Today&apos;s Session
+          </button>
         </Card>
-        </ScrollReveal>
-
-        {previewWorkout ? (
-          <div className="sheet-backdrop">
-            <div className="sheet-panel sheet-detent-large animate-sheet-up">
-              <Card className="sheet-card bg-[var(--surface)]">
-                <div className="sheet-drag-handle" />
-                <p className="text-sm text-muted">Workout preview</p>
-                <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
-                <p className="medium-label mt-2 text-muted">
-                  {previewWorkout.focus} | {previewWorkout.durationMinutes} min
-                </p>
-                <p className="mt-3 text-sm leading-6 text-muted">
-                  {getPreviewTease(profile.id, previewWorkout.id)}
-                </p>
-
-                {showSuggestedSessionBlock ? (
-                  <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-text">Today&apos;s focus session</p>
-                        <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.focusText}</p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {suggestedFocusSession.targetLabels.map((label) => (
-                            <span
-                              key={label}
-                              className="rounded-full border border-white/8 bg-black/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted"
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
-                        Open workout
-                      </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-[18px] border border-white/6 bg-black/10 px-3 py-2.5">
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-muted">Session length</p>
-                        <p className="mt-1 text-sm font-medium text-text">~{suggestedFocusSession.estimatedDurationMinutes} min</p>
-                      </div>
-                      <div className="rounded-[18px] border border-white/6 bg-black/10 px-3 py-2.5">
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-muted">Total sets</p>
-                        <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.totalSets || "Flexible"}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {suggestedFocusSession.exercises.map((exercise, index) => (
-                        <div
-                          key={`${exercise.name}-${index}`}
-                          className="flex items-start justify-between rounded-[18px] border border-white/6 bg-black/10 px-3 py-2.5"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-text">{index + 1}. {exercise.name}</p>
-                            <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted">
-                              {exercise.sets && exercise.repRange
-                                ? `${exercise.sets} x ${exercise.repRange}`
-                                : exercise.muscleGroup}
-                            </p>
-                          </div>
-                          <p className="max-w-[42%] text-right text-[10px] uppercase tracking-[0.12em] text-muted">
-                            {exercise.matchedLabels.join(" + ")}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="mt-5 space-y-3">
-                  {previewWorkout.exercises.map((exercise, index) => (
-                    <ScrollReveal key={exercise.id} delay={index * 45} y={22} scale={0.992}>
-                    <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-text">
-                          {index + 1}. {exercise.name}
-                        </p>
-                        <p className="caption-text text-muted">
-                          {exercise.sets} x {exercise.repRange}
-                        </p>
-                      </div>
-                      <p className="medium-label mt-2 text-muted">Targets: {exercise.muscleGroup}</p>
-                    </div>
-                    </ScrollReveal>
-                  ))}
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <button
-                    className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-sm font-medium text-muted"
-                    onClick={() => setLocalPreviewWorkoutId(null)}
-                  >
-                    Close
-                  </button>
-                  <button
-                    className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
-                    onClick={() => onStartWorkout(previewWorkout)}
-                  >
-                    Begin Session
-                  </button>
-                </div>
-              </Card>
-            </div>
-          </div>
-        ) : null}
-      </>
+      </ScrollReveal>
     );
   }
 

@@ -4,14 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { BodyActivationVisual } from "@/components/body-activation-visual";
 import { Card } from "@/components/ui";
 import { TRAINING_LOAD_VIEW_ZONES } from "@/lib/training-load";
+import type { TodaySession } from "@/lib/profile-training-state";
 import type { UserId } from "@/lib/types";
-import type {
-  SuggestedFocusSession,
-  TrainingLoadGroup,
-  TrainingLoadMetric,
-  TrainingLoadSummary,
-  TrainingLoadZone,
-} from "@/lib/training-load";
+import type { TrainingLoadGroup, TrainingLoadMetric, TrainingLoadSummary, TrainingLoadZone } from "@/lib/training-load";
 
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
@@ -192,19 +187,7 @@ function SummaryLine({
   );
 }
 
-function NextFocusCard({
-  label,
-  focusText,
-  helperText,
-  lowActivity,
-  onOpen,
-}: {
-  label: string;
-  focusText: string;
-  helperText: string;
-  lowActivity?: boolean;
-  onOpen: () => void;
-}) {
+function TodaySessionCard({ session, onOpen }: { session: TodaySession; onOpen: () => void }) {
   return (
     <button
       type="button"
@@ -213,113 +196,41 @@ function NextFocusCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
-          <p className="mt-1 text-base font-semibold text-white/92">{focusText}</p>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s session</p>
+          <p className="mt-1 text-base font-semibold text-white/92">{session.title}</p>
+          <p className="mt-2 text-sm leading-6 text-white/56">{session.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
-            Next workout
+            {session.cta.action === "resume" ? "Resume" : "Open"}
           </span>
           <ChevronRight className="h-4 w-4 text-white/44" />
         </div>
       </div>
-      <p className="mt-2 text-sm leading-6 text-white/56">
-        {lowActivity
-          ? "Starting from your highest-priority regions for this profile until more current-week data is logged."
-          : "Based on the most undertrained priority regions in your current-week load."}
-      </p>
-      <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-white/34">{helperText}</p>
-    </button>
-  );
-}
-
-function SuggestedSessionCard({
-  session,
-  onOpen,
-}: {
-  session: SuggestedFocusSession | null;
-  onOpen: () => void;
-}) {
-  if (!session) {
-    return null;
-  }
-
-  return (
-    <div className="rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-4">
-      <button type="button" onClick={onOpen} className="w-full text-left transition active:scale-[0.995]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s focus session</p>
-            <p className="mt-1 text-base font-semibold text-white/90">{session.focusText}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {session.targetLabels.map((label) => (
-                <span
-                  key={label}
-                  className="rounded-full border border-white/8 bg-white/[0.045] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/58"
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
-              {session.exercises.length} moves
-            </span>
-            <ChevronRight className="h-4 w-4 text-white/44" />
-          </div>
-        </div>
-      </button>
-
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {session.focusRegions.map((region) => (
+          <span
+            key={region}
+            className="rounded-full border border-white/8 bg-white/[0.045] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/58"
+          >
+            {region}
+          </span>
+        ))}
+      </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">Session length</p>
-          <p className="mt-1 text-sm font-medium text-white/84">~{session.estimatedDurationMinutes} min</p>
+          <p className="mt-1 text-sm font-medium text-white/84">~{session.estimatedDurationMin} min</p>
         </div>
         <div className="rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">Total sets</p>
-          <p className="mt-1 text-sm font-medium text-white/84">{session.totalSets || "Flexible"}</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">Exercises</p>
+          <p className="mt-1 text-sm font-medium text-white/84">{session.plan.totalExercises}</p>
         </div>
       </div>
-
-      <div className="mt-3 space-y-2">
-        {session.exercises.map((exercise, index) => (
-          <button
-            key={`${exercise.name}-${index}`}
-            type="button"
-            onClick={onOpen}
-            className="flex w-full items-start justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition active:scale-[0.995]"
-          >
-            <div>
-              <p className="text-sm font-medium text-white/84">
-                {index + 1}. {exercise.name}
-              </p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
-                {exercise.sets && exercise.repRange
-                  ? `${exercise.sets} x ${exercise.repRange}`
-                  : exercise.muscleGroup}
-              </p>
-            </div>
-            <div className="max-w-[42%] text-right">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">
-                {exercise.matchedLabels.join(" + ")}
-              </p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{session.helperText}</p>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-white/70 transition active:scale-[0.98]"
-        >
-          {session.actionLabel}
-        </button>
-      </div>
-    </div>
+      <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-white/34">
+        {session.cta.action === "resume" ? "Resume the active or saved session" : "Open the single session plan for today"}
+      </p>
+    </button>
   );
 }
 
@@ -330,10 +241,8 @@ export function TrainingLoadCard({
   weekLabel,
   activeDayCount,
   userId,
-  nextFocusHelperText,
-  suggestedSession,
-  onOpenNextFocus,
-  onOpenSuggestedSession,
+  todaySession,
+  onOpenTodaySession,
 }: {
   metrics: TrainingLoadMetric[];
   groups: TrainingLoadGroup[];
@@ -342,10 +251,8 @@ export function TrainingLoadCard({
   weekLabel: string;
   activeDayCount: number;
   userId: UserId;
-  nextFocusHelperText: string;
-  suggestedSession: SuggestedFocusSession | null;
-  onOpenNextFocus: () => void;
-  onOpenSuggestedSession: () => void;
+  todaySession: TodaySession;
+  onOpenTodaySession: () => void;
 }) {
   const [view, setView] = useState<"front" | "back">("front");
   const [selectedZone, setSelectedZone] = useState<TrainingLoadZone | null>(null);
@@ -396,15 +303,7 @@ export function TrainingLoadCard({
           <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
         </div>
 
-        <NextFocusCard
-          label="Next focus"
-          focusText={summary.suggestedNextFocus.text}
-          helperText={nextFocusHelperText}
-          lowActivity={summary.lowActivity}
-          onOpen={onOpenNextFocus}
-        />
-
-        <SuggestedSessionCard session={suggestedSession} onOpen={onOpenSuggestedSession} />
+        <TodaySessionCard session={todaySession} onOpen={onOpenTodaySession} />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">

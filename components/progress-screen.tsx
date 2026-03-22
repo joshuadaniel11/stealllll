@@ -52,8 +52,7 @@ export function ProgressScreen({
   measurements,
   stretchCompletions,
   recentTrainingUpdate,
-  onOpenNextFocus,
-  onOpenSuggestedSession,
+  onOpenTodaySession,
   onSaveMeasurement,
   onEditSession,
 }: {
@@ -62,12 +61,11 @@ export function ProgressScreen({
   measurements: MeasurementEntry[];
   stretchCompletions: StretchCompletion[];
   recentTrainingUpdate: RecentTrainingUpdate | null;
-  onOpenNextFocus: () => void;
-  onOpenSuggestedSession: () => void;
+  onOpenTodaySession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
-  const { calendarRows, nextFocusDestination, progressSignals, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
+  const { calendarRows, progressSignals, recentSessions, todaySession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
     trainingState;
   const goalDashboard = trainingState.goalDashboard;
   const bodyweightTrend = [...measurements]
@@ -122,10 +120,8 @@ export function ProgressScreen({
           weekLabel={trainingLoad.week.label}
           activeDayCount={trainingLoad.activeDays.size}
           userId={profile.id}
-          nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
-          suggestedSession={suggestedFocusSession}
-          onOpenNextFocus={onOpenNextFocus}
-          onOpenSuggestedSession={onOpenSuggestedSession}
+          todaySession={todaySession}
+          onOpenTodaySession={onOpenTodaySession}
         />
       </ScrollReveal>
 

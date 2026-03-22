@@ -7,9 +7,10 @@ import {
   getSuggestedWorkoutDestination,
   getWeeklyCalendarRows,
   getWeeklyTrainingLoad,
+  TRAINING_LOAD_ZONE_META,
 } from "@/lib/training-load";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
-import type { ExerciseLibraryItem, Profile, WeeklySummary, WorkoutSession } from "@/lib/types";
+import type { ActiveWorkout, ExerciseLibraryItem, Profile, WeeklySummary, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 export type TrendPoint = {
   date: string;
@@ -29,8 +30,53 @@ export type ProfileTrainingState = {
   calendarRows: ReturnType<typeof getWeeklyCalendarRows>;
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
+  todaySession: TodaySession;
   goalDashboard: GoalDashboard;
   progressSignals: ProgressSignals;
+};
+
+export type TodaySessionExercise = {
+  id: string;
+  order: number;
+  name: string;
+  role: "primary" | "support" | "finisher";
+  primaryRegion: string;
+  secondaryRegions: string[];
+  sets: number;
+  repRange: string;
+  lastPerformance?: string;
+  targetCue?: string;
+  swapEnabled: boolean;
+};
+
+export type TodaySession = {
+  status: "ready" | "resume" | "low-activity" | "recovery";
+  title: string;
+  subtitle: string;
+  sessionTypeLabel: string;
+  estimatedDurationMin: number;
+  focusRegions: string[];
+  why: {
+    summary: string;
+    insightChips: string[];
+    coverage: Array<{ region: string; completionPct: number }>;
+  };
+  plan: {
+    source: "template" | "generated";
+    exercises: TodaySessionExercise[];
+    totalExercises: number;
+  };
+  notes: string[];
+  cta: {
+    primaryLabel: string;
+    action: "start" | "resume";
+  };
+  workoutId: string;
+  workoutName: string;
+  generatedSession: SuggestedFocusSession | null;
+  canStartDirectly: boolean;
+  resumeSource: "active" | "partial" | null;
+  partialSessionId: string | null;
 };
 
 export type GoalDashboardCard = {
@@ -62,6 +108,23 @@ export type ProgressSignals = {
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
   return [...sessions].sort((a, b) => +new Date(b.performedAt) - +new Date(a.performedAt));
+}
+
+function getRotationalWorkout(profile: Profile, sessions: WorkoutSession[], overrideWorkoutId: string | null) {
+  if (overrideWorkoutId) {
+    return profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ?? profile.workoutPlan[0];
+  }
+
+  if (!sessions.length) {
+    return profile.workoutPlan[0];
+  }
+
+  const lastSession = sessions[0];
+  const currentIndex = profile.workoutPlan.findIndex((workout) => workout.id === lastSession.workoutDayId);
+  if (currentIndex === -1) {
+    return profile.workoutPlan[0];
+  }
+  return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
 }
 
 function getSessionVolume(session: WorkoutSession) {
@@ -173,6 +236,234 @@ function getRecentZoneExposure(sessions: WorkoutSession[], limit = 8) {
 
 function getExposureTotal(zoneExposure: Record<string, number>, zoneIds: string[]) {
   return Math.round(zoneIds.reduce((sum, zoneId) => sum + (zoneExposure[zoneId] ?? 0), 0) * 10) / 10;
+}
+
+function getExerciseLastPerformance(exerciseName: string, sessions: WorkoutSession[]) {
+  for (const session of sessions) {
+    const match = session.exercises.find((exercise) => exercise.exerciseName === exerciseName);
+    if (!match) {
+      continue;
+    }
+    const completedSet = [...match.sets].reverse().find((set) => set.completed && (set.weight > 0 || set.reps > 0));
+    if (!completedSet) {
+      continue;
+    }
+    if (completedSet.weight > 0) {
+      return `${completedSet.weight} kg × ${completedSet.reps}`;
+    }
+    return `${completedSet.reps} reps`;
+  }
+  return undefined;
+}
+
+function getExerciseRegionLabels(exerciseName: string, muscleGroup: WorkoutSession["exercises"][number]["muscleGroup"]) {
+  const contribution = getExerciseMuscleContribution({ exerciseName, muscleGroup });
+  return Object.entries(contribution)
+    .sort((a, b) => b[1] - a[1])
+    .map(([zoneId]) => TRAINING_LOAD_ZONE_META[zoneId as keyof typeof TRAINING_LOAD_ZONE_META].label)
+    .slice(0, 3);
+}
+
+function getSessionTypeLabel(profileId: Profile["id"], status: TodaySession["status"], focusRegions: string[]) {
+  if (status === "resume") {
+    return "Resume session";
+  }
+  if (status === "low-activity") {
+    return profileId === "joshua" ? "Restart session" : "Restart session";
+  }
+  if (status === "recovery") {
+    return profileId === "joshua" ? "Recovery-aware build" : "Recovery-aware shape";
+  }
+  if (focusRegions.some((label) => /chest|delts|lats|arms/i.test(label))) {
+    return profileId === "joshua" ? "Build session" : "Shape session";
+  }
+  if (focusRegions.some((label) => /glute|waist|obliques/i.test(label))) {
+    return profileId === "natasha" ? "Sculpt session" : "Catch-up session";
+  }
+  return profileId === "joshua" ? "Push session" : "Shape session";
+}
+
+function buildTodaySession(
+  profile: Profile,
+  sessions: WorkoutSession[],
+  trainingLoad: WeeklyTrainingLoad,
+  nextFocusDestination: SuggestedWorkoutDestination | null,
+  suggestedFocusSession: SuggestedFocusSession | null,
+  workoutOverrideId: string | null,
+  activeWorkout: ActiveWorkout | null,
+): TodaySession {
+  const rotatedWorkout = getRotationalWorkout(profile, sessions, workoutOverrideId);
+  const workout =
+    (workoutOverrideId ? profile.workoutPlan.find((item) => item.id === workoutOverrideId) : null) ??
+    (suggestedFocusSession?.sourceWorkoutId
+      ? profile.workoutPlan.find((item) => item.id === suggestedFocusSession.sourceWorkoutId) ?? null
+      : null) ??
+    (nextFocusDestination ? profile.workoutPlan.find((item) => item.id === nextFocusDestination.workoutId) ?? null : null) ??
+    rotatedWorkout;
+  const latestPartialSession =
+    activeWorkout?.userId === profile.id
+      ? null
+      : sessions.find((session) => session.partial && session.workoutDayId === workout.id) ?? null;
+  const focusRegions = trainingLoad.summary.suggestedNextFocus.labels.slice(0, 2);
+  const focusCoverage = trainingLoad.summary.suggestedNextFocus.zoneIds
+    .map((zoneId) => ({
+      region: TRAINING_LOAD_ZONE_META[zoneId].label,
+      completionPct: trainingLoad.metrics.find((metric) => metric.id === zoneId)?.percentage ?? 0,
+    }))
+    .slice(0, 2);
+  const recentPenaltyAverage =
+    trainingLoad.summary.suggestedNextFocus.zoneIds.reduce(
+      (sum, zoneId) => sum + (trainingLoad.recentLoad.zonePenalties[zoneId] ?? 0),
+      0,
+    ) / Math.max(1, trainingLoad.summary.suggestedNextFocus.zoneIds.length);
+  const status: TodaySession["status"] =
+    activeWorkout?.userId === profile.id || latestPartialSession
+      ? "resume"
+      : trainingLoad.summary.lowActivity
+        ? "low-activity"
+        : recentPenaltyAverage >= 0.58
+          ? "recovery"
+          : "ready";
+  const rawPlanExercises = suggestedFocusSession?.exercises.length
+    ? suggestedFocusSession.exercises.map((exercise) => ({
+        id: exercise.exerciseId ?? `${workout.id}-${exercise.name.toLowerCase().replace(/\s+/g, "-")}`,
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        sets: exercise.sets ?? 3,
+        repRange: exercise.repRange ?? "10-12",
+        note: exercise.note,
+      }))
+    : workout.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        sets: exercise.sets,
+        repRange: exercise.repRange,
+        note: exercise.note,
+      }));
+  const planExercises = (status === "low-activity" ? rawPlanExercises.slice(0, 3) : rawPlanExercises).map((exercise, index, array) => {
+    const regionLabels = getExerciseRegionLabels(exercise.name, exercise.muscleGroup);
+    return {
+      id: exercise.id,
+      order: index + 1,
+      name: exercise.name,
+      role: index === 0 || index === 1 ? "primary" : index === array.length - 1 ? "finisher" : "support",
+      primaryRegion: regionLabels[0] ?? exercise.muscleGroup,
+      secondaryRegions: regionLabels.slice(1),
+      sets: exercise.sets,
+      repRange: exercise.repRange,
+      lastPerformance: getExerciseLastPerformance(exercise.name, sessions),
+      targetCue: exercise.note,
+      swapEnabled: true,
+    } satisfies TodaySessionExercise;
+  });
+  const estimatedDurationMin =
+    suggestedFocusSession?.estimatedDurationMinutes ??
+    (status === "low-activity" ? Math.max(24, Math.round(workout.durationMinutes * 0.6)) : workout.durationMinutes);
+  const sessionTypeLabel = getSessionTypeLabel(profile.id, status, focusRegions);
+  const title = `${trainingLoad.summary.suggestedNextFocus.text} Session`;
+  const subtitle =
+    status === "resume"
+      ? activeWorkout?.userId === profile.id
+        ? `${activeWorkout.workoutName} is still open and ready to continue.`
+        : `${latestPartialSession?.workoutName ?? workout.name} has progress saved and is ready to resume.`
+      : status === "low-activity"
+        ? `A shorter restart session built from your highest-priority regions while this week's load data fills in.`
+        : status === "recovery"
+          ? `Today's plan leans into fresher work while still moving your main physique priorities forward.`
+          : `Today's workout plan is shaped around your current-week focus gaps and the best matching template available.`;
+  const whySummary =
+    status === "low-activity"
+      ? `Current-week load is still sparse, so this session starts from your highest-priority regions for ${profile.name}.`
+      : `Current-week training load points to ${focusRegions.join(" + ")} as the clearest next push, so the session plan leans into those regions first.`;
+  const insightChips = Array.from(
+    new Set([
+      sessionTypeLabel,
+      `${planExercises.length} exercises`,
+      nextFocusDestination?.workoutName ?? workout.name,
+    ]),
+  ).slice(0, 3);
+  const notes = [
+    status === "resume"
+      ? "Pick up where you left off and keep the session clean."
+      : `Lead with ${focusRegions[0] ?? "your main priority"} while the session is freshest.`,
+    status === "recovery"
+      ? "Keep reps smooth and leave a clean rep in reserve on the first main movement."
+      : "Let the first two exercises do the heavy lifting for today's result.",
+    profile.id === "joshua"
+      ? "Chase width, fullness, and crisp execution instead of chasing junk volume."
+      : "Keep the shape work controlled so glutes, back, and waist detail all read clearly.",
+  ].slice(0, 3);
+  const planSource: TodaySession["plan"]["source"] =
+    suggestedFocusSession && (suggestedFocusSession.isFallback || suggestedFocusSession.exercises.length !== workout.exercises.length)
+      ? "generated"
+      : "template";
+
+  return {
+    status,
+    title,
+    subtitle,
+    sessionTypeLabel,
+    estimatedDurationMin,
+    focusRegions,
+    why: {
+      summary: whySummary,
+      insightChips,
+      coverage: focusCoverage,
+    },
+    plan: {
+      source: planSource,
+      exercises: planExercises,
+      totalExercises: planExercises.length,
+    },
+    notes,
+    cta: {
+      primaryLabel: status === "resume" ? "Resume session" : "Start session",
+      action: status === "resume" ? "resume" : "start",
+    },
+    workoutId: workout.id,
+    workoutName: workout.name,
+    generatedSession: suggestedFocusSession,
+    canStartDirectly: Boolean(suggestedFocusSession?.canStartDirectly),
+    resumeSource: activeWorkout?.userId === profile.id ? "active" : latestPartialSession ? "partial" : null,
+    partialSessionId: latestPartialSession?.id ?? null,
+  };
+}
+
+export function selectTodaySession(
+  profile: Profile,
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  options?: {
+    workoutOverrideId?: string | null;
+    activeWorkout?: ActiveWorkout | null;
+  },
+  referenceDate = new Date(),
+): TodaySession {
+  const trainingLoad = getWeeklyTrainingLoad(sessions, profile.id, referenceDate);
+  const nextFocusDestination = getSuggestedWorkoutDestination(
+    profile.id,
+    profile.workoutPlan,
+    trainingLoad.summary.suggestedNextFocus,
+    trainingLoad.recentLoad,
+  );
+  const suggestedFocusSession = getSuggestedFocusSession(
+    profile.id,
+    profile.workoutPlan,
+    trainingLoad.summary.suggestedNextFocus,
+    exerciseLibrary,
+    trainingLoad.recentLoad,
+  );
+
+  return buildTodaySession(
+    profile,
+    sessions,
+    trainingLoad,
+    nextFocusDestination,
+    suggestedFocusSession,
+    options?.workoutOverrideId ?? null,
+    options?.activeWorkout ?? null,
+  );
 }
 
 function buildProgressSignals(
@@ -381,6 +672,10 @@ export function getProfileTrainingState(
   profile: Profile,
   allSessions: WorkoutSession[],
   exerciseLibrary: ExerciseLibraryItem[],
+  options?: {
+    workoutOverrideId?: string | null;
+    activeWorkout?: ActiveWorkout | null;
+  },
   referenceDate = new Date(),
 ): ProfileTrainingState {
   const userSessions = sortSessionsDescending(allSessions.filter((session) => session.userId === profile.id));
@@ -388,6 +683,20 @@ export function getProfileTrainingState(
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
   const trendData = getTrendData(userSessions);
+
+  const nextFocusDestination = getSuggestedWorkoutDestination(
+    profile.id,
+    profile.workoutPlan,
+    trainingLoad.summary.suggestedNextFocus,
+    trainingLoad.recentLoad,
+  );
+  const suggestedFocusSession = getSuggestedFocusSession(
+    profile.id,
+    profile.workoutPlan,
+    trainingLoad.summary.suggestedNextFocus,
+    exerciseLibrary,
+    trainingLoad.recentLoad,
+  );
 
   return {
     userSessions,
@@ -400,19 +709,9 @@ export function getProfileTrainingState(
     weeklySummary,
     trainingLoad,
     calendarRows: getWeeklyCalendarRows(userSessions, 6, referenceDate),
-    nextFocusDestination: getSuggestedWorkoutDestination(
-      profile.id,
-      profile.workoutPlan,
-      trainingLoad.summary.suggestedNextFocus,
-      trainingLoad.recentLoad,
-    ),
-    suggestedFocusSession: getSuggestedFocusSession(
-      profile.id,
-      profile.workoutPlan,
-      trainingLoad.summary.suggestedNextFocus,
-      exerciseLibrary,
-      trainingLoad.recentLoad,
-    ),
+    nextFocusDestination,
+    suggestedFocusSession,
+    todaySession: selectTodaySession(profile, userSessions, exerciseLibrary, options, referenceDate),
     goalDashboard: buildGoalDashboard(profile, trainingLoad, weeklySummary, streak),
     progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
   };
