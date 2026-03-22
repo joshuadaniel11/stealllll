@@ -78,6 +78,7 @@ export type WeeklyTrainingLoad = {
 export type TrainingLoadSummary = {
   mostTrained: TrainingLoadMetric[];
   needsWork: TrainingLoadMetric[];
+  lowActivity: boolean;
 };
 
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
@@ -137,6 +138,9 @@ const PROFILE_PRIORITY_ZONES: Record<UserId, TrainingLoadZone[]> = {
     "sideDelts",
   ],
 };
+
+const MOST_TRAINED_MIN_PERCENTAGE = 18;
+const MOST_TRAINED_MIN_EFFECTIVE_SETS = 1.5;
 
 type ZoneContribution = Partial<Record<TrainingLoadZone, number>>;
 
@@ -514,9 +518,18 @@ function getPriorityRank(userId: UserId, zone: TrainingLoadZone) {
 
 function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[]): TrainingLoadSummary {
   const priorityZones = new Set(PROFILE_PRIORITY_ZONES[userId]);
+  const lowActivity = metrics.every((metric) => metric.effectiveSets < MOST_TRAINED_MIN_EFFECTIVE_SETS);
 
-  const mostTrained = [...metrics]
-    .filter((metric) => metric.effectiveSets > 0)
+  const thresholdQualified = metrics.filter(
+    (metric) =>
+      metric.effectiveSets >= MOST_TRAINED_MIN_EFFECTIVE_SETS || metric.percentage >= MOST_TRAINED_MIN_PERCENTAGE,
+  );
+
+  const mostTrainedPool = thresholdQualified.length
+    ? thresholdQualified
+    : metrics.filter((metric) => priorityZones.has(metric.id) && metric.effectiveSets > 0);
+
+  const mostTrained = [...mostTrainedPool]
     .sort((a, b) => {
       if (priorityZones.has(a.id) !== priorityZones.has(b.id)) {
         return priorityZones.has(a.id) ? -1 : 1;
@@ -547,6 +560,7 @@ function buildTrainingLoadSummary(userId: UserId, metrics: TrainingLoadMetric[])
   return {
     mostTrained,
     needsWork,
+    lowActivity,
   };
 }
 

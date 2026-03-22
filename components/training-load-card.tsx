@@ -108,11 +108,13 @@ function TopZoneList({ zones }: { zones: TrainingLoadMetric[] }) {
 function SummaryLine({
   label,
   metrics,
+  lowActivity,
 }: {
   label: string;
   metrics: TrainingLoadMetric[];
+  lowActivity?: boolean;
 }) {
-  const value = metrics.length ? metrics.map((metric) => metric.label).join(", ") : "Still building";
+  const value = metrics.length ? metrics.map((metric) => metric.label).join(", ") : lowActivity ? "Set the first priority with this week’s next session" : "Still building";
 
   return (
     <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3">
@@ -175,8 +177,8 @@ export function TrainingLoadCard({
 
       <div className="mt-4 grid gap-4">
         <div className="grid gap-2">
-          <SummaryLine label="Most trained" metrics={summary.mostTrained} />
-          <SummaryLine label="Needs work" metrics={summary.needsWork} />
+          <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
+          <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
         </div>
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
