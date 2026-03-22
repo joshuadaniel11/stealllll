@@ -151,6 +151,27 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={70}>
+        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} userId={profile.id} />
+      </ScrollReveal>
+
+      <ScrollReveal delay={95}>
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted">Workout calendar</p>
+              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
+            </div>
+            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+              {currentWeekSessions.length} this week
+            </div>
+          </div>
+          <div className="mt-4">
+            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
+          </div>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={120}>
         <Card>
           <div className="flex items-center justify-between">
             <div>
@@ -217,7 +238,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={120}>
+      <ScrollReveal delay={145}>
         <Card>
           <p className="text-sm text-muted">Smart focus</p>
           <div className="mt-4 rounded-[24px] border border-stroke bg-white/50 px-4 py-4 dark:bg-white/5">
@@ -235,15 +256,11 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={150}>
+      <ScrollReveal delay={170}>
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={200}>
-        <TrainingLoadCard metrics={weeklyTrainingLoad.metrics} weekLabel={weekLabel} userId={profile.id} />
-      </ScrollReveal>
-
-      <ScrollReveal delay={225}>
+      <ScrollReveal delay={195}>
         <Card>
           <p className="text-sm text-muted">{aestheticSignal.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -251,23 +268,6 @@ export function ProgressScreen({
             <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">Adaptive</div>
           </div>
           <p className="mt-3 text-sm leading-6 text-muted">{aestheticSignal.detail}</p>
-        </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={250}>
-        <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-muted">Workout calendar</p>
-              <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em]">Last 6 weeks</h3>
-            </div>
-            <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
-              {currentWeekSessions.length} this week
-            </div>
-          </div>
-          <div className="mt-4">
-            <WeeklyTrainingCalendar rows={weeklyCalendarRows} />
-          </div>
         </Card>
       </ScrollReveal>
 
