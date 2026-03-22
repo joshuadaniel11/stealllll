@@ -1,4 +1,4 @@
-import type { WorkoutSession, WorkoutSessionExercise } from "@/lib/types";
+import type { UserId, WorkoutSession, WorkoutSessionExercise } from "@/lib/types";
 
 export type TrainingLoadGroupId =
   | "chest"
@@ -42,6 +42,10 @@ export type TrainingLoadMetric = {
   effectiveSets: number;
   percentage: number;
   overload: boolean;
+  contributors: Array<{
+    exerciseName: string;
+    effectiveSets: number;
+  }>;
 };
 
 export type TrainingLoadGroup = {
@@ -68,6 +72,40 @@ export type WeeklyTrainingLoad = {
   groups: TrainingLoadGroup[];
   topZones: TrainingLoadMetric[];
   activeDays: Set<string>;
+};
+
+export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
+  front: [
+    "upperChest",
+    "midChest",
+    "lowerChest",
+    "frontDelts",
+    "sideDelts",
+    "biceps",
+    "triceps",
+    "forearms",
+    "upperAbs",
+    "lowerAbs",
+    "obliques",
+    "sideGlutes",
+    "quads",
+    "calves",
+  ],
+  back: [
+    "rearDelts",
+    "upperBack",
+    "lats",
+    "midBack",
+    "lowerBack",
+    "triceps",
+    "biceps",
+    "forearms",
+    "upperGlutes",
+    "gluteMax",
+    "sideGlutes",
+    "hamstrings",
+    "calves",
+  ],
 };
 
 type ZoneContribution = Partial<Record<TrainingLoadZone, number>>;
@@ -124,6 +162,57 @@ export const TRAINING_LOAD_ZONE_META: Record<
   quads: { label: "Quads", group: "legs", color: "#7bd26f", targetSets: 8 },
   hamstrings: { label: "Hamstrings", group: "legs", color: "#61c37d", targetSets: 6 },
   calves: { label: "Calves", group: "legs", color: "#95db72", targetSets: 4 },
+};
+
+const USER_TARGET_OVERRIDES: Record<UserId, Partial<Record<TrainingLoadZone, number>>> = {
+  joshua: {
+    upperChest: 6,
+    midChest: 8,
+    lowerChest: 5,
+    frontDelts: 5,
+    sideDelts: 7,
+    rearDelts: 6,
+    upperBack: 7,
+    lats: 8,
+    midBack: 8,
+    lowerBack: 5,
+    upperAbs: 4,
+    lowerAbs: 4,
+    obliques: 3,
+    upperGlutes: 4,
+    gluteMax: 5,
+    sideGlutes: 3,
+    biceps: 7,
+    triceps: 7,
+    forearms: 4,
+    quads: 6,
+    hamstrings: 5,
+    calves: 4,
+  },
+  natasha: {
+    upperChest: 4,
+    midChest: 5,
+    lowerChest: 3,
+    frontDelts: 4,
+    sideDelts: 6,
+    rearDelts: 6,
+    upperBack: 7,
+    lats: 8,
+    midBack: 7,
+    lowerBack: 4,
+    upperAbs: 4,
+    lowerAbs: 4,
+    obliques: 4,
+    upperGlutes: 8,
+    gluteMax: 10,
+    sideGlutes: 7,
+    biceps: 5,
+    triceps: 5,
+    forearms: 3,
+    quads: 7,
+    hamstrings: 6,
+    calves: 4,
+  },
 };
 
 const EXERCISE_RULES: Array<{ pattern: RegExp; contribution: ZoneContribution }> = [
@@ -257,6 +346,10 @@ function roundToSingleDecimal(value: number) {
   return Math.round(value * 10) / 10;
 }
 
+function getTargetSets(userId: UserId, zone: TrainingLoadZone) {
+  return USER_TARGET_OVERRIDES[userId]?.[zone] ?? TRAINING_LOAD_ZONE_META[zone].targetSets;
+}
+
 export function getCurrentWeekWindow(referenceDate = new Date()): WeekWindow {
   const start = new Date(referenceDate);
   const day = start.getDay();
@@ -329,22 +422,35 @@ function buildEmptyZoneTotals() {
   }, {} as Record<TrainingLoadZone, number>);
 }
 
-function buildZoneMetrics(totals: Record<TrainingLoadZone, number>) {
+function buildZoneMetrics(
+  userId: UserId,
+  totals: Record<TrainingLoadZone, number>,
+  contributorTotals: Record<TrainingLoadZone, Record<string, number>>,
+) {
   return (Object.entries(TRAINING_LOAD_ZONE_META) as Array<
     [TrainingLoadZone, (typeof TRAINING_LOAD_ZONE_META)[TrainingLoadZone]]
   >).map(([id, meta]) => {
     const effectiveSets = roundToSingleDecimal(totals[id]);
-    const rawPercentage = meta.targetSets ? (effectiveSets / meta.targetSets) * 100 : 0;
+    const targetSets = getTargetSets(userId, id);
+    const rawPercentage = targetSets ? (effectiveSets / targetSets) * 100 : 0;
+    const contributors = Object.entries(contributorTotals[id] ?? {})
+      .map(([exerciseName, sets]) => ({
+        exerciseName,
+        effectiveSets: roundToSingleDecimal(sets),
+      }))
+      .sort((a, b) => b.effectiveSets - a.effectiveSets)
+      .slice(0, 4);
 
     return {
       id,
       label: meta.label,
       group: meta.group,
       color: meta.color,
-      targetSets: meta.targetSets,
+      targetSets,
       effectiveSets,
       percentage: Math.min(100, Math.round(rawPercentage)),
       overload: rawPercentage > 100,
+      contributors,
     };
   });
 }
@@ -371,10 +477,20 @@ function buildGroupMetrics(metrics: TrainingLoadMetric[]) {
   });
 }
 
-export function getWeeklyTrainingLoad(sessions: WorkoutSession[], referenceDate = new Date()): WeeklyTrainingLoad {
+export function getWeeklyTrainingLoad(
+  sessions: WorkoutSession[],
+  userId: UserId,
+  referenceDate = new Date(),
+): WeeklyTrainingLoad {
   const week = getCurrentWeekWindow(referenceDate);
   const currentWeekSessions = getCurrentWeekSessions(sessions, referenceDate);
   const totals = buildEmptyZoneTotals();
+  const contributorTotals = Object.keys(TRAINING_LOAD_ZONE_META).reduce<
+    Record<TrainingLoadZone, Record<string, number>>
+  >((accumulator, key) => {
+    accumulator[key as TrainingLoadZone] = {};
+    return accumulator;
+  }, {} as Record<TrainingLoadZone, Record<string, number>>);
 
   for (const session of currentWeekSessions) {
     for (const exercise of session.exercises) {
@@ -385,12 +501,15 @@ export function getWeeklyTrainingLoad(sessions: WorkoutSession[], referenceDate 
 
       const contribution = getExerciseMuscleContribution(exercise);
       for (const [zone, weight] of Object.entries(contribution) as Array<[TrainingLoadZone, number]>) {
-        totals[zone] += completedSets * weight;
+        const effectiveContribution = completedSets * weight;
+        totals[zone] += effectiveContribution;
+        contributorTotals[zone][exercise.exerciseName] =
+          (contributorTotals[zone][exercise.exerciseName] ?? 0) + effectiveContribution;
       }
     }
   }
 
-  const metrics = buildZoneMetrics(totals);
+  const metrics = buildZoneMetrics(userId, totals, contributorTotals);
   const groups = buildGroupMetrics(metrics);
   const topZones = [...metrics]
     .filter((metric) => metric.effectiveSets > 0)

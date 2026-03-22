@@ -105,22 +105,6 @@ function getZoneStyle(metric?: TrainingLoadMetric) {
   };
 }
 
-function renderZones(shapes: ZoneShape[], metricsByZone: Record<TrainingLoadZone, TrainingLoadMetric>) {
-  return shapes.map((shape, index) => {
-    const style = getZoneStyle(metricsByZone[shape.zone]);
-    return (
-      <path
-        key={`${shape.zone}-${index}`}
-        d={shape.d}
-        fill={style.fill}
-        stroke={style.stroke}
-        strokeWidth="1.25"
-        style={{ filter: style.filter }}
-      />
-    );
-  });
-}
-
 function BodyShell({ variant, view }: { variant: BodyVariant; view: BodyView }) {
   const shell = "rgba(103,103,118,0.16)";
   const shellStroke = "rgba(255,255,255,0.06)";
@@ -165,10 +149,14 @@ export function BodyActivationVisual({
   metrics,
   userId,
   view,
+  selectedZone,
+  onSelectZone,
 }: {
   metrics: TrainingLoadMetric[];
   userId: UserId;
   view: BodyView;
+  selectedZone?: TrainingLoadZone | null;
+  onSelectZone?: (zone: TrainingLoadZone) => void;
 }) {
   const variant: BodyVariant = userId === "natasha" ? "female" : "male";
   const metricsByZone = getMetricMap(metrics);
@@ -180,7 +168,23 @@ export function BodyActivationVisual({
       <div className="relative flex items-center justify-center">
         <svg viewBox="0 0 120 260" className="h-[320px] w-[150px]" aria-hidden="true">
           <BodyShell variant={variant} view={view} />
-          {renderZones(shapes, metricsByZone)}
+          {shapes.map((shape, index) => {
+            const style = getZoneStyle(metricsByZone[shape.zone]);
+            const isSelected = selectedZone === shape.zone;
+
+            return (
+              <path
+                key={`${shape.zone}-${index}`}
+                d={shape.d}
+                fill={style.fill}
+                stroke={isSelected ? "rgba(255,255,255,0.94)" : style.stroke}
+                strokeWidth={isSelected ? "1.8" : "1.25"}
+                style={{ filter: style.filter }}
+                className={onSelectZone ? "cursor-pointer transition" : undefined}
+                onClick={() => onSelectZone?.(shape.zone)}
+              />
+            );
+          })}
         </svg>
       </div>
       <div className="relative mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-white/36">

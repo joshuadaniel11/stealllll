@@ -121,7 +121,7 @@ export function ProgressScreen({
           detail: `${absVisibilityLabel}, backed by ${weeklyStretchCount} recovery sessions and ${coreSessions} core-focused sessions.`,
         };
 
-  const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions);
+  const weeklyTrainingLoad = getWeeklyTrainingLoad(userSessions, profile.id);
   const currentWeekSessions = getCurrentWeekSessions(userSessions);
   const weeklyCalendarRows = getWeeklyCalendarRows(userSessions);
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
