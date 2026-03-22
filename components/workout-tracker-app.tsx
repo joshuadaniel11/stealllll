@@ -18,6 +18,7 @@ import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { getCoupleIntelligenceSummary } from "@/lib/couple-intelligence";
+import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { getProfileSessions, getProfileTrainingState } from "@/lib/profile-training-state";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
@@ -210,101 +211,6 @@ function toSuggestedFocusActiveWorkout(
       note: exercise.note ?? "",
       sets: buildEmptySets(exercise, getLastExerciseSets(exercise.name, sessions)),
     })),
-  };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isValidSetLog(value: unknown): value is SetLog {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.weight === "number" &&
-    typeof value.reps === "number" &&
-    typeof value.completed === "boolean"
-  );
-}
-
-function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    (value.userId === "joshua" || value.userId === "natasha") &&
-    typeof value.startedAt === "string" &&
-    typeof value.workoutDayId === "string" &&
-    typeof value.workoutName === "string" &&
-    Array.isArray(value.exercises) &&
-    value.exercises.every(
-      (exercise) =>
-        isRecord(exercise) &&
-        typeof exercise.exerciseId === "string" &&
-        typeof exercise.exerciseName === "string" &&
-        typeof exercise.muscleGroup === "string" &&
-        Array.isArray(exercise.sets) &&
-        exercise.sets.every(isValidSetLog),
-    )
-  );
-}
-
-function isValidImportedState(value: Partial<AppState>) {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  if (value.selectedUserId && value.selectedUserId !== "joshua" && value.selectedUserId !== "natasha") {
-    return false;
-  }
-
-  if (value.sessions && !Array.isArray(value.sessions)) {
-    return false;
-  }
-
-  if (value.measurements && !isRecord(value.measurements)) {
-    return false;
-  }
-
-  if (value.stretchCompletions && !isRecord(value.stretchCompletions)) {
-    return false;
-  }
-
-  if (value.workoutOverrides && !isRecord(value.workoutOverrides)) {
-    return false;
-  }
-
-  if (value.exerciseSwapMemory && !isRecord(value.exerciseSwapMemory)) {
-    return false;
-  }
-
-  return true;
-}
-
-function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>): AppState {
-  return {
-    ...seed,
-    ...incoming,
-    profiles: seed.profiles,
-    exerciseLibrary: seed.exerciseLibrary,
-    weeklySummaries: seed.weeklySummaries,
-    measurements: {
-      ...seed.measurements,
-      ...(incoming.measurements ?? {}),
-    },
-    stretchCompletions: {
-      ...seed.stretchCompletions,
-      ...(incoming.stretchCompletions ?? {}),
-    },
-    workoutOverrides: {
-      ...seed.workoutOverrides,
-      ...(incoming.workoutOverrides ?? {}),
-    },
-    exerciseSwapMemory: {
-      ...seed.exerciseSwapMemory,
-      ...(incoming.exerciseSwapMemory ?? {}),
-    },
-    bibleVerses: incoming.bibleVerses?.length ? incoming.bibleVerses : seed.bibleVerses,
-    activeWorkout: isValidActiveWorkout(incoming.activeWorkout) ? incoming.activeWorkout : null,
   };
 }
 

@@ -46,7 +46,13 @@ export function loadState(): Partial<AppState> | null {
     return null;
   }
 
-  return deserializeState(raw);
+  const parsed = deserializeState(raw);
+  if (!parsed) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+
+  return parsed;
 }
 
 export function saveState(state: AppState) {
@@ -60,7 +66,11 @@ export function saveState(state: AppState) {
     state,
   };
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Storage can fail in private mode or when quota is exceeded. Ignore so the app keeps running.
+  }
 }
 
 export function loadLockedProfile(): AppState["selectedUserId"] | null {

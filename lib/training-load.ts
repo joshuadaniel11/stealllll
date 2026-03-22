@@ -739,7 +739,7 @@ function buildSuggestedNextFocus(
       .slice(0, 2);
 
   const selectedMetrics = lowActivity
-    ? priorityMetrics.slice(0, 2)
+    ? pickZones(priorityMetrics.slice(0, Math.min(4, priorityMetrics.length)))
     : (() => {
         const lagging = priorityMetrics.filter((metric) => metric.percentage < 80);
         if (lagging.length >= 2) {
