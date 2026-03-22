@@ -28,7 +28,7 @@ import {
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
-import { getSuggestedWorkoutDestination, getWeeklyTrainingLoad } from "@/lib/training-load";
+import { getSuggestedFocusSession, getSuggestedWorkoutDestination, getWeeklyTrainingLoad } from "@/lib/training-load";
 import type {
   ActiveWorkout,
   AppState,
@@ -591,6 +591,16 @@ export function WorkoutTrackerApp() {
         weeklyTrainingLoad.summary.suggestedNextFocus,
       ),
     [selectedProfile, weeklyTrainingLoad.summary.suggestedNextFocus],
+  );
+  const suggestedFocusSession = useMemo(
+    () =>
+      getSuggestedFocusSession(
+        selectedProfile.id,
+        selectedProfile.workoutPlan,
+        weeklyTrainingLoad.summary.suggestedNextFocus,
+        state.exerciseLibrary,
+      ),
+    [selectedProfile, state.exerciseLibrary, weeklyTrainingLoad.summary.suggestedNextFocus],
   );
   const streak = getStreak(userSessions);
   const recentWorkouts = userSessions.slice(0, 3);
@@ -1417,6 +1427,7 @@ export function WorkoutTrackerApp() {
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
               recentSessions={userSessions.slice(0, 4)}
               nextFocusDestination={nextFocusDestination}
+              suggestedFocusSession={suggestedFocusSession}
               onOpenNextFocus={openNextFocusWorkout}
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}

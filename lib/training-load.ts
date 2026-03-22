@@ -1,4 +1,5 @@
 import type {
+  ExerciseLibraryItem,
   ExerciseTemplate,
   MuscleGroup,
   UserId,
@@ -102,6 +103,35 @@ export type SuggestedWorkoutDestination = {
   matchedLabels: string[];
   helperText: string;
   isFallback: boolean;
+};
+
+export type SuggestedFocusSessionExercise = {
+  name: string;
+  matchedZoneIds: TrainingLoadZone[];
+  matchedLabels: string[];
+  sourceWorkoutName: string | null;
+};
+
+export type SuggestedFocusSession = {
+  focusText: string;
+  exercises: SuggestedFocusSessionExercise[];
+  sourceWorkoutId: string | null;
+  sourceWorkoutName: string | null;
+  helperText: string;
+  isFallback: boolean;
+};
+
+type FocusExerciseCandidate = {
+  key: string;
+  name: string;
+  matchedZoneIds: TrainingLoadZone[];
+  totalFocusScore: number;
+  strongestZoneScore: number;
+  sourceWorkoutId: string | null;
+  sourceWorkoutName: string | null;
+  preferredWorkout: boolean;
+  favorite: boolean;
+  stableOrder: number;
 };
 
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
@@ -480,6 +510,22 @@ function getTemplateExerciseContribution(exercise: ExerciseTemplate) {
   });
 }
 
+function scoreContributionForFocus(contribution: ZoneContribution, focusZoneIds: TrainingLoadZone[]) {
+  const zoneScores = focusZoneIds.reduce<Record<TrainingLoadZone, number>>((accumulator, zoneId) => {
+    accumulator[zoneId] = contribution[zoneId] ?? 0;
+    return accumulator;
+  }, {} as Record<TrainingLoadZone, number>);
+
+  const matchedZoneIds = focusZoneIds.filter((zoneId) => zoneScores[zoneId] > 0);
+
+  return {
+    zoneScores,
+    matchedZoneIds,
+    totalFocusScore: focusZoneIds.reduce((sum, zoneId) => sum + zoneScores[zoneId], 0),
+    strongestZoneScore: Math.max(0, ...focusZoneIds.map((zoneId) => zoneScores[zoneId])),
+  };
+}
+
 export function getCurrentWeekSessions(sessions: WorkoutSession[], referenceDate = new Date()) {
   const week = getCurrentWeekWindow(referenceDate);
   return sessions.filter((session) => {
@@ -666,6 +712,162 @@ export function getSuggestedWorkoutDestination(
       ? `Open matching workout`
       : `Open closest workout`,
     isFallback: bestMatch.matchedZoneIds.length === 0,
+  };
+}
+
+export function getSuggestedFocusSession(
+  userId: UserId,
+  workoutPlan: WorkoutPlanDay[],
+  focus: NextWorkoutFocus,
+  exerciseLibrary: ExerciseLibraryItem[] = [],
+): SuggestedFocusSession | null {
+  if (!focus.zoneIds.length) {
+    return null;
+  }
+
+  const destination = getSuggestedWorkoutDestination(userId, workoutPlan, focus);
+  const preferredWorkoutId = destination?.workoutId ?? null;
+  const preferredWorkoutName = destination?.workoutName ?? null;
+
+  const scoredTemplateExercises: FocusExerciseCandidate[] = workoutPlan.flatMap((workout, workoutIndex) =>
+    workout.exercises.map((exercise, exerciseIndex) => {
+      const contribution = getTemplateExerciseContribution(exercise);
+      const score = scoreContributionForFocus(contribution, focus.zoneIds);
+
+      return {
+        key: `template-${workout.id}-${exercise.id}`,
+        name: exercise.name,
+        matchedZoneIds: score.matchedZoneIds,
+        totalFocusScore: score.totalFocusScore,
+        strongestZoneScore: score.strongestZoneScore,
+        sourceWorkoutId: workout.id,
+        sourceWorkoutName: workout.name,
+        preferredWorkout: workout.id === preferredWorkoutId,
+        favorite: Boolean(exercise.favorite),
+        stableOrder: workoutIndex * 100 + exerciseIndex,
+      };
+    }),
+  );
+
+  const dedupedTemplateExercises = Array.from(
+    new Map(
+      scoredTemplateExercises
+        .sort((a, b) => {
+          if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
+            return b.matchedZoneIds.length - a.matchedZoneIds.length;
+          }
+          if (b.totalFocusScore !== a.totalFocusScore) {
+            return b.totalFocusScore - a.totalFocusScore;
+          }
+          if (Number(b.preferredWorkout) !== Number(a.preferredWorkout)) {
+            return Number(b.preferredWorkout) - Number(a.preferredWorkout);
+          }
+          if (Number(b.favorite) !== Number(a.favorite)) {
+            return Number(b.favorite) - Number(a.favorite);
+          }
+          if (b.strongestZoneScore !== a.strongestZoneScore) {
+            return b.strongestZoneScore - a.strongestZoneScore;
+          }
+          return a.stableOrder - b.stableOrder;
+        })
+        .map((exercise) => [exercise.name.toLowerCase(), exercise] as const),
+    ).values(),
+  );
+
+  const matchedTemplateExercises = dedupedTemplateExercises.filter((exercise) => exercise.totalFocusScore > 0);
+  const selectedExercises: FocusExerciseCandidate[] = [];
+  const targetCount = 4;
+
+  for (const zoneId of focus.zoneIds) {
+    const bestForZone = matchedTemplateExercises.find(
+      (exercise) => !selectedExercises.includes(exercise) && exercise.matchedZoneIds.includes(zoneId),
+    );
+    if (bestForZone) {
+      selectedExercises.push(bestForZone);
+    }
+  }
+
+  for (const exercise of matchedTemplateExercises) {
+    if (selectedExercises.length >= targetCount) {
+      break;
+    }
+    if (selectedExercises.includes(exercise)) {
+      continue;
+    }
+    selectedExercises.push(exercise);
+  }
+
+  if (selectedExercises.length < targetCount) {
+    const libraryFallbacks = exerciseLibrary
+      .map((exercise, index) => {
+        const contribution = getExerciseMuscleContribution({
+          exerciseName: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+        });
+        const score = scoreContributionForFocus(contribution, focus.zoneIds);
+
+        return {
+          key: `library-${exercise.id}`,
+          name: exercise.name,
+          matchedZoneIds: score.matchedZoneIds,
+          totalFocusScore: score.totalFocusScore,
+          strongestZoneScore: score.strongestZoneScore,
+          sourceWorkoutId: null,
+          sourceWorkoutName: null,
+          preferredWorkout: false,
+          favorite: false,
+          stableOrder: 10000 + index,
+        };
+      })
+      .filter((exercise) => exercise.totalFocusScore > 0)
+      .sort((a, b) => {
+        if (b.matchedZoneIds.length !== a.matchedZoneIds.length) {
+          return b.matchedZoneIds.length - a.matchedZoneIds.length;
+        }
+        if (b.totalFocusScore !== a.totalFocusScore) {
+          return b.totalFocusScore - a.totalFocusScore;
+        }
+        if (b.strongestZoneScore !== a.strongestZoneScore) {
+          return b.strongestZoneScore - a.strongestZoneScore;
+        }
+        return a.stableOrder - b.stableOrder;
+      });
+
+    for (const fallbackExercise of libraryFallbacks) {
+      if (selectedExercises.length >= targetCount) {
+        break;
+      }
+      const alreadySelected = selectedExercises.some(
+        (exercise) => exercise.name.toLowerCase() === fallbackExercise.name.toLowerCase(),
+      );
+      if (alreadySelected) {
+        continue;
+      }
+      selectedExercises.push(fallbackExercise);
+    }
+  }
+
+  if (!selectedExercises.length) {
+    return null;
+  }
+
+  const sourceWorkoutName =
+    selectedExercises.find((exercise) => exercise.sourceWorkoutId === preferredWorkoutId)?.sourceWorkoutName ??
+    selectedExercises.find((exercise) => exercise.sourceWorkoutName)?.sourceWorkoutName ??
+    preferredWorkoutName;
+
+  return {
+    focusText: focus.text,
+    exercises: selectedExercises.slice(0, targetCount).map((exercise) => ({
+      name: exercise.name,
+      matchedZoneIds: exercise.matchedZoneIds,
+      matchedLabels: exercise.matchedZoneIds.map(getZoneLabel),
+      sourceWorkoutName: exercise.sourceWorkoutName,
+    })),
+    sourceWorkoutId: preferredWorkoutId,
+    sourceWorkoutName,
+    helperText: sourceWorkoutName ? `Built from ${sourceWorkoutName}` : "Built from your current focus priorities",
+    isFallback: selectedExercises.some((exercise) => exercise.sourceWorkoutId === null),
   };
 }
 

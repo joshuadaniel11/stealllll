@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import { TRAINING_LOAD_VIEW_ZONES } from "@/lib/training-load";
 import type { UserId } from "@/lib/types";
 import type {
+  SuggestedFocusSession,
   TrainingLoadGroup,
   TrainingLoadMetric,
   TrainingLoadSummary,
@@ -223,6 +224,42 @@ function NextFocusCard({
   );
 }
 
+function SuggestedSessionCard({ session }: { session: SuggestedFocusSession | null }) {
+  if (!session) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s focus session</p>
+          <p className="mt-1 text-sm font-medium text-white/80">{session.focusText}</p>
+        </div>
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
+          {session.exercises.length} moves
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {session.exercises.map((exercise) => (
+          <div
+            key={exercise.name}
+            className="flex items-center justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5"
+          >
+            <p className="text-sm font-medium text-white/84">{exercise.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">
+              {exercise.matchedLabels.join(" + ")}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-white/34">{session.helperText}</p>
+    </div>
+  );
+}
+
 export function TrainingLoadCard({
   metrics,
   groups,
@@ -231,6 +268,7 @@ export function TrainingLoadCard({
   activeDayCount,
   userId,
   nextFocusHelperText,
+  suggestedSession,
   onOpenNextFocus,
 }: {
   metrics: TrainingLoadMetric[];
@@ -241,6 +279,7 @@ export function TrainingLoadCard({
   activeDayCount: number;
   userId: UserId;
   nextFocusHelperText: string;
+  suggestedSession: SuggestedFocusSession | null;
   onOpenNextFocus: () => void;
 }) {
   const [view, setView] = useState<"front" | "back">("front");
@@ -299,6 +338,8 @@ export function TrainingLoadCard({
           lowActivity={summary.lowActivity}
           onOpen={onOpenNextFocus}
         />
+
+        <SuggestedSessionCard session={suggestedSession} />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
