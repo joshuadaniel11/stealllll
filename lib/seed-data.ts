@@ -8,6 +8,7 @@ import type {
   WorkoutPlanDay,
   WorkoutSession,
 } from "@/lib/types";
+import { buildCanonicalExerciseLibrary } from "@/lib/exercise-data";
 
 const targetLabels: Record<string, string> = {
   Chest: "Targets: Chest",
@@ -229,7 +230,7 @@ const profiles: Profile[] = [
       { dayLabel: "Friday", title: "Shoulder Ease", focus: "Chest and shoulders", durationMinutes: 8, bendSearch: "chest shoulders", note: "Open the chest and shoulders until everything feels elegant and easy. Stay loose through the upper body and give Joshua that irresistible soft-but-dangerous look." },
       { dayLabel: "Saturday", title: "Full Body Unwind", focus: "Whole body", durationMinutes: 12, bendSearch: "full body recovery", note: "Finish the week with a full-body Bend flow and let every part of you loosen up. Relax into it, move slow, and keep Joshua craving the way your body looks and feels." },
     ],
-    favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown", "abductor-machine"],
+    favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown-day2-nat", "abductor-machine"],
   },
   {
     id: "joshua",
@@ -266,7 +267,7 @@ const weeklySummaries: Record<"natasha" | "joshua", WeeklySummary> = {
   joshua: { userId: "joshua", workoutsCompleted: 0, totalSets: 0, totalVolume: 0, personalBests: 0, mostTrainedMuscleGroup: "Chest", consistencyLabel: "Building rhythm with a clean start" },
 };
 
-const exerciseLibrary: ExerciseLibraryItem[] = [
+const rawExerciseLibrary: ExerciseLibraryItem[] = [
   ...profiles.flatMap((profile) =>
     profile.workoutPlan.flatMap((day) =>
       day.exercises.map((exercise) => ({
@@ -287,15 +288,20 @@ const exerciseLibrary: ExerciseLibraryItem[] = [
   { id: "smith-machine-hip-thrust", name: "Smith Machine Hip Thrust", muscleGroup: "Glutes", equipment: "Machine", cues: ["Use the same hip thrust setup with a more stable bar path.", "Drive through heels and pause hard at lockout."] },
   { id: "machine-hip-thrust", name: "Machine Hip Thrust", muscleGroup: "Glutes", equipment: "Machine", cues: ["Let the machine keep you stable and focus on full glute squeeze.", "Control the lower and pause at the top."] },
   { id: "glute-bridge-machine", name: "Glute Bridge Machine", muscleGroup: "Glutes", equipment: "Machine", cues: ["Shorter range, constant glute tension.", "Keep chin tucked and ribs down."] },
+  { id: "abductor-machine", name: "Abductor Machine", muscleGroup: "Glutes", equipment: "Machine", cues: ["Drive knees out under control and hold the outer-glute squeeze.", "Keep torso stable and stay in the glutes."] },
   { id: "leg-press-high-feet", name: "Leg Press High Foot Placement", muscleGroup: "Glutes", equipment: "Machine", cues: ["Place feet high and slightly wider to bias glutes.", "Control the bottom and drive evenly."] },
   { id: "single-arm-lat-pulldown", name: "Single-Arm Lat Pulldown", muscleGroup: "Back", equipment: "Cable", cues: ["Pull elbow into hip for lat focus.", "Stay tall and avoid shrugging."] },
   { id: "assisted-pull-up", name: "Assisted Pull-Up", muscleGroup: "Back", equipment: "Machine", cues: ["Use assistance to stay in the target rep range.", "Lead with elbows and chest tall."] },
   { id: "machine-lat-pullover", name: "Machine Lat Pullover", muscleGroup: "Back", equipment: "Machine", cues: ["Drive through the elbows and keep lats loaded.", "Smooth stretch and squeeze."] },
+  { id: "machine-row", name: "Machine Row", muscleGroup: "Back", equipment: "Machine", cues: ["Drive elbows back without shrugging.", "Pause the squeeze through the mid-back."] },
   { id: "seated-cable-row", name: "Seated Cable Row", muscleGroup: "Back", equipment: "Cable", cues: ["Pull to lower ribs and keep chest high.", "Pause the squeeze before returning."] },
   { id: "incline-machine-press", name: "Incline Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Stable upper-chest pressing with a controlled path.", "Keep shoulders down and press smoothly."] },
   { id: "flat-machine-press", name: "Flat Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Press through palms and keep tension on the chest.", "Control the negative."] },
+  { id: "plate-loaded-chest-press", name: "Plate-Loaded Chest Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Use a stable pressing path and chase a full chest squeeze.", "Control the lowering phase and keep shoulders packed."] },
   { id: "smith-flat-press", name: "Smith Machine Flat Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Fixed bar path for stable heavy pressing.", "Keep elbows under wrists."] },
+  { id: "smith-incline-press", name: "Smith Incline Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Bias upper chest with a fixed incline pressing path.", "Keep the elbows stacked and press cleanly."] },
   { id: "plate-loaded-shoulder-press", name: "Plate-Loaded Shoulder Press", muscleGroup: "Shoulders", equipment: "Machine", cues: ["Stable shoulder press with clean overload.", "Keep ribcage stacked and press straight up."] },
+  { id: "machine-shoulder-press", name: "Machine Shoulder Press", muscleGroup: "Shoulders", equipment: "Machine", cues: ["Use the fixed path to load the delts cleanly.", "Keep the shoulders down and press smoothly."] },
   { id: "seated-dumbbell-lateral-raise", name: "Seated Dumbbell Lateral Raise", muscleGroup: "Shoulders", equipment: "Dumbbell", cues: ["Use a shorter range and steady tempo.", "Lead with elbows, not wrists."] },
   { id: "cable-front-raise", name: "Cable Front Raise", muscleGroup: "Shoulders", equipment: "Cable", cues: ["Keep shoulders down and lift smoothly.", "Use light load and clean control."] },
   { id: "walking-lunge-alt", name: "Walking Lunge", muscleGroup: "Legs", equipment: "Dumbbell", cues: ["Take long controlled steps and stay balanced.", "Drive through the front foot."] },
@@ -305,6 +311,7 @@ const exerciseLibrary: ExerciseLibraryItem[] = [
   { id: "dumbbell-step-up", name: "Dumbbell Step-Up", muscleGroup: "Legs", equipment: "Dumbbell", cues: ["Drive through the working leg only.", "Stand tall at the top."] },
   { id: "rope-pushdown", name: "Rope Pushdown", muscleGroup: "Triceps", equipment: "Cable", cues: ["Split rope at the bottom and lock out cleanly.", "Keep elbows pinned."] },
   { id: "single-arm-cable-extension", name: "Single-Arm Cable Extension", muscleGroup: "Triceps", equipment: "Cable", cues: ["Use full triceps stretch and lockout.", "Keep shoulder quiet."] },
+  { id: "overhead-rope-extension", name: "Overhead Rope Extension", muscleGroup: "Triceps", equipment: "Cable", cues: ["Stay long through the stretch and finish with clean elbow extension.", "Keep the upper arm stable."] },
   { id: "ez-bar-curl", name: "EZ-Bar Curl", muscleGroup: "Biceps", equipment: "Barbell", cues: ["Curl smoothly and lower under control.", "Keep elbows tucked."] },
   { id: "cable-curl", name: "Cable Curl", muscleGroup: "Biceps", equipment: "Cable", cues: ["Constant tension through the full range.", "Stand tall and avoid swinging."] },
   { id: "captains-chair-knee-raise", name: "Captain's Chair Knee Raise", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Curl pelvis up, not just knees.", "Move slowly and avoid swinging."] },
@@ -312,7 +319,10 @@ const exerciseLibrary: ExerciseLibraryItem[] = [
   { id: "bike-erg-sprint", name: "Bike Erg Sprint", muscleGroup: "Full Body", equipment: "Machine", cues: ["Keep output sharp and short.", "Recover fully between efforts."] },
   { id: "battle-rope-slam", name: "Battle Rope Slam", muscleGroup: "Full Body", equipment: "Cable", cues: ["Stay athletic and slam with intent.", "Keep core braced."] },
   { id: "standing-calf-raise", name: "Standing Calf Raise", muscleGroup: "Legs", equipment: "Machine", cues: ["Pause hard at the top and lower slowly.", "Keep pressure through the big toe and ball of the foot."] },
+  { id: "45-degree-back-extension", name: "45 Degree Back Extension", muscleGroup: "Back", equipment: "Machine", cues: ["Move slowly and keep tension through glutes and lower back.", "Do not throw the torso through the top."] },
 ];
+
+const exerciseLibrary: ExerciseLibraryItem[] = buildCanonicalExerciseLibrary(rawExerciseLibrary);
 
 const bibleVerses: BibleVerse[] = [
   {

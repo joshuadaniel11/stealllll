@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
+import { buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
 import { getProfileTrainingState } from "@/lib/profile-training-state";
 import { createSeedState } from "@/lib/seed-data";
 
@@ -148,11 +149,36 @@ function testSuggestedSessionIsActionable() {
   assert.equal(trainingState.suggestedFocusSession?.canStartDirectly, true);
 }
 
+function testExerciseLibraryCanonicalization() {
+  const seed = createSeedState();
+  const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
+  assert.equal(dedupedMachineHipThrusts.length, 1);
+  assert.ok(findExerciseLibraryItemByName(seed.exerciseLibrary, "Straight-Arm Pulldown"));
+  assert.ok(findExerciseLibraryItemByName(seed.exerciseLibrary, "Machine Row"));
+}
+
+function testFavoriteIdsStayResolvable() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+  assert.ok(natasha);
+
+  const resolvableFavorites = natasha.favoriteExerciseIds.filter(
+    (id) =>
+      seed.exerciseLibrary.some((exercise) => exercise.id === id) ||
+      natasha.workoutPlan.some((workout) => workout.exercises.some((exercise) => exercise.id === id)),
+  );
+
+  assert.equal(resolvableFavorites.length, natasha.favoriteExerciseIds.length);
+  assert.equal(buildCanonicalExerciseLibrary(seed.exerciseLibrary).length, seed.exerciseLibrary.length);
+}
+
 const tests = [
   ["reject invalid imported state", testInvalidImportedState],
   ["merge imported state safely", testSafeStateMerge],
   ["bias next focus away from just-trained zones", testRecoveryAwareNextFocus],
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
+  ["canonicalize exercise library names", testExerciseLibraryCanonicalization],
+  ["keep favorite exercise ids resolvable", testFavoriteIdsStayResolvable],
 ] as const;
 
 for (const [label, run] of tests) {

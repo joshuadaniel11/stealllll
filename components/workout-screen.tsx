@@ -6,6 +6,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { ExitSessionModal } from "@/components/exit-session-modal";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
+import { areEquivalentExerciseNames, buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { SuggestedFocusSession } from "@/lib/training-load";
@@ -46,15 +47,16 @@ const substitutionHints: Record<string, string[]> = {
   };
 
 function getSubstitutions(currentExerciseName: string, muscleGroup: string, library: ExerciseLibraryItem[]) {
+  const canonicalLibrary = buildCanonicalExerciseLibrary(library);
   const preferredNames = substitutionHints[currentExerciseName] ?? [];
   const preferred = preferredNames
-    .map((name) => library.find((item) => item.name === name))
+    .map((name) => findExerciseLibraryItemByName(canonicalLibrary, name))
     .filter((item): item is ExerciseLibraryItem => Boolean(item));
 
-  const fallback = library.filter(
+  const fallback = canonicalLibrary.filter(
     (item) =>
       item.muscleGroup === muscleGroup &&
-      item.name !== currentExerciseName &&
+      !areEquivalentExerciseNames(item.name, currentExerciseName) &&
       !preferred.some((option) => option.id === item.id),
   );
 

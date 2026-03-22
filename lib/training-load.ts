@@ -7,6 +7,7 @@ import type {
   WorkoutSession,
   WorkoutSessionExercise,
 } from "@/lib/types";
+import { buildCanonicalExerciseLibrary, normalizeExerciseName } from "@/lib/exercise-data";
 
 export type TrainingLoadGroupId =
   | "chest"
@@ -368,7 +369,7 @@ const EXERCISE_RULES: Array<{ pattern: RegExp; contribution: ZoneContribution }>
     contribution: { rearDelts: 0.72, upperBack: 0.62, midBack: 0.22 },
   },
   {
-    pattern: /lat pulldown|pull-up|pull up|lat pull over|lat pullover|single-arm cable lat pull-in/i,
+    pattern: /lat pulldown|single arm lat pulldown|pull up|pull in|lat pullover|machine lat pullover|straight arm cable pulldown|straight arm pulldown|assisted pull up/i,
     contribution: { lats: 1, upperBack: 0.25, biceps: 0.3, forearms: 0.15 },
   },
   {
@@ -526,7 +527,8 @@ function getFallbackContribution(exercise: ExerciseLike): ZoneContribution {
 }
 
 export function getExerciseMuscleContribution(exercise: ExerciseLike): ZoneContribution {
-  const matchedRule = EXERCISE_RULES.find((rule) => rule.pattern.test(exercise.exerciseName));
+  const normalizedName = normalizeExerciseName(exercise.exerciseName);
+  const matchedRule = EXERCISE_RULES.find((rule) => rule.pattern.test(normalizedName));
   return matchedRule?.contribution ?? getFallbackContribution(exercise);
 }
 
@@ -913,7 +915,7 @@ export function getSuggestedFocusSession(
           }
           return a.stableOrder - b.stableOrder;
         })
-        .map((exercise) => [exercise.name.toLowerCase(), exercise] as const),
+        .map((exercise) => [normalizeExerciseName(exercise.name), exercise] as const),
     ).values(),
   );
 
@@ -941,7 +943,7 @@ export function getSuggestedFocusSession(
   }
 
   if (selectedExercises.length < targetCount) {
-    const libraryFallbacks = exerciseLibrary
+    const libraryFallbacks = buildCanonicalExerciseLibrary(exerciseLibrary)
       .map((exercise, index) => {
         const contribution = getExerciseMuscleContribution({
           exerciseName: exercise.name,
@@ -998,7 +1000,7 @@ export function getSuggestedFocusSession(
         break;
       }
       const alreadySelected = selectedExercises.some(
-        (exercise) => exercise.name.toLowerCase() === fallbackExercise.name.toLowerCase(),
+        (exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(fallbackExercise.name),
       );
       if (alreadySelected) {
         continue;
