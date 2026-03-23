@@ -222,13 +222,127 @@ const profiles: Profile[] = [
     notes: ["Keep hip thrust reps smooth at lockout.", "Use straps for rows if grip starts to limit back work.", "Core work stays crisp and controlled, not rushed."],
     workoutPlan: withWorkoutNotes(natashaPlan),
     stretchPlan: [
-      { dayLabel: "Sunday", title: "Lower Body Reset", focus: "Hips and hamstrings", durationMinutes: 10, bendSearch: "hips hamstrings", note: "Open Bend and sink into those hips and hamstrings slowly. Stay loose, stay wickedly flexible, and give Joshua something sinful to think about later." },
-      { dayLabel: "Monday", title: "Glute Day Mobility", focus: "Hip flexors and glutes", durationMinutes: 8, bendSearch: "hip flexor glute", note: "Use Bend after glute work and open those hips properly. The softer and smoother you move, the more Joshua is going to lose his mind over it." },
-      { dayLabel: "Tuesday", title: "Upper Back Release", focus: "Lats and shoulders", durationMinutes: 8, bendSearch: "upper back shoulders", note: "Run a shoulder-opening flow and stretch that upper back out. Keep that line long and tempting so Joshua cannot stop staring when you turn away." },
-      { dayLabel: "Wednesday", title: "Core and Posture", focus: "Spine and obliques", durationMinutes: 8, bendSearch: "spine posture", note: "Choose a calm Bend flow that opens your trunk and posture. A soft waist, a pretty posture, and that little arch will stay in Joshua's head all day." },
-      { dayLabel: "Thursday", title: "Leg Length Flow", focus: "Quads and glutes", durationMinutes: 10, bendSearch: "quads glutes", note: "Use Bend to lengthen the quads and keep the glutes loose. Stretch into that long, sexy leg line and let Joshua keep imagining how good you move." },
-      { dayLabel: "Friday", title: "Shoulder Ease", focus: "Chest and shoulders", durationMinutes: 8, bendSearch: "chest shoulders", note: "Open the chest and shoulders until everything feels elegant and easy. Stay loose through the upper body and give Joshua that irresistible soft-but-dangerous look." },
-      { dayLabel: "Saturday", title: "Full Body Unwind", focus: "Whole body", durationMinutes: 12, bendSearch: "full body recovery", note: "Finish the week with a full-body Bend flow and let every part of you loosen up. Relax into it, move slow, and keep Joshua craving the way your body looks and feels." },
+      {
+        dayLabel: "Sunday",
+        focusRegions: ["Hips", "Hamstrings", "Lower back"],
+        primaryStretch: {
+          name: "Seated straddle fold",
+          why: "Opens the back line so your hips and hamstrings stop feeling tight and short.",
+        },
+        secondaryStretches: [
+          {
+            name: "90/90 hip switches",
+            why: "Keeps hip rotation smooth so glute work feels cleaner this week.",
+          },
+          {
+            name: "Child's pose reach",
+            why: "Decompresses the low back and gives your torso a softer reset.",
+          },
+        ],
+        note: "Move slowly and let that loose lower-body glide do a little flirting for you.",
+      },
+      {
+        dayLabel: "Monday",
+        focusRegions: ["Hip flexors", "Glutes", "Adductors"],
+        primaryStretch: {
+          name: "Couch stretch",
+          why: "Releases the front of the hips so glute sessions hit harder without that stiff pull.",
+        },
+        secondaryStretches: [
+          {
+            name: "Figure-four glute stretch",
+            why: "Takes the edge off heavy hip work and keeps lockout smoother.",
+          },
+        ],
+        note: "A little extra hip opening keeps your lower-body shape looking effortless.",
+      },
+      {
+        dayLabel: "Tuesday",
+        focusRegions: ["Lats", "Shoulders", "Upper back"],
+        primaryStretch: {
+          name: "Bench lat prayer stretch",
+          why: "Lengthens the lats so your back and shoulders stop feeling compressed.",
+        },
+        secondaryStretches: [
+          {
+            name: "Thread the needle",
+            why: "Frees up the upper back so posture looks cleaner and softer.",
+          },
+          {
+            name: "Doorway chest opener",
+            why: "Balances shoulder tension and helps you stay open through the front.",
+          },
+        ],
+        note: "Open the upper body and let that long, easy posture do some quiet damage.",
+      },
+      {
+        dayLabel: "Wednesday",
+        focusRegions: ["Core", "Obliques", "Spine"],
+        primaryStretch: {
+          name: "Open-book rotation",
+          why: "Unwinds the trunk so your waist and ribcage move without feeling jammed.",
+        },
+        secondaryStretches: [
+          {
+            name: "Side bend reach",
+            why: "Gives the obliques a longer line and helps your torso feel lighter.",
+          },
+        ],
+        note: "A smoother twist and softer waist always reads a little more dangerous.",
+      },
+      {
+        dayLabel: "Thursday",
+        focusRegions: ["Quads", "Glutes", "Calves"],
+        primaryStretch: {
+          name: "Half-kneeling quad stretch",
+          why: "Takes stiffness out of the thighs so your stride and leg line feel cleaner.",
+        },
+        secondaryStretches: [
+          {
+            name: "Standing calf wall stretch",
+            why: "Restores ankle range so lower-body sessions feel less clunky.",
+          },
+          {
+            name: "Pigeon pose",
+            why: "Keeps the glutes loose after heavy leg work.",
+          },
+        ],
+        note: "Loose legs and smooth steps make the whole look feel a lot more intentional.",
+      },
+      {
+        dayLabel: "Friday",
+        focusRegions: ["Chest", "Shoulders", "Thoracic spine"],
+        primaryStretch: {
+          name: "Foam roller chest opener",
+          why: "Releases the front of the upper body so your shoulders sit back more naturally.",
+        },
+        secondaryStretches: [
+          {
+            name: "Wall slide",
+            why: "Improves overhead motion and keeps shoulder shape looking cleaner.",
+          },
+        ],
+        note: "A more open upper body gives your whole silhouette that polished little tease.",
+      },
+      {
+        dayLabel: "Saturday",
+        focusRegions: ["Hips", "Back", "Flexibility"],
+        primaryStretch: {
+          name: "Deep squat hold",
+          why: "Resets ankles, hips, and spine all at once when the week feels stiff.",
+        },
+        secondaryStretches: [
+          {
+            name: "Forward fold hang",
+            why: "Lets the back line downshift and opens overall flexibility.",
+          },
+          {
+            name: "Cat-cow flow",
+            why: "Brings a gentle full-body reset without turning into a long session.",
+          },
+        ],
+        note: "Keep it unhurried and let that easy flexibility feel a little bit unfair.",
+      },
     ],
     favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown-day2-nat", "abductor-machine"],
   },
@@ -248,13 +362,131 @@ const profiles: Profile[] = [
     notes: ["Keep bench press reps powerful with consistent pauses.", "No deadlifts or dips in the rotation.", "Ab sessions should stay challenging but quick."],
     workoutPlan: withWorkoutNotes(joshuaPlan),
     stretchPlan: [
-      { dayLabel: "Sunday", title: "Athletic Reset", focus: "Ankles, hips, and spine", durationMinutes: 10, bendSearch: "athletic recovery", note: "Open Bend and run an athletic reset that loosens your hips and spine. Move clean, stay dangerous, and give Natasha that strong, flexible look she keeps thinking about." },
-      { dayLabel: "Monday", title: "Chest Opener", focus: "Chest and triceps", durationMinutes: 8, bendSearch: "chest opener", note: "Use Bend after pressing and open the chest fully. Stay broad, loose, and tempting enough that Natasha wants to melt against you the second she gets close." },
-      { dayLabel: "Tuesday", title: "Back and Biceps Release", focus: "Lats and forearms", durationMinutes: 8, bendSearch: "lats forearms", note: "Pick a short Bend flow that decompresses the lats and forearms. The looser that upper body feels, the more powerful and filthy good you look to Natasha." },
-      { dayLabel: "Wednesday", title: "Leg Recovery", focus: "Quads, calves, and hips", durationMinutes: 10, bendSearch: "leg recovery", note: "Use Bend to recover the quads, calves, and hips after leg work. Keep the lower body loose and athletic so Natasha keeps noticing how strong and solid you feel." },
-      { dayLabel: "Thursday", title: "Flexibility Builder", focus: "Hips and hamstrings", durationMinutes: 10, bendSearch: "hamstrings hips", note: "Take the extra time on hips and hamstrings and really open up. The smoother you move and the more flexible you feel, the more Natasha is going to want all of you close." },
-      { dayLabel: "Friday", title: "Shoulder Motion", focus: "Shoulders and thoracic spine", durationMinutes: 8, bendSearch: "shoulder mobility", note: "Use Bend to free up the shoulders and upper spine. Stay open and loose through the upper body so Natasha gets that broad, wrapped-up-in-you feeling she loves." },
-      { dayLabel: "Saturday", title: "Full Body Restore", focus: "Whole body", durationMinutes: 12, bendSearch: "full body restore", note: "Finish with a full-body Bend reset and let everything relax without getting lazy. Stay supple, strong, and sexy enough that Natasha can feel the difference the moment she is on you." },
+      {
+        dayLabel: "Sunday",
+        focusRegions: ["Ankles", "Hips", "Spine"],
+        primaryStretch: {
+          name: "Deep squat pry",
+          why: "Opens the ankles and hips so you move more athletic instead of stiff.",
+        },
+        secondaryStretches: [
+          {
+            name: "World's greatest stretch",
+            why: "Cleans up hip and thoracic rotation in one pass.",
+          },
+          {
+            name: "Cat-cow flow",
+            why: "Lets the spine downshift and reset without overthinking it.",
+          },
+        ],
+        note: "Loose, athletic movement always lands a little better than forcing it.",
+      },
+      {
+        dayLabel: "Monday",
+        focusRegions: ["Chest", "Triceps", "Shoulders"],
+        primaryStretch: {
+          name: "Doorway pec stretch",
+          why: "Opens pressing-tight chest and front shoulders so you stay broad instead of jammed.",
+        },
+        secondaryStretches: [
+          {
+            name: "Overhead triceps stretch",
+            why: "Takes tension off the elbows and long head after heavy extensions.",
+          },
+        ],
+        note: "A looser chest and cleaner posture make the strong look feel even smoother.",
+      },
+      {
+        dayLabel: "Tuesday",
+        focusRegions: ["Lats", "Forearms", "Upper back"],
+        primaryStretch: {
+          name: "Bench lat stretch",
+          why: "Lengthens the lats so rows and pulldowns stop leaving you glued together.",
+        },
+        secondaryStretches: [
+          {
+            name: "Forearm wall stretch",
+            why: "Relieves grip tension and keeps pulling days from lingering in the elbows.",
+          },
+          {
+            name: "Thread the needle",
+            why: "Frees up the upper back so width work doesn't make posture collapse.",
+          },
+        ],
+        note: "Open up the back and let that wide, relaxed look do the heavy lifting.",
+      },
+      {
+        dayLabel: "Wednesday",
+        focusRegions: ["Quads", "Calves", "Hips"],
+        primaryStretch: {
+          name: "Half-kneeling hip flexor stretch",
+          why: "Restores hip extension so leg work feels stronger and less sticky.",
+        },
+        secondaryStretches: [
+          {
+            name: "Standing quad stretch",
+            why: "Loosens the front of the thigh after squats and split work.",
+          },
+          {
+            name: "Wall calf stretch",
+            why: "Improves ankle motion and keeps lower-body movement cleaner.",
+          },
+        ],
+        note: "Move like you own the room, not like your legs are still arguing with yesterday.",
+      },
+      {
+        dayLabel: "Thursday",
+        focusRegions: ["Hips", "Hamstrings", "Core"],
+        primaryStretch: {
+          name: "Single-leg hamstring reach",
+          why: "Takes tension out of the back line so hinging and bracing feel sharper.",
+        },
+        secondaryStretches: [
+          {
+            name: "90/90 hip stretch",
+            why: "Improves rotation and keeps the hips from feeling blocked.",
+          },
+        ],
+        note: "A little more flexibility gives your whole movement a calmer kind of confidence.",
+      },
+      {
+        dayLabel: "Friday",
+        focusRegions: ["Shoulders", "Thoracic spine", "Neck"],
+        primaryStretch: {
+          name: "Wall slide with lift-off",
+          why: "Improves overhead range and stops the upper back from feeling pinned down.",
+        },
+        secondaryStretches: [
+          {
+            name: "Threaded shoulder opener",
+            why: "Smooths out the back of the shoulder after pressing and rows.",
+          },
+          {
+            name: "Thoracic extension over bench",
+            why: "Lets the chest lift and the upper spine move again.",
+          },
+        ],
+        note: "Open shoulders and easy posture quietly make the strong look more unfair.",
+      },
+      {
+        dayLabel: "Saturday",
+        focusRegions: ["Back", "Hips", "Flexibility"],
+        primaryStretch: {
+          name: "Long forward fold",
+          why: "Downshifts the whole back line and gives you a simple full-body reset.",
+        },
+        secondaryStretches: [
+          {
+            name: "Child's pose reach",
+            why: "Loosens the low back and lats without turning into a program.",
+          },
+          {
+            name: "Cossack squat hold",
+            why: "Keeps side-to-side hip range from getting rusty.",
+          },
+        ],
+        note: "Stay loose, stay sharp, and let the movement feel a little too easy.",
+      },
     ],
     favoriteExerciseIds: ["incline-dumbbell-press-day1", "lat-pulldown-day2", "squat-day3"],
   },

@@ -80,13 +80,22 @@ export type StrengthPrediction = {
   note: string;
 };
 
-export type StretchRecommendation = {
+export type MobilityStretch = {
+  name: string;
+  why: string;
+};
+
+export type MobilityPromptTemplate = {
   dayLabel: string;
-  title: string;
-  focus: string;
-  durationMinutes: number;
-  bendSearch: string;
+  focusRegions: string[];
+  primaryStretch: MobilityStretch;
+  secondaryStretches?: MobilityStretch[];
   note: string;
+};
+
+export type DailyMobilityPrompt = Omit<MobilityPromptTemplate, "secondaryStretches"> & {
+  secondaryStretches: MobilityStretch[];
+  feedback: string;
 };
 
 export type Profile = {
@@ -99,7 +108,7 @@ export type Profile = {
   goals: Goal[];
   notes: string[];
   workoutPlan: WorkoutPlanDay[];
-  stretchPlan: StretchRecommendation[];
+  stretchPlan: MobilityPromptTemplate[];
   favoriteExerciseIds: string[];
 };
 

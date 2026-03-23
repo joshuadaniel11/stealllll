@@ -42,6 +42,7 @@ import {
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
 import { buildCompletedSession, buildSessionSummary, countLoggedSets } from "@/lib/workout-session";
+import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type {
   ActiveWorkout,
@@ -70,8 +71,6 @@ const navItems = [
 ];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
-const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 function getNextWorkoutFromSessions(profile: Profile, sessions: WorkoutSession[]) {
   if (!sessions.length) {
     return profile.workoutPlan[0];
@@ -136,11 +135,6 @@ function getWeddingCountdown() {
       : "Counting down to your wedding day together.";
 
   return { months, days, label };
-}
-
-function getTodayStretch(profile: Profile) {
-  const today = days[new Date().getDay()];
-  return profile.stretchPlan.find((stretch) => stretch.dayLabel === today) ?? profile.stretchPlan[0];
 }
 
 function isSameLocalDay(a: string, b: Date) {
@@ -454,7 +448,10 @@ export function WorkoutTrackerApp() {
     () => getTodayWorkout(selectedProfile, userSessions, workoutOverride),
     [selectedProfile, userSessions, workoutOverride],
   );
-  const todaysStretch = useMemo(() => getTodayStretch(selectedProfile), [selectedProfile]);
+  const todaysMobilityPrompt = useMemo(
+    () => selectDailyMobilityPrompt(selectedProfile, state.stretchCompletions[selectedProfile.id]),
+    [selectedProfile, state.stretchCompletions],
+  );
   const strengthPredictions = useMemo(
     () => getStrengthPredictions(selectedProfile.id, userSessions),
     [selectedProfile.id, userSessions],
@@ -835,8 +832,10 @@ export function WorkoutTrackerApp() {
     if (stretchCompletedToday) {
       return;
     }
-    setState((current) => addStretchCompletion(current, selectedProfile.id, todaysStretch.title));
-    showToast(`${selectedProfile.name} finished today's Bend stretch.`);
+    setState((current) =>
+      addStretchCompletion(current, selectedProfile.id, todaysMobilityPrompt.primaryStretch.name),
+    );
+    showToast(`${selectedProfile.name} finished today's mobility prompt.`);
   };
 
   const toggleStretchCompletion = () => {
@@ -848,7 +847,7 @@ export function WorkoutTrackerApp() {
     setState((current) =>
       removeStretchCompletionsForDay(current, selectedProfile.id, (entry) => isSameLocalDay(entry.date, new Date())),
     );
-    showToast(`${selectedProfile.name}'s Bend stretch was marked undone.`);
+    showToast(`${selectedProfile.name}'s mobility prompt was marked undone.`);
   };
 
   const closeOnboarding = () => {
@@ -1171,7 +1170,7 @@ export function WorkoutTrackerApp() {
                 pbCount={state.personalBests[selectedProfile.id].length}
                 strengthPredictions={strengthPredictions}
                 dailyVerse={dailyVerse}
-                dailyStretch={todaysStretch}
+                dailyMobilityPrompt={todaysMobilityPrompt}
                 stretchCompletedToday={stretchCompletedToday}
                 sharedSummary={dynamicSharedSummary}
                 recentWorkouts={recentWorkouts}

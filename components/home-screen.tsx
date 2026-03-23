@@ -4,17 +4,17 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
-import { DailyStretchCard } from "@/components/daily-stretch-card";
+import { DailyMobilityPromptCard } from "@/components/daily-mobility-prompt-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
   BibleVerse,
+  DailyMobilityPrompt,
   Profile,
   SharedSummary,
   StrengthPrediction,
-  StretchRecommendation,
   WorkoutPlanDay,
   WorkoutSession,
 } from "@/lib/types";
@@ -91,7 +91,7 @@ type HomeScreenProps = {
   pbCount: number;
   strengthPredictions: StrengthPrediction[];
   dailyVerse: BibleVerse;
-  dailyStretch: StretchRecommendation | null;
+  dailyMobilityPrompt: DailyMobilityPrompt | null;
   stretchCompletedToday: boolean;
   sharedSummary: SharedSummary;
   recentWorkouts: WorkoutSession[];
@@ -121,7 +121,7 @@ export function HomeScreen({
   pbCount,
   strengthPredictions,
   dailyVerse,
-  dailyStretch,
+  dailyMobilityPrompt,
   stretchCompletedToday,
   sharedSummary,
   recentWorkouts,
@@ -299,10 +299,10 @@ export function HomeScreen({
         </div>
       </ScrollReveal>
 
-      {dailyStretch ? (
+      {dailyMobilityPrompt ? (
         <ScrollReveal delay={120}>
-          <DailyStretchCard
-            stretch={dailyStretch}
+          <DailyMobilityPromptCard
+            prompt={dailyMobilityPrompt}
             completed={stretchCompletedToday}
             onToggle={onToggleStretch}
           />
