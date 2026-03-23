@@ -29,27 +29,27 @@ function formatDate(value: string) {
 const workoutMotivationByProfile: Record<string, Record<string, string>> = {
   natasha: {
     "natasha-glutes-hams":
-      "\u{1F351}\u{1F525} Build those round, juicy glutes until Joshua can't stop thinking about getting his hands all over you later.",
+      "Build your lower-body shape with the kind of smooth glute work Joshua keeps noticing.",
     "natasha-back-arms":
-      "\u{1F608}\u{1F5A4} Make that back look so tempting Joshua goes crazy watching you walk away from him.",
+      "Keep your back and arms sharp enough that Joshua keeps staring when you walk away.",
     "natasha-glutes-quads":
-      "\u{1F351}\u{1F48B} Train legs and curves so good Joshua is desperate to pull you closer the second he sees you.",
+      "Train legs and curves with the kind of fullness that makes your whole silhouette land harder.",
     "natasha-upper-core":
-      "\u2728\u{1FAE6} Tighten that waist and shape that body until Joshua is fully obsessed with how sinful you look.",
+      "Keep your waist and upper-body shape crisp, clean, and a little dangerous.",
     "natasha-core-explosive":
-      "\u26A1\u{1F60F} Move hot, feel dangerous, and carry that teasing little energy straight back to Joshua.",
+      "Move sharply, feel light, and carry that teasing energy through the rest of the day.",
   },
   joshua: {
     "joshua-chest-triceps":
-      "\u{1F608}\u{1F4AA} Press up that thick chest and triceps until Natasha wants herself pinned up close against you.",
+      "Build chest and triceps with the kind of upper-body thickness Natasha feels immediately.",
     "joshua-back-biceps":
-      "\u{1F5A4}\u{1F4AA} Train that wide back and biceps until Natasha gets hot just thinking about your arms wrapped tight around her.",
+      "Train back and biceps until that wider frame and stronger arms start speaking for themselves.",
     "joshua-legs":
-      "\u{1F525}\u{1F9B5} Build those shoulders and legs so Natasha feels that hard, athletic look and wants you on her instantly.",
+      "Build shoulders and legs so the whole athletic look feels harder, cleaner, and more obvious.",
     "joshua-shoulders-arms":
-      "\u{1F4AA}\u{1F60F} Hit chest and triceps again so Natasha can feel exactly how much thicker and harder you've gotten.",
+      "Hit chest and triceps again so the extra size and strength keep showing up where it counts.",
     "joshua-upper-strength":
-      "\u{1F5A4}\u{1F525} Finish back and biceps hard so Natasha can see that wider, sexier shape and start wanting you on sight.",
+      "Finish back and biceps hard so that wider, stronger look keeps getting harder to ignore.",
   },
 };
 
@@ -109,6 +109,7 @@ type HomeScreenProps = {
   onSkipWorkout: () => void;
   onMoveWorkout: (workoutId: string) => void;
   onOpenExercise: (exerciseId: string) => void;
+  onOpenRecentWorkout: (workoutDayId: string, exerciseId?: string) => void;
 };
 
 export function HomeScreen({
@@ -135,6 +136,7 @@ export function HomeScreen({
   onSkipWorkout,
   onMoveWorkout,
   onOpenExercise,
+  onOpenRecentWorkout,
 }: HomeScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
@@ -147,10 +149,10 @@ export function HomeScreen({
   const pendingPartial =
     latestSession?.partial && latestSession.workoutDayId === todaysWorkout.id ? latestSession : null;
   const homeStateLabel = activeWorkoutName
-    ? "Active workout"
+    ? "Live now"
     : pendingPartial
-      ? "Partial workout saved"
-      : "Ready when you are";
+      ? "Resume ready"
+      : "Queued today";
   const homeStateDetail = activeWorkoutName
     ? `${activeWorkoutName} is still open on this phone. Jump back in where you left it.`
     : pendingPartial
@@ -185,9 +187,7 @@ export function HomeScreen({
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
               Today&apos;s note
             </p>
-            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white">
-              {profile.name}
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white">{profile.name}</h1>
             <p className="text-sm leading-7 text-white/70">{dailyMotivation}</p>
           </div>
         </Card>
@@ -293,9 +293,9 @@ export function HomeScreen({
 
       <ScrollReveal delay={90}>
         <div className="grid grid-cols-3 gap-3">
-          <MiniMetric label="This week" value={String(weeklyCount)} />
+          <MiniMetric label="Sessions" value={String(weeklyCount)} />
           <MiniMetric label="Streak" value={`${streak}d`} />
-          <MiniMetric label="Last PRs" value={String(pbCount)} />
+          <MiniMetric label="PRs" value={String(pbCount)} />
         </div>
       </ScrollReveal>
 
@@ -350,7 +350,9 @@ export function HomeScreen({
                       <button
                         key={workout.id}
                         type="button"
-                        onClick={() => onOpenExercise(workout.exercises[0]?.exerciseId ?? "")}
+                        onClick={() =>
+                          onOpenRecentWorkout(workout.workoutDayId, workout.exercises[0]?.exerciseId)
+                        }
                         className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
                       >
                         <div className="space-y-1">
@@ -368,7 +370,7 @@ export function HomeScreen({
                             sets
                           </p>
                         </div>
-                        <span className="text-xs text-white/38">Open</span>
+                        <span className="text-xs text-white/38">Reopen</span>
                       </button>
                     ))}
                   </div>

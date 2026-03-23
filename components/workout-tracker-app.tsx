@@ -1228,6 +1228,19 @@ export function WorkoutTrackerApp() {
               onSkipWorkout={skipWorkout}
               onMoveWorkout={moveWorkout}
               onOpenExercise={setSelectedExerciseId}
+              onOpenRecentWorkout={(workoutDayId, exerciseId) => {
+                const workout = selectedProfile.workoutPlan.find((item) => item.id === workoutDayId);
+                if (workout) {
+                  setSuggestedSessionPreview(false);
+                  setWorkoutPreviewId(workout.id);
+                  startTransition(() => setActiveTab("workout"));
+                  return;
+                }
+
+                if (exerciseId) {
+                  setSelectedExerciseId(exerciseId);
+                }
+              }}
             />
           )}
 
