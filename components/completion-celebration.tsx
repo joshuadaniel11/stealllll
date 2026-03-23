@@ -1,10 +1,12 @@
 export function CompletionCelebration({
   visible,
+  title,
   message,
   actionLabel,
   onAction,
 }: {
   visible: boolean;
+  title: string;
   message: string;
   actionLabel?: string | null;
   onAction?: () => void;
@@ -18,7 +20,7 @@ export function CompletionCelebration({
       }`}
     >
       <div className="glass hairline rounded-[28px] px-5 py-4 shadow-glow">
-        <p className="text-sm text-muted">Workout saved</p>
+        <p className="text-sm text-muted">{title}</p>
         <div className="mt-1 flex items-center justify-between gap-3">
           <p className="text-base font-medium">{message}</p>
           {actionLabel ? (

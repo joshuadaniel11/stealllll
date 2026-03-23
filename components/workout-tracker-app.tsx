@@ -275,6 +275,7 @@ export function WorkoutTrackerApp() {
   const [showWorkoutFeelingPrompt, setShowWorkoutFeelingPrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [completionTitle, setCompletionTitle] = useState("Update");
   const [completionMessage, setCompletionMessage] = useState("");
   const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
@@ -301,11 +302,13 @@ export function WorkoutTrackerApp() {
   const showToast = (
     message: string,
     options?: {
+      title?: string;
       actionLabel?: string;
       actionKind?: "undo-schedule";
       pendingScheduleUndo?: { userId: UserId; previousNextWorkoutId: string | null } | null;
     },
   ) => {
+    setCompletionTitle(options?.title ?? "Update");
     setCompletionMessage(message);
     setToastActionLabel(options?.actionLabel ?? null);
     setToastActionKind(options?.actionKind ?? null);
@@ -420,6 +423,7 @@ export function WorkoutTrackerApp() {
     }
     const timeout = window.setTimeout(() => {
       setShowCompletionCelebration(false);
+      setCompletionTitle("Update");
       setToastActionLabel(null);
       setToastActionKind(null);
       setPendingScheduleUndo(null);
@@ -682,7 +686,7 @@ export function WorkoutTrackerApp() {
       setWorkoutPreviewId(null);
       setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
       markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
-      showToast("Progress saved. You can resume this workout from the Workout tab.");
+      showToast("Progress saved. You can resume this workout from the Workout tab.", { title: "Workout saved" });
     softHaptic([8, 28, 8]);
     startTransition(() => setActiveTab("home"));
   };
@@ -747,9 +751,9 @@ export function WorkoutTrackerApp() {
       const seed = createSeedState();
       setState(mergeStateWithSeed(seed, parsed));
       startTransition(() => setActiveTab("home"));
-      showToast("Backup imported successfully.");
+      showToast("Backup imported successfully.", { title: "Import complete" });
     } catch {
-      showToast("Import failed. Please use a valid workout backup file.");
+      showToast("Import failed. Please use a valid workout backup file.", { title: "Import failed" });
     }
   };
 
@@ -862,7 +866,7 @@ export function WorkoutTrackerApp() {
     setState((current) =>
       addStretchCompletion(current, selectedProfile.id, todaysMobilityPrompt.primaryStretch.name),
     );
-    showToast(`${selectedProfile.name} finished today's mobility prompt.`);
+    showToast(`${selectedProfile.name} finished today's mobility prompt.`, { title: "Mobility done" });
   };
 
   const toggleStretchCompletion = () => {
@@ -874,7 +878,7 @@ export function WorkoutTrackerApp() {
     setState((current) =>
       removeStretchCompletionsForDay(current, selectedProfile.id, (entry) => isSameLocalDay(entry.date, new Date())),
     );
-    showToast(`${selectedProfile.name}'s mobility prompt was marked undone.`);
+    showToast(`${selectedProfile.name}'s mobility prompt was marked undone.`, { title: "Mobility updated" });
   };
 
   const closeOnboarding = () => {
@@ -893,7 +897,7 @@ export function WorkoutTrackerApp() {
     }
     const seed = createSeedState();
     setState((current) => resetProfileProgressState(current, selectedProfile.id, seed));
-    showToast(`${selectedProfile.name}'s saved progress was reset on this phone.`);
+    showToast(`${selectedProfile.name}'s saved progress was reset on this phone.`, { title: "Profile reset" });
     setShowSettings(false);
     startTransition(() => setActiveTab("home"));
   };
@@ -908,7 +912,7 @@ export function WorkoutTrackerApp() {
     setState(createSeedState());
     setShowSettings(false);
     setShowOnboarding(true);
-    showToast("The app was reset to a clean start.");
+    showToast("The app was reset to a clean start.", { title: "App reset" });
     startTransition(() => setActiveTab("home"));
   };
 
@@ -922,7 +926,7 @@ export function WorkoutTrackerApp() {
     }
 
     setState((current) => setWorkoutOverride(current, pendingScheduleUndo.userId, pendingScheduleUndo.previousNextWorkoutId));
-    showToast("Workout order change undone.");
+    showToast("Workout order change undone.", { title: "Plan restored" });
   };
 
   const enterProfile = (profileId: UserId) => {
@@ -979,6 +983,7 @@ export function WorkoutTrackerApp() {
       isIosInstallPath
         ? "Open this in Safari, tap Share, then Add to Home Screen."
         : "Use your browser menu and choose Install app or Add to Home Screen.",
+      { title: "Install STEAL" },
     );
   };
 
@@ -986,14 +991,14 @@ export function WorkoutTrackerApp() {
     if (lockedProfile === selectedProfile.id) {
       setLockedProfile(null);
       saveLockedProfile(null);
-      showToast("This phone can switch between profiles again.");
+      showToast("This phone can switch between profiles again.", { title: "Phone unlocked" });
       return;
     }
 
     setLockedProfile(selectedProfile.id);
     saveLockedProfile(selectedProfile.id);
     setHasEnteredProfile(true);
-    showToast(`This phone is now locked to ${selectedProfile.name}.`);
+    showToast(`This phone is now locked to ${selectedProfile.name}.`, { title: "Phone locked" });
   };
 
   const saveEditedSession = (updatedSession: WorkoutSession, options?: { countAsDone?: boolean }) => {
@@ -1009,7 +1014,9 @@ export function WorkoutTrackerApp() {
       updatedSession.workoutName,
       options?.countAsDone ? "complete" : "edit",
     );
-    showToast(options?.countAsDone ? "Workout marked done. Moving to the next day." : "Workout changes saved to progress.");
+    showToast(options?.countAsDone ? "Workout marked done. Moving to the next day." : "Workout changes saved to progress.", {
+      title: options?.countAsDone ? "Workout complete" : "Workout updated",
+    });
   };
 
   const markPartialSessionComplete = (summary: SessionSummary) => {
@@ -1042,7 +1049,7 @@ export function WorkoutTrackerApp() {
     if (currentTargetSession && currentUpdatedWorkoutName) {
       markTrainingStateUpdated(currentTargetSession.userId, currentUpdatedWorkoutName, "complete");
     }
-    showToast("Workout counted as done. Moving to the next day.");
+    showToast("Workout counted as done. Moving to the next day.", { title: "Workout complete" });
   };
 
   const openSuggestedFocusSession = () => {
@@ -1245,6 +1252,7 @@ export function WorkoutTrackerApp() {
       <BibleVerseModal verse={showDailyVerse ? dailyVerse : null} onClose={() => setShowDailyVerse(false)} />
       <CompletionCelebration
         visible={showCompletionCelebration}
+        title={completionTitle}
         message={completionMessage}
         actionLabel={toastActionLabel}
         onAction={handleToastAction}
