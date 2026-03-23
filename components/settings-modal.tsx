@@ -41,11 +41,11 @@ export function SettingsModal({
           <div className="sheet-drag-handle" />
 
           <ScrollReveal delay={0} y={18} scale={0.994}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="settings-hero-card flex items-start justify-between gap-4 rounded-[28px] px-4 py-4">
+              <div className="pr-2">
                 <p className="text-sm font-medium text-muted">Settings</p>
                 <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Quiet, private, simple.</h2>
-                <p className="caption-text mt-2 text-muted">Everything important for this phone.</p>
+                <p className="caption-text mt-2 text-muted">Everything important for this phone, kept clean and easy to manage.</p>
               </div>
               <button
                 className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
@@ -67,7 +67,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Saved on this device</p>
-                      <p className="caption-text mt-1 text-muted">Use the same browser or app each time on this phone.</p>
+                      <p className="caption-text mt-1 text-muted">Stay in the same browser or app so your progress keeps feeling seamless here.</p>
                     </div>
                   </div>
                   <button className="grouped-row" onClick={onToggleProfileLock}>
@@ -81,7 +81,7 @@ export function SettingsModal({
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
                           ? "Let this phone choose between profiles again."
-                          : "Open straight into this profile every time."}
+                          : "Open straight into this profile every time on this device."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
@@ -95,7 +95,7 @@ export function SettingsModal({
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
                           ? "Unlock this phone first to switch profiles."
-                          : "Go back to the opening screen."}
+                          : "Go back to the opening profile chooser."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
@@ -187,7 +187,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Reset {profile.name}</p>
-                      <p className="caption-text mt-1 text-muted">Clear only this profile&apos;s history.</p>
+                      <p className="caption-text mt-1 text-muted">Clear only this profile&apos;s history and start fresh.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                   </button>
@@ -198,7 +198,7 @@ export function SettingsModal({
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-text">Reset all data</p>
-                      <p className="caption-text mt-1 text-muted">Reset the whole app on this device.</p>
+                      <p className="caption-text mt-1 text-muted">Wipe the whole app on this device and reset everything.</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
                   </button>

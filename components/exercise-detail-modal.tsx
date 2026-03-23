@@ -57,11 +57,25 @@ export function ExerciseDetailModal({
 
           {suggestion && (
             <ScrollReveal delay={60} y={18} scale={0.994}>
-              <div className="mt-4 rounded-[24px] bg-black/5 p-4 text-sm text-muted dark:bg-white/5">
-                {suggestion}
+              <div className="library-summary-card mt-4 rounded-[24px] p-4">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted">Progress cue</p>
+                <p className="mt-2 text-sm leading-6 text-text">{suggestion}</p>
               </div>
             </ScrollReveal>
           )}
+
+          <ScrollReveal delay={85} y={18} scale={0.994}>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="library-stat-tile rounded-[20px] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted">Primary target</p>
+                <p className="mt-1 text-sm font-medium text-text">{exercise.muscleGroup}</p>
+              </div>
+              <div className="library-stat-tile rounded-[20px] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted">Recent entries</p>
+                <p className="mt-1 text-sm font-medium text-text">{history.length || "No history yet"}</p>
+              </div>
+            </div>
+          </ScrollReveal>
 
           <ScrollReveal delay={110} y={20} scale={0.992}>
             <div className="mt-4 space-y-3">
@@ -69,10 +83,10 @@ export function ExerciseDetailModal({
                 history.map((item) => (
                   <div
                     key={`${exercise.id}-${item.date}`}
-                    className="rounded-[20px] border border-stroke bg-white/50 px-4 py-3 dark:bg-white/5"
+                    className="library-history-row rounded-[20px] px-4 py-3"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="font-medium">{item.date}</p>
+                      <p className="font-medium text-text">{item.date}</p>
                       <p className="text-sm text-muted">Best score {item.bestSet}</p>
                     </div>
                     <p className="mt-1 text-sm text-muted">{item.totalReps} total reps</p>
@@ -87,8 +101,8 @@ export function ExerciseDetailModal({
           </ScrollReveal>
 
           <ScrollReveal delay={160} y={18} scale={0.994}>
-            <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] p-4">
-              <p className="text-sm font-medium text-text">Notes</p>
+            <div className="library-cue-card mt-4 rounded-[24px] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted">Execution notes</p>
               <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
                 {cues.map((cue) => (
                   <p key={cue}>{cue}</p>

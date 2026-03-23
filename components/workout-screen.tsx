@@ -746,12 +746,15 @@ export function WorkoutScreen({
 
           {substitutions.length ? (
           <div className="mt-2.5">
-            <p className="text-sm text-muted">Quick swap</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted">Quick swap</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-white/42">Same target, cleaner fit</p>
+            </div>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {substitutions.map((option) => (
                 <button
                   key={option.id}
-                  className="rounded-[18px] bg-[var(--card-strong)] px-3 py-2 text-sm font-medium text-muted"
+                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
                   onClick={() => onSwapExercise(currentExerciseIndex, option.id)}
                 >
                   {option.name}
