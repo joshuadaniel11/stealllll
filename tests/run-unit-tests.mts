@@ -233,6 +233,83 @@ function testMetricsLayerBuildsEffectiveVolumeCoverage() {
   assert.ok(trainingState.metrics.regionMetrics.some((metric) => metric.zoneId === "upperChest" && metric.evs > 0));
 }
 
+function testEVSCalculatesExactlyForSingleZoneExercise() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  // Leg extension maps fully to quads and counts as stable isolation work,
+  // so the exact EVS is easy to verify: 1.0 * 0.8 * 1.0 * 1.0 = 0.8
+  const sessions = [
+    {
+      id: "exact-evs-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-quads",
+      workoutName: "Glutes + Quads",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 35,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "leg-extension-day3-nat",
+          exerciseName: "Leg Extension",
+          muscleGroup: "Quads" as const,
+          sets: [{ id: "a", weight: 35, reps: 8, completed: true }],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, referenceDate);
+  const quadsMetric = trainingState.metrics.regionMetrics.find((metric) => metric.zoneId === "quads");
+  const legExtensionEntry = trainingState.metrics.effectiveVolumeScore.byExercise.find(
+    (entry) => entry.exerciseName === "Leg Extension",
+  );
+
+  assert.ok(quadsMetric && legExtensionEntry);
+  assert.equal(legExtensionEntry.score, 0.8);
+  assert.equal(quadsMetric.evs, 0.8);
+  assert.equal(trainingState.metrics.effectiveVolumeScore.byRegion.quads, 0.8);
+}
+
+function testCoverageClampsAtOneHundredTwentyFivePercent() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const sessions = [
+    {
+      id: "coverage-clamp-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-quads",
+      workoutName: "Glutes + Quads",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 75,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "leg-extension-day3-nat",
+          exerciseName: "Leg Extension",
+          muscleGroup: "Quads" as const,
+          sets: Array.from({ length: 20 }, (_, index) => ({
+            id: `quad-${index}`,
+            weight: 45,
+            reps: 8,
+            completed: true,
+            rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.equal(trainingState.metrics.weeklyCoverage.byRegion.quads, 125);
+}
+
 function testRecoveryIndexRespondsToAccumulatedRecentLoad() {
   const seed = createSeedState();
   const natasha = seed.profiles.find((profile) => profile.id === "natasha");
@@ -281,6 +358,20 @@ function testRecoveryIndexRespondsToAccumulatedRecentLoad() {
   assert.ok(loadedState.metrics.recoveryIndex.score < emptyState.metrics.recoveryIndex.score);
   assert.ok(loadedState.metrics.recoveryIndex.rolling3dLoad > 0);
   assert.ok(loadedState.metrics.recoveryIndex.score >= 0 && loadedState.metrics.recoveryIndex.score <= 100);
+}
+
+function testRecoveryIndexFallsBackCleanlyWithNoRecentLoad() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const trainingState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, referenceDate);
+
+  assert.equal(trainingState.metrics.recoveryIndex.score, 100);
+  assert.equal(trainingState.metrics.recoveryIndex.rolling3dLoad, 0);
+  assert.equal(trainingState.metrics.recoveryIndex.completionPenalty, 0);
+  assert.equal(trainingState.metrics.recoveryIndex.restPenalty, 0);
 }
 
 function testProgressVelocityDetectsImprovingExerciseWindow() {
@@ -338,6 +429,79 @@ function testProgressVelocityDetectsImprovingExerciseWindow() {
   assert.ok(trainingState.metrics.stimulusToFatigueRatio.byExercise.length > 0);
 }
 
+function testProgressVelocityStaysStableWithSparseHistory() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "pv-sparse",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 42,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [{ id: "a", weight: 60, reps: 10, completed: true }],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.equal(trainingState.metrics.progressVelocity.byRegion.lats, 0);
+  assert.ok(Number.isFinite(trainingState.metrics.progressVelocity.average));
+}
+
+function testSfrStaysFiniteWithMissingRirAndZeroDuration() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  // Missing RIR should fall back conservatively to 3.
+  // Zero duration should still produce a stable density/fatigue path via safe guards.
+  const sessions = [
+    {
+      id: "sfr-fallback-1",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 0,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "cable-curl-day2",
+          exerciseName: "Cable Curl",
+          muscleGroup: "Biceps" as const,
+          sets: [
+            { id: "a", weight: 20, reps: 12, completed: true },
+            { id: "b", weight: 20, reps: 12, completed: true },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const bicepsSfr = trainingState.metrics.stimulusToFatigueRatio.byRegion.biceps;
+  const density = trainingState.metrics.densityScore.bySession[0]?.density ?? 0;
+
+  assert.ok(Number.isFinite(bicepsSfr));
+  assert.ok(bicepsSfr > 0);
+  assert.ok(Number.isFinite(density));
+  assert.ok(density > 0);
+}
+
 function testNextFocusUsesMetricsAwareCoverageRanking() {
   const seed = createSeedState();
   const joshua = seed.profiles.find((profile) => profile.id === "joshua");
@@ -382,6 +546,69 @@ function testNextFocusUsesMetricsAwareCoverageRanking() {
   const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
 
   assert.deepEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels, ["Upper chest", "Side delts"]);
+}
+
+function testNextFocusMixedDataAvoidsWellCoveredPriority() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const sessions = [
+    {
+      id: "mixed-next-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T08:00:00.000Z",
+      durationMinutes: 58,
+      sessionRpe: 9,
+      feeling: "Tough" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: Array.from({ length: 8 }, (_, index) => ({
+            id: `g-${index}`,
+            weight: 60,
+            reps: 8,
+            completed: true,
+            rir: 0,
+          })),
+        },
+      ],
+    },
+    {
+      id: "mixed-next-2",
+      userId: "natasha",
+      workoutDayId: "natasha-back-arms",
+      workoutName: "Back + Biceps",
+      performedAt: "2026-03-22T08:00:00.000Z",
+      durationMinutes: 46,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2-nat",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "l-1", weight: 45, reps: 10, completed: true, rir: 2 },
+            { id: "l-2", weight: 45, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(!trainingState.trainingLoad.summary.suggestedNextFocus.labels.includes("Upper glutes"));
+  assert.ok(
+    trainingState.trainingLoad.summary.suggestedNextFocus.labels.includes("Upper back") ||
+      trainingState.trainingLoad.summary.suggestedNextFocus.labels.includes("Side glutes") ||
+      trainingState.trainingLoad.summary.suggestedNextFocus.labels.includes("Obliques"),
+  );
 }
 
 function testProfileTargetMultipliersDivergeByPriorityModel() {
@@ -518,6 +745,49 @@ function testHiddenMetricsLayerBuildsDensityAdaptationConsistencyAndSymmetry() {
   assert.ok(trainingState.metrics.symmetryScore.score >= 0 && trainingState.metrics.symmetryScore.score <= 100);
 }
 
+function testSymmetryAndConsistencyRespectBoundaries() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const emptyState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+  assert.equal(emptyState.metrics.consistencyScore.score, 0);
+  assert.equal(emptyState.metrics.symmetryScore.score, 100);
+
+  const imbalancedSessions = [
+    {
+      id: "symmetry-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 40,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: Array.from({ length: 10 }, (_, index) => ({
+            id: `imb-${index}`,
+            weight: 55,
+            reps: 8,
+            completed: true,
+            rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const imbalancedState = getProfileTrainingState(natasha, imbalancedSessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(imbalancedState.metrics.symmetryScore.score >= 0 && imbalancedState.metrics.symmetryScore.score <= 100);
+  assert.ok(imbalancedState.metrics.symmetryScore.score < 100);
+  assert.ok(imbalancedState.metrics.consistencyScore.score >= 0 && imbalancedState.metrics.consistencyScore.score <= 100);
+}
+
 function testAdaptationScoreDropsWithRepeatedExposure() {
   const seed = createSeedState();
   const natasha = seed.profiles.find((profile) => profile.id === "natasha");
@@ -548,6 +818,44 @@ function testAdaptationScoreDropsWithRepeatedExposure() {
   assert.ok(topExposure);
   assert.ok(topExposure.sessionsUsedLast42d >= 9);
   assert.ok(topExposure.noveltyFactor < 1);
+}
+
+function testTrainingInsightsStayCentralizedAndActionable() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "insight-1",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-23T08:30:00.000Z",
+      durationMinutes: 55,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "a", weight: 70, reps: 8, completed: true, rir: 1 },
+            { id: "b", weight: 70, reps: 8, completed: true, rir: 1 },
+            { id: "c", weight: 70, reps: 8, completed: true, rir: 1 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(trainingState.insights.homeAction.length > 0);
+  assert.ok(trainingState.insights.completionNext.length > 0);
+  assert.ok(trainingState.insights.focusDirection.includes("Upper chest"));
+  assert.ok(trainingState.insights.progressSignal.length > 0);
 }
 
 function testExerciseLibraryCanonicalization() {
@@ -684,13 +992,21 @@ const tests = [
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],
   ["spread suggested session across useful patterns", testSuggestedSessionSpreadsFocusAcrossPatterns],
   ["build effective volume and coverage metrics", testMetricsLayerBuildsEffectiveVolumeCoverage],
+  ["calculate exact EVS for single-zone work", testEVSCalculatesExactlyForSingleZoneExercise],
+  ["clamp weekly coverage at one hundred twenty five percent", testCoverageClampsAtOneHundredTwentyFivePercent],
   ["drop recovery index under stacked recent fatigue", testRecoveryIndexRespondsToAccumulatedRecentLoad],
+  ["fall back to a clean recovery score with no recent load", testRecoveryIndexFallsBackCleanlyWithNoRecentLoad],
   ["detect positive progress velocity from improving work", testProgressVelocityDetectsImprovingExerciseWindow],
+  ["keep progress velocity stable with sparse history", testProgressVelocityStaysStableWithSparseHistory],
+  ["keep sfr finite with missing rir and zero duration", testSfrStaysFiniteWithMissingRirAndZeroDuration],
   ["rank next focus from metrics-aware deficits", testNextFocusUsesMetricsAwareCoverageRanking],
+  ["avoid well-covered regions in mixed next-focus data", testNextFocusMixedDataAvoidsWellCoveredPriority],
   ["apply profile-specific target multipliers", testProfileTargetMultipliersDivergeByPriorityModel],
   ["soften target evs when recovery drops", testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops],
   ["build hidden density adaptation consistency and symmetry metrics", testHiddenMetricsLayerBuildsDensityAdaptationConsistencyAndSymmetry],
+  ["keep symmetry and consistency inside clean bounds", testSymmetryAndConsistencyRespectBoundaries],
   ["drop adaptation score under repeated exposure", testAdaptationScoreDropsWithRepeatedExposure],
+  ["build centralized premium training insights", testTrainingInsightsStayCentralizedAndActionable],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],

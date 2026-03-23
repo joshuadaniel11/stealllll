@@ -35,8 +35,18 @@ export type ProfileTrainingState = {
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
   metrics: ProfileTrainingMetrics;
+  insights: TrainingInsights;
   goalDashboard: GoalDashboard;
   progressSignals: ProgressSignals;
+};
+
+export type TrainingInsights = {
+  homeAction: string;
+  completionNext: string;
+  weeklyStatusTitle: string;
+  weeklyStatusDetail: string;
+  focusDirection: string;
+  progressSignal: string;
 };
 
 export type GoalDashboardCard = {
@@ -385,6 +395,81 @@ function buildGoalDashboard(profile: Profile, trainingLoad: WeeklyTrainingLoad, 
   };
 }
 
+function getPrimaryFocusLabel(trainingLoad: WeeklyTrainingLoad) {
+  return trainingLoad.summary.suggestedNextFocus.labels[0] ?? trainingLoad.summary.suggestedNextFocus.text;
+}
+
+function buildTrainingInsights(
+  profile: Profile,
+  weeklySummary: WeeklySummary,
+  trainingLoad: WeeklyTrainingLoad,
+  metrics: ProfileTrainingMetrics,
+): TrainingInsights {
+  const primaryFocusLabel = getPrimaryFocusLabel(trainingLoad);
+  const focusDirection = trainingLoad.summary.suggestedNextFocus.text;
+  const primaryFocusMetric =
+    metrics.regionMetrics.find((metric) => metric.zoneId === trainingLoad.summary.suggestedNextFocus.zoneIds[0]) ?? null;
+  const strongestCovered = trainingLoad.summary.mostTrained[0]?.label ?? null;
+  const progressLeader = metrics.progressVelocity.leaders[0] ?? null;
+  const progressLaggard = metrics.progressVelocity.laggards[0] ?? null;
+  const recoveryLow = metrics.recoveryIndex.score < 55;
+  const recoverySoft = metrics.recoveryIndex.score < 68;
+  const consistencyStrong = metrics.consistencyScore.score >= 75;
+  const undercovered = (primaryFocusMetric?.coveragePct ?? 0) < 100;
+
+  const homeAction = recoveryLow
+    ? `Recovery is slightly low. Keep ${focusDirection.toLowerCase()} clean.`
+    : `Give ${primaryFocusLabel.toLowerCase()} more this week.`;
+
+  const completionNext = recoverySoft
+    ? `Recovery is slightly low. Shift to ${focusDirection.toLowerCase()} next.`
+    : strongestCovered && undercovered
+      ? `${strongestCovered} are covered. Shift to ${focusDirection.toLowerCase()} next.`
+      : `Keep the week moving toward ${focusDirection.toLowerCase()}.`;
+
+  const weeklyStatusTitle =
+    weeklySummary.workoutsCompleted === 0
+      ? "No training logged yet this week"
+      : recoveryLow
+        ? "Recovery is slightly low"
+        : undercovered
+          ? `${focusDirection} need attention`
+          : profile.id === "natasha"
+            ? "Shape work is moving well"
+            : "Upper-body work is moving well";
+
+  const weeklyStatusDetail =
+    weeklySummary.workoutsCompleted === 0
+      ? `Start with ${focusDirection.toLowerCase()}.`
+      : recoveryLow
+        ? `Keep ${focusDirection.toLowerCase()} clean and skip junk volume.`
+        : strongestCovered && undercovered
+          ? `${strongestCovered} are covered. ${focusDirection} are next.`
+          : consistencyStrong
+            ? "The week is holding steady. Keep the rhythm."
+            : `Coverage is building, with ${focusDirection.toLowerCase()} still next.`;
+
+  const progressSignal =
+    progressLeader && progressLeader.score > 2
+      ? `${progressLeader.label} work is trending up.`
+      : progressLaggard && undercovered
+        ? `${progressLaggard.label} is flat. Give it more clean work.`
+        : consistencyStrong
+          ? "Consistency is holding. Keep the rhythm."
+          : profile.id === "natasha"
+            ? "Shape work is building cleanly."
+            : "Strength is building cleanly.";
+
+  return {
+    homeAction,
+    completionNext,
+    weeklyStatusTitle,
+    weeklyStatusDetail,
+    focusDirection,
+    progressSignal,
+  };
+}
+
 export function getProfileTrainingState(
   profile: Profile,
   allSessions: WorkoutSession[],
@@ -405,6 +490,7 @@ export function getProfileTrainingState(
       suggestedNextFocus,
     },
   };
+  const insights = buildTrainingInsights(profile, weeklySummary, derivedTrainingLoad, metrics);
 
   return {
     userSessions,
@@ -431,6 +517,7 @@ export function getProfileTrainingState(
       derivedTrainingLoad.recentLoad,
     ),
     metrics,
+    insights,
     goalDashboard: buildGoalDashboard(profile, derivedTrainingLoad, weeklySummary, streak),
     progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
   };

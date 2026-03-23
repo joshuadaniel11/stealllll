@@ -99,18 +99,6 @@ function getTodayWorkout(profile: Profile, sessions: WorkoutSession[], overrideW
   return getNextWorkoutFromSessions(profile, sessions);
 }
 
-function getDaysSinceLastWorkout(sessions: WorkoutSession[]) {
-  if (!sessions.length) {
-    return null;
-  }
-
-  const lastSessionDate = new Date(sessions[0].performedAt);
-  const today = new Date();
-  lastSessionDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return Math.floor((today.getTime() - lastSessionDate.getTime()) / 86400000);
-}
-
 function getWeddingCountdown() {
   const today = new Date();
   const weddingDate = new Date("2026-11-02T00:00:00");
@@ -491,19 +479,6 @@ export function WorkoutTrackerApp() {
     }),
     [deferredInstallPrompt, isIosInstallPath, isStandalone],
   );
-  const nextFocusText = trainingState.trainingLoad.summary.suggestedNextFocus.text;
-  const workoutRhythmNote = useMemo(() => {
-    const gapDays = getDaysSinceLastWorkout(userSessions);
-    if (gapDays === null || gapDays < 3) {
-      if (workoutOverride) {
-        return `Moved into place. Focus sits on ${nextFocusText.toLowerCase()} this week.`;
-      }
-
-      return `Focus sits on ${nextFocusText.toLowerCase()} this week.`;
-    }
-
-    return `${gapDays} days off. Focus sits on ${nextFocusText.toLowerCase()} this week.`;
-  }, [nextFocusText, userSessions, workoutOverride]);
   const activeWorkoutTemplate = useMemo(() => {
     const matchedWorkout = selectedProfile.workoutPlan.find(
       (workout) => workout.id === state.activeWorkout?.workoutDayId,
@@ -1182,7 +1157,7 @@ export function WorkoutTrackerApp() {
                 profile={selectedProfile}
                 todaysWorkout={todaysWorkout}
                 activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
-                workoutRhythmNote={workoutRhythmNote}
+                trainingInsight={trainingState.insights.homeAction}
                 weeklyCount={weeklyCount}
                 streak={streak}
                 pbCount={state.personalBests[selectedProfile.id].length}
@@ -1291,7 +1266,7 @@ export function WorkoutTrackerApp() {
       )}
       <SessionSummaryModal
         summary={sessionSummary}
-        nextFocusText={trainingState.trainingLoad.summary.suggestedNextFocus.text}
+        nextInsight={trainingState.insights.completionNext}
         onClose={() => setSessionSummary(null)}
         onMarkComplete={markPartialSessionComplete}
       />

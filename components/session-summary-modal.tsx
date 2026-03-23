@@ -44,12 +44,12 @@ function getAfterWorkoutTease(summary: SessionSummary) {
 
 export function SessionSummaryModal({
   summary,
-  nextFocusText,
+  nextInsight,
   onClose,
   onMarkComplete,
 }: {
   summary: SessionSummary | null;
-  nextFocusText?: string | null;
+  nextInsight?: string | null;
   onClose: () => void;
   onMarkComplete?: (summary: SessionSummary) => void;
 }) {
@@ -92,12 +92,11 @@ export function SessionSummaryModal({
           <ScrollReveal delay={95} y={14} scale={0.996}>
             <p className="mt-5 text-sm leading-6 text-muted">{getAfterWorkoutTease(summary)}</p>
           </ScrollReveal>
-          {!summary.partial && nextFocusText ? (
+          {!summary.partial && nextInsight ? (
             <ScrollReveal delay={102} y={14} scale={0.996}>
               <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm text-muted">Next up</p>
-                <p className="mt-2 text-base font-semibold text-text">{nextFocusText}</p>
-                <p className="mt-1 text-sm leading-6 text-muted">That is where the week wants more work now.</p>
+                <p className="mt-2 text-base font-semibold text-text">{nextInsight}</p>
               </div>
             </ScrollReveal>
           ) : null}

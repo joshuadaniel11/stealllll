@@ -8,7 +8,7 @@ import { DailyMobilityPromptCard } from "@/components/daily-mobility-prompt-card
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
-import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
+import { getSessionPresentation } from "@/lib/session-presentation";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
   BibleVerse,
@@ -45,7 +45,7 @@ type HomeScreenProps = {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
   activeWorkoutName: string | null;
-  workoutRhythmNote: string | null;
+  trainingInsight: string;
   weeklyCount: number;
   streak: number;
   pbCount: number;
@@ -75,7 +75,7 @@ export function HomeScreen({
   profile,
   todaysWorkout,
   activeWorkoutName,
-  workoutRhythmNote,
+  trainingInsight,
   weeklyCount,
   streak,
   pbCount,
@@ -109,10 +109,10 @@ export function HomeScreen({
       ? "Resume ready"
       : "Queued today";
   const homeStateDetail = activeWorkoutName
-    ? `${activeWorkoutName} is still open.`
+    ? `Resume when you're ready. ${trainingInsight}`
     : pendingPartial
-      ? `${pendingPartial.workoutName} is ready to resume.`
-      : getSessionSupportLine(todaysWorkout, workoutRhythmNote);
+      ? `Pick it back up. ${trainingInsight}`
+      : trainingInsight;
   const primaryActionLabel = activeWorkoutName
     ? "Resume Session"
     : pendingPartial

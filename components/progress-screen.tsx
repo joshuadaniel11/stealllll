@@ -73,12 +73,12 @@ function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
 
 function FocusDirectionCard({
   focusText,
-  coverageLabels,
+  progressInsight,
   sessionSummary,
   onOpen,
 }: {
   focusText: string;
-  coverageLabels: Array<{ label: string; percentage: number }>;
+  progressInsight: string;
   sessionSummary: { focusText: string; estimatedDurationMinutes: number; exerciseCount: number } | null;
   onOpen: () => void;
 }) {
@@ -101,17 +101,8 @@ function FocusDirectionCard({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
         <div className="progress-summary-card rounded-[24px] border px-4 py-4">
-          <p className="text-[12px] font-medium text-white/48">Needs attention</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {coverageLabels.map((item) => (
-              <span
-                key={item.label}
-                className="rounded-full border border-white/8 bg-white/[0.05] px-3 py-1.5 text-[12px] font-medium text-white/78"
-              >
-                {item.label} {item.percentage}%
-              </span>
-            ))}
-          </div>
+          <p className="text-[12px] font-medium text-white/48">Progress signal</p>
+          <p className="mt-2 text-[15px] font-semibold text-white/90">{progressInsight}</p>
         </div>
         {sessionSummary ? (
           <div className="progress-subcard rounded-[24px] border px-4 py-4">
@@ -125,32 +116,6 @@ function FocusDirectionCard({
       </div>
     </Card>
   );
-}
-
-function getWeeklyRead(trainingState: ProfileTrainingState) {
-  const { trainingLoad, weeklySummary } = trainingState;
-  const nextText = trainingLoad.summary.suggestedNextFocus.text;
-  const topLoaded = trainingLoad.summary.mostTrained.map((metric) => metric.label).join(", ");
-  const lagging = trainingLoad.summary.needsWork.map((metric) => metric.label).join(", ");
-
-  if (weeklySummary.workoutsCompleted === 0) {
-    return {
-      title: "No training logged yet this week",
-      detail: "Start with your priority zones and let the week build from there.",
-    };
-  }
-
-  return {
-    title: `${nextText} need attention`,
-    detail: topLoaded
-      ? `${topLoaded} are leading. ${lagging || nextText} still need work.`
-      : `${lagging || nextText} still need work next.`,
-  };
-}
-
-function getWeeklyFocusText(trainingState: ProfileTrainingState) {
-  const labels = trainingState.trainingLoad.summary.suggestedNextFocus.labels.slice(0, 2);
-  return labels.length ? labels.join(" + ") : trainingState.trainingLoad.summary.suggestedNextFocus.text;
 }
 
 export function ProgressScreen({
@@ -200,12 +165,7 @@ export function ProgressScreen({
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
-  const weeklyRead = getWeeklyRead(trainingState);
-  const weeklyFocusText = getWeeklyFocusText(trainingState);
-  const focusCoverage = trainingLoad.summary.needsWork.slice(0, 2).map((metric) => ({
-    label: metric.label,
-    percentage: metric.percentage,
-  }));
+  const { insights } = trainingState;
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
         const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
@@ -226,9 +186,9 @@ export function ProgressScreen({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[13px] font-medium text-white/52">This week</p>
-              <h2 className="mt-2 text-[1.85rem] font-semibold tracking-[-0.06em] text-white/94">{weeklyRead.title}</h2>
-              <p className="mt-2 text-[14px] font-medium text-white/72">Focus: {weeklyFocusText}</p>
-              <p className="mt-2 text-[14px] leading-6 text-white/56">{weeklyRead.detail}</p>
+              <h2 className="mt-2 text-[1.85rem] font-semibold tracking-[-0.06em] text-white/94">{insights.weeklyStatusTitle}</h2>
+              <p className="mt-2 text-[14px] font-medium text-white/72">Focus: {insights.focusDirection}</p>
+              <p className="mt-2 text-[14px] leading-6 text-white/56">{insights.weeklyStatusDetail}</p>
             </div>
             <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/68">
               {weeklySummary.workoutsCompleted} this week
@@ -245,8 +205,8 @@ export function ProgressScreen({
 
       <ScrollReveal delay={12}>
         <FocusDirectionCard
-          focusText={weeklyFocusText}
-          coverageLabels={focusCoverage}
+          focusText={insights.focusDirection}
+          progressInsight={insights.progressSignal}
           sessionSummary={
             suggestedFocusSession
               ? {
