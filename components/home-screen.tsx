@@ -215,7 +215,7 @@ export function HomeScreen({
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
                 More
               </p>
-              <p className="text-sm leading-6 text-white/54">Note, mobility, and extras.</p>
+              <p className="text-sm leading-6 text-white/54">Note, countdown, mobility, and extras.</p>
             </div>
             <ChevronDown
               className={`h-4 w-4 text-white/46 transition-transform duration-300 ${

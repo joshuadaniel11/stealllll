@@ -313,13 +313,11 @@ export function ProgressScreen({
       <ScrollReveal delay={86}>
         <Card className="progress-panel">
           <SectionHeader
-            eyebrow="Weekly snapshot"
-            title={`${profile.name}'s training read`}
-            description={profile.goalSummary}
+            eyebrow="Secondary signals"
+            title={`${profile.name}'s supporting read`}
           />
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3">
             <MiniMetric label="Focus" value={progressSignals.primarySignal.value} />
-            <MiniMetric label="This week" value={`${weeklySummary.workoutsCompleted}`} />
             <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
           </div>
           <div className="mt-4 grid gap-3">
