@@ -23,7 +23,14 @@ type EllipseShape = {
 type ShapeDef = PathShape | EllipseShape;
 type BodyBaseConfig = {
   href: string;
+  sourceHeight: number;
   crop: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  frame: {
     x: number;
     y: number;
     width: number;
@@ -177,22 +184,30 @@ function Shape({
 const BODY_BASES: Record<BodyVariant, Record<BodyView, BodyBaseConfig>> = {
   male: {
     front: {
-      href: "/body-map/male-base.svg",
-      crop: { x: 66, y: 18, width: 182, height: 330 },
+      href: "/body-map/female-base.svg",
+      sourceHeight: 386,
+      crop: { x: 122, y: 18, width: 112, height: 322 },
+      frame: { x: 14, y: 14, width: 92, height: 224 },
     },
     back: {
-      href: "/body-map/male-base.svg",
-      crop: { x: 342, y: 18, width: 182, height: 330 },
+      href: "/body-map/female-base.svg",
+      sourceHeight: 386,
+      crop: { x: 365, y: 18, width: 112, height: 322 },
+      frame: { x: 14, y: 14, width: 92, height: 224 },
     },
   },
   female: {
     front: {
-      href: "/body-map/female-base.svg",
-      crop: { x: 72, y: 16, width: 180, height: 332 },
+      href: "/body-map/male-base.svg",
+      sourceHeight: 388,
+      crop: { x: 118, y: 20, width: 122, height: 314 },
+      frame: { x: 17, y: 14, width: 86, height: 224 },
     },
     back: {
-      href: "/body-map/female-base.svg",
-      crop: { x: 322, y: 16, width: 180, height: 332 },
+      href: "/body-map/male-base.svg",
+      sourceHeight: 388,
+      crop: { x: 362, y: 20, width: 122, height: 314 },
+      frame: { x: 17, y: 14, width: 86, height: 224 },
     },
   },
 };
@@ -201,16 +216,22 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
   const base = BODY_BASES[variant][view];
 
   return (
-    <svg x="10" y="7" width="100" height="238" viewBox={`${base.crop.x} ${base.crop.y} ${base.crop.width} ${base.crop.height}`}>
+    <svg
+      x={base.frame.x}
+      y={base.frame.y}
+      width={base.frame.width}
+      height={base.frame.height}
+      viewBox={`${base.crop.x} ${base.crop.y} ${base.crop.width} ${base.crop.height}`}
+    >
       <image
         href={base.href}
         x="0"
         y="0"
         width="600"
-        height={variant === "male" ? "388" : "386"}
+        height={base.sourceHeight}
         preserveAspectRatio="none"
         filter="url(#body-base-tone)"
-        opacity="0.82"
+        opacity="0.72"
       />
     </svg>
   );
