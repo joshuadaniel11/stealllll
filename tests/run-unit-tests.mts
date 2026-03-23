@@ -337,6 +337,81 @@ function testProgressVelocityDetectsImprovingExerciseWindow() {
   assert.ok(trainingState.metrics.stimulusToFatigueRatio.byExercise.length > 0);
 }
 
+function testProfileTargetMultipliersDivergeByPriorityModel() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(joshua);
+  assert.ok(natasha);
+
+  const joshuaState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, referenceDate);
+  const natashaState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+
+  const joshuaUpperChest = joshuaState.metrics.regionMetrics.find((metric) => metric.zoneId === "upperChest");
+  const joshuaGluteMax = joshuaState.metrics.regionMetrics.find((metric) => metric.zoneId === "gluteMax");
+  const natashaUpperChest = natashaState.metrics.regionMetrics.find((metric) => metric.zoneId === "upperChest");
+  const natashaGluteMax = natashaState.metrics.regionMetrics.find((metric) => metric.zoneId === "gluteMax");
+
+  assert.ok(joshuaUpperChest && joshuaGluteMax && natashaUpperChest && natashaGluteMax);
+  assert.ok(joshuaUpperChest.priorityMultiplier > 1);
+  assert.equal(natashaUpperChest.priorityMultiplier, 1);
+  assert.ok(natashaGluteMax.priorityMultiplier > joshuaGluteMax.priorityMultiplier);
+}
+
+function testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const heavyRecentSessions = [
+    {
+      id: "recovery-target-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T08:00:00.000Z",
+      durationMinutes: 70,
+      sessionRpe: 9,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "machine-hip-thrust-day1", exerciseName: "Machine Hip Thrust", muscleGroup: "Glutes" as const, sets: [{ id: "a", weight: 60, reps: 8, completed: true }] }],
+    },
+    {
+      id: "recovery-target-2",
+      userId: "natasha",
+      workoutDayId: "natasha-back-arms",
+      workoutName: "Back + Biceps",
+      performedAt: "2026-03-22T08:00:00.000Z",
+      durationMinutes: 65,
+      sessionRpe: 8.8,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "lat-pulldown-day2-nat", exerciseName: "Lat Pulldown", muscleGroup: "Back" as const, sets: [{ id: "a", weight: 45, reps: 10, completed: true }] }],
+    },
+    {
+      id: "recovery-target-3",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-quads",
+      workoutName: "Glutes + Quads",
+      performedAt: "2026-03-21T08:00:00.000Z",
+      durationMinutes: 60,
+      sessionRpe: 8.7,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "leg-press-day3-nat", exerciseName: "Leg Press", muscleGroup: "Quads" as const, sets: [{ id: "a", weight: 120, reps: 10, completed: true }] }],
+    },
+  ];
+
+  const loadedState = getProfileTrainingState(natasha, heavyRecentSessions, seed.exerciseLibrary, referenceDate);
+  const emptyState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+
+  const loadedGlute = loadedState.metrics.regionMetrics.find((metric) => metric.zoneId === "gluteMax");
+  const emptyGlute = emptyState.metrics.regionMetrics.find((metric) => metric.zoneId === "gluteMax");
+
+  assert.ok(loadedGlute && emptyGlute);
+  assert.ok(loadedGlute.recoveryModifier <= emptyGlute.recoveryModifier);
+  assert.ok(loadedGlute.targetEVS < emptyGlute.targetEVS);
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -473,6 +548,8 @@ const tests = [
   ["build effective volume and coverage metrics", testMetricsLayerBuildsEffectiveVolumeCoverage],
   ["drop recovery index under stacked recent fatigue", testRecoveryIndexRespondsToAccumulatedRecentLoad],
   ["detect positive progress velocity from improving work", testProgressVelocityDetectsImprovingExerciseWindow],
+  ["apply profile-specific target multipliers", testProfileTargetMultipliersDivergeByPriorityModel],
+  ["soften target evs when recovery drops", testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],

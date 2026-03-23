@@ -77,6 +77,9 @@ export type RegionTrainingMetric = {
   zoneId: TrainingLoadZone;
   label: string;
   evs: number;
+  baseTargetEVS: number;
+  priorityMultiplier: number;
+  recoveryModifier: number;
   targetEVS: number;
   coveragePct: number;
   progressVelocity: number;
@@ -90,6 +93,30 @@ export type ProfileTrainingMetrics = {
   progressVelocity: ProgressVelocityMetric;
   stimulusToFatigueRatio: StimulusToFatigueMetric;
   regionMetrics: RegionTrainingMetric[];
+};
+
+const PROFILE_PRIORITY_MULTIPLIERS: Record<string, Partial<Record<TrainingLoadZone, number>>> = {
+  joshua: {
+    upperChest: 1.3,
+    midChest: 1.05,
+    sideDelts: 1.25,
+    rearDelts: 1.15,
+    lats: 1.2,
+    upperAbs: 1.1,
+    lowerAbs: 1.1,
+    biceps: 1.1,
+    triceps: 1.1,
+  },
+  natasha: {
+    upperGlutes: 1.3,
+    gluteMax: 1.25,
+    sideGlutes: 1.2,
+    lats: 1.1,
+    upperBack: 1.15,
+    lowerAbs: 1.05,
+    obliques: 1.05,
+    sideDelts: 1.05,
+  },
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -107,6 +134,10 @@ function average(values: number[]) {
   }
 
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function getPriorityMultiplier(profile: Profile, zoneId: TrainingLoadZone) {
+  return PROFILE_PRIORITY_MULTIPLIERS[profile.id]?.[zoneId] ?? 1;
 }
 
 function buildZoneNumberRecord(initial = 0) {
@@ -412,6 +443,13 @@ function buildRecoveryIndex(profile: Profile, sessions: WorkoutSession[], refere
   };
 }
 
+function getRecoveryModifier(recoveryIndex: RecoveryIndexMetric) {
+  if (recoveryIndex.score >= 75) return 1;
+  if (recoveryIndex.score >= 60) return 0.96;
+  if (recoveryIndex.score >= 45) return 0.92;
+  return 0.88;
+}
+
 export function getProfileTrainingMetrics(
   profile: Profile,
   sessions: WorkoutSession[],
@@ -422,6 +460,8 @@ export function getProfileTrainingMetrics(
   const lookup = getLibraryLookups(exerciseLibrary);
   const currentWeekSessions = getCurrentWeekSessions(sessions, referenceDate);
   const priorityZones = getProfilePriorityZones(profile.id);
+  const recoveryIndex = buildRecoveryIndex(profile, sessions, referenceDate);
+  const recoveryModifier = getRecoveryModifier(recoveryIndex);
 
   const zoneEvs = buildZoneNumberRecord();
   const zoneStimulus = buildZoneNumberRecord();
@@ -480,10 +520,17 @@ export function getProfileTrainingMetrics(
     }
   }
 
-  const targetByRegion = trainingLoad.metrics.reduce<Record<TrainingLoadZone, number>>((accumulator, metric) => {
+  const baseTargetByRegion = trainingLoad.metrics.reduce<Record<TrainingLoadZone, number>>((accumulator, metric) => {
     accumulator[metric.id] = metric.targetSets;
     return accumulator;
   }, {} as Record<TrainingLoadZone, number>);
+  const targetByRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, number>>(
+    (accumulator, zoneId) => {
+      accumulator[zoneId] = round(baseTargetByRegion[zoneId] * getPriorityMultiplier(profile, zoneId) * recoveryModifier, 2);
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, number>,
+  );
 
   const coverageByRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, number>>(
     (accumulator, zoneId) => {
@@ -540,6 +587,9 @@ export function getProfileTrainingMetrics(
     zoneId: metric.id,
     label: metric.label,
     evs: round(zoneEvs[metric.id], 2),
+    baseTargetEVS: round(baseTargetByRegion[metric.id], 2),
+    priorityMultiplier: round(getPriorityMultiplier(profile, metric.id), 2),
+    recoveryModifier,
     targetEVS: targetByRegion[metric.id],
     coveragePct: coverageByRegion[metric.id],
     progressVelocity: progressByRegion[metric.id],
@@ -575,7 +625,7 @@ export function getProfileTrainingMetrics(
       coveredPriorityRegions: priorityCoverageValues.filter((value) => value > 0).length,
       byRegion: coverageByRegion,
     },
-    recoveryIndex: buildRecoveryIndex(profile, sessions, referenceDate),
+    recoveryIndex,
     progressVelocity: {
       average: round(average(priorityProgressValues), 1),
       byRegion: progressByRegion,
