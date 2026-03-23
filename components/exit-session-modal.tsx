@@ -26,7 +26,7 @@ export function ExitSessionModal({
             <p className="text-sm text-muted">Exit session</p>
             <h3 className="large-title mt-2 font-semibold text-text">Leave this workout?</h3>
             <p className="medium-label mt-3 text-muted">
-              Save the exercises and sets you already completed, or leave without saving and clear the session.
+              Save the work you already logged and come back later, or clear the live session and leave it behind.
             </p>
           </div>
           <div className="mt-6 grid grid-cols-1 gap-3 pb-[calc(env(safe-area-inset-bottom,0px)+4px)]">
@@ -43,13 +43,13 @@ export function ExitSessionModal({
               disabled={!canSaveProgress}
               onClick={onSaveProgress}
             >
-              Save completed work and exit
+              Save progress and exit
             </button>
             <button
               className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
               onClick={onDiscard}
             >
-              Exit without saving
+              Clear live session
             </button>
           </div>
         </Card>

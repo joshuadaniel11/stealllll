@@ -41,7 +41,12 @@ import {
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
-import { buildCompletedSession, buildSessionSummary, countLoggedSets } from "@/lib/workout-session";
+import {
+  buildCompletedSession,
+  buildResumedActiveWorkout,
+  buildSessionSummary,
+  countLoggedSets,
+} from "@/lib/workout-session";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type {
@@ -139,6 +144,18 @@ function getWeddingCountdown() {
 
 function isSameLocalDay(a: string, b: Date) {
   return new Date(a).toDateString() === b.toDateString();
+}
+
+function getLatestPartialSessionForWorkout(
+  sessions: WorkoutSession[],
+  userId: UserId,
+  workoutDayId: string,
+) {
+  return (
+    sessions.find(
+      (session) => session.userId === userId && session.workoutDayId === workoutDayId && session.partial,
+    ) ?? null
+  );
 }
 
 function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = []): SetLog[] {
@@ -559,6 +576,29 @@ export function WorkoutTrackerApp() {
       return;
     }
 
+    const savedPartial = getLatestPartialSessionForWorkout(userSessions, selectedProfile.id, workout.id);
+
+    if (savedPartial) {
+      setState((current) => {
+        const currentPartial = current.sessions.find((session) => session.id === savedPartial.id);
+        if (!currentPartial) {
+          return current;
+        }
+
+        return {
+          ...current,
+          sessions: current.sessions.filter((session) => session.id !== currentPartial.id),
+          activeWorkout: buildResumedActiveWorkout(currentPartial, workout),
+        };
+      });
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
+      showToast(`Resumed your saved ${workout.dayLabel.toLowerCase()} session.`);
+      softHaptic(10);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
     setState((current) => ({
       ...current,
       activeWorkout: toActiveWorkout(
@@ -650,12 +690,12 @@ export function WorkoutTrackerApp() {
         nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
       }),
     );
-    setShowWorkoutFeelingPrompt(false);
-    setSuggestedSessionPreview(false);
-    setWorkoutPreviewId(null);
-    setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
-    markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
-    showToast("Progress saved. Training state updated.");
+      setShowWorkoutFeelingPrompt(false);
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
+      setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
+      markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
+      showToast("Progress saved. You can resume this workout from the Workout tab.");
     softHaptic([8, 28, 8]);
     startTransition(() => setActiveTab("home"));
   };

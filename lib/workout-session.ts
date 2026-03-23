@@ -1,4 +1,4 @@
-import type { ActiveWorkout, WorkoutSession } from "@/lib/types";
+import type { ActiveWorkout, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 import type { SessionSummary } from "@/components/session-summary-modal";
 
 export function countLoggedSets(exercises: ActiveWorkout["exercises"] | WorkoutSession["exercises"]) {
@@ -53,5 +53,57 @@ export function buildSessionSummary(
     partial: options?.partial ?? session.partial,
     prCount: options?.prCount,
     prHighlights: options?.prHighlights,
+  };
+}
+
+export function buildResumedActiveWorkout(
+  partialSession: WorkoutSession,
+  workout: WorkoutPlanDay,
+): ActiveWorkout {
+  const seed = Date.now();
+
+  return {
+    id: `active-resume-${seed}`,
+    userId: partialSession.userId,
+    startedAt: new Date().toISOString(),
+    workoutDayId: workout.id,
+    workoutName: workout.name,
+    templateExercises: workout.exercises,
+    exercises: workout.exercises.map((exercise, exerciseIndex) => {
+      const partialExercise =
+        partialSession.exercises.find((logged) => logged.exerciseId === exercise.id) ??
+        partialSession.exercises.find(
+          (logged) => logged.exerciseName.toLowerCase() === exercise.name.toLowerCase(),
+        );
+      const completedSets =
+        partialExercise?.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)) ?? [];
+      const carryForwardWeight =
+        completedSets.at(-1)?.weight && completedSets.at(-1)!.weight > 0 ? completedSets.at(-1)!.weight : 0;
+
+      return {
+        exerciseId: partialExercise?.exerciseId ?? exercise.id,
+        exerciseName: partialExercise?.exerciseName ?? exercise.name,
+        muscleGroup: partialExercise?.muscleGroup ?? exercise.muscleGroup,
+        note: partialExercise?.note ?? exercise.note ?? "",
+        sets: Array.from({ length: exercise.sets }, (_, setIndex) => {
+          const loggedSet = completedSets[setIndex];
+
+          if (loggedSet) {
+            return {
+              ...loggedSet,
+              id: `${exercise.id}-resume-${exerciseIndex}-${setIndex}-${seed}`,
+              completed: true,
+            };
+          }
+
+          return {
+            id: `${exercise.id}-resume-${exerciseIndex}-${setIndex}-${seed}`,
+            weight: carryForwardWeight,
+            reps: 0,
+            completed: false,
+          };
+        }),
+      };
+    }),
   };
 }

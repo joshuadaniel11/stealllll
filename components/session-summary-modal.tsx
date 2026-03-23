@@ -62,8 +62,13 @@ export function SessionSummaryModal({
           <div className="sheet-drag-handle" />
           <ScrollReveal delay={0} y={18} scale={0.994}>
             <div>
-              <p className="text-sm text-muted">{summary.partial ? "Partial session saved" : "Session complete"}</p>
+              <p className="text-sm text-muted">{summary.partial ? "Progress saved" : "Session complete"}</p>
               <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
+              {summary.partial ? (
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  This workout can be resumed from the Workout tab whenever you&apos;re ready.
+                </p>
+              ) : null}
             </div>
           </ScrollReveal>
           <ScrollReveal delay={70} y={18} scale={0.994}>
