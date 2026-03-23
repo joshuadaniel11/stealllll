@@ -13,6 +13,10 @@ import type {
   TrainingLoadZone,
 } from "@/lib/training-load";
 
+function DetailLabel({ label }: { label: string }) {
+  return <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">{label}</p>;
+}
+
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
     <div className="progress-subcard rounded-[20px] border px-3 py-3">
@@ -103,7 +107,7 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[13px] text-white/80">{contributor.exerciseName}</p>
                 <p className="text-[11px] font-medium text-white/42">
-                {contributor.effectiveSets.toFixed(1)} sets
+                  {contributor.effectiveSets.toFixed(1)} sets
                 </p>
               </div>
             </div>
@@ -213,15 +217,15 @@ function NextFocusCard({
       onClick={onOpen}
       className="progress-focus-card w-full rounded-[22px] border px-4 py-4 text-left transition active:scale-[0.995]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-medium text-white/48">{label}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[12px] font-medium text-white/48">{label}</p>
           <p className="mt-1 text-[1.1rem] font-semibold tracking-[-0.03em] text-white/92">{focusText}</p>
         </div>
         <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white/68">
-              Next workout
-            </span>
+          <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white/68">
+            Next workout
+          </span>
           <ChevronRight className="h-4 w-4 text-white/44" />
         </div>
       </div>
@@ -393,9 +397,12 @@ export function TrainingLoadCard({
       </div>
 
       <div className="mt-4 grid gap-4">
-        <div className="grid gap-2">
+        <div className="space-y-2">
+          <DetailLabel label="Coach read" />
+          <div className="grid gap-2">
           <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
           <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
+          </div>
         </div>
 
         <NextFocusCard
@@ -453,13 +460,17 @@ export function TrainingLoadCard({
 
         <ZoneContributorPanel metric={inspectedMetric} />
 
-        <div className="grid grid-cols-2 gap-2">
-          {orderedGroups.map((group) => (
-            <GroupMetricCard key={group.id} metric={group} />
-          ))}
+        <div className="space-y-2">
+          <DetailLabel label="Coverage detail" />
+          <div className="grid grid-cols-2 gap-2">
+            {orderedGroups.map((group) => (
+              <GroupMetricCard key={group.id} metric={group} />
+            ))}
+          </div>
         </div>
 
-        <div>
+        <div className="space-y-2">
+          <DetailLabel label="Visible load leaders" />
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-white/82">Most loaded visible zones</p>
             <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{view} side</p>

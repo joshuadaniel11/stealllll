@@ -1,3 +1,4 @@
+﻿import type { ReactNode } from "react";
 import { MeasurementCard } from "@/components/measurement-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { TrainingLoadCard } from "@/components/training-load-card";
@@ -22,6 +23,29 @@ import type { MeasurementEntry, Profile, RecentTrainingUpdate, StretchCompletion
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  aside,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  aside?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[13px] font-medium text-white/54">{eyebrow}</p>
+        <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">{title}</h3>
+        {description ? <p className="mt-2 text-[14px] leading-6 text-white/58">{description}</p> : null}
+      </div>
+      {aside ? <div>{aside}</div> : null}
+    </div>
+  );
 }
 
 function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
@@ -141,16 +165,16 @@ export function ProgressScreen({
 
       <ScrollReveal delay={12}>
         <Card className="progress-panel">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-medium text-white/54">Goal dashboard</p>
-              <h3 className="mt-1 text-[1.55rem] font-semibold tracking-[-0.05em] text-white/94">{goalDashboard.label}</h3>
-              <p className="mt-2 text-[14px] leading-6 text-white/58">{goalDashboard.headline}</p>
-            </div>
-            <div className="max-w-[10rem] rounded-full bg-white/8 px-3 py-1.5 text-center text-[11px] font-medium text-white/68">
-              {goalDashboard.emphasisLabel}
-            </div>
-          </div>
+          <SectionHeader
+            eyebrow="Goal dashboard"
+            title={goalDashboard.label}
+            description={goalDashboard.headline}
+            aside={
+              <div className="max-w-[10rem] rounded-full bg-white/8 px-3 py-1.5 text-center text-[11px] font-medium text-white/68">
+                {goalDashboard.emphasisLabel}
+              </div>
+            }
+          />
 
           <div className="progress-summary-card mt-4 rounded-[22px] border px-4 py-4">
             <p className="text-[12px] font-medium text-white/52">This week&apos;s read</p>
@@ -167,18 +191,16 @@ export function ProgressScreen({
 
       <ScrollReveal delay={25}>
         <Card className="progress-panel">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-medium text-white/54">Workout calendar</p>
-              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">Last 6 weeks</h3>
-              <p className="mt-2 text-[14px] leading-6 text-white/56">
-                A clean view of your training rhythm, with this week kept visually in focus.
-              </p>
-            </div>
-            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-              {weeklySummary.workoutsCompleted} this week
-            </div>
-          </div>
+          <SectionHeader
+            eyebrow="Workout calendar"
+            title="Last 6 weeks"
+            description="A cleaner read on your rhythm, with this week kept in focus."
+            aside={
+              <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                {weeklySummary.workoutsCompleted} this week
+              </div>
+            }
+          />
           <div className="mt-4">
             <WeeklyTrainingCalendar rows={calendarRows} />
           </div>
@@ -187,42 +209,56 @@ export function ProgressScreen({
 
       <ScrollReveal delay={50}>
         <Card className="progress-panel">
-          <p className="text-[13px] font-medium text-white/54">Weekly snapshot</p>
-          <h2 className="mt-1 text-[1.7rem] font-semibold tracking-[-0.05em] text-white/94">{profile.name}&apos;s training read</h2>
-          <p className="mt-2 text-[14px] leading-6 text-white/58">{profile.goalSummary}</p>
+          <SectionHeader
+            eyebrow="Weekly snapshot"
+            title={`${profile.name}'s training read`}
+            description={profile.goalSummary}
+          />
           <div className="mt-4 grid grid-cols-3 gap-3">
             <MiniMetric label="Total workouts" value={`${totalWorkouts}`} />
             <MiniMetric label="This week" value={`${weeklySummary.workoutsCompleted}`} />
             <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
           </div>
-          <div className="progress-highlight-card mt-4 rounded-[24px] p-4">
-            <p className="text-[12px] font-medium text-white/52">Best current signal</p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-[15px] font-semibold text-white/90">{progressSignals.leadingIndicator.title}</p>
-              <p className="text-[13px] font-medium text-white/72">{progressSignals.leadingIndicator.value}</p>
+          <div className="mt-4 grid gap-3">
+            <div className="progress-highlight-card rounded-[24px] p-4">
+              <p className="text-[12px] font-medium text-white/52">Best current signal</p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-[15px] font-semibold text-white/90">{progressSignals.leadingIndicator.title}</p>
+                <p className="text-[13px] font-medium text-white/72">{progressSignals.leadingIndicator.value}</p>
+              </div>
+              <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.leadingIndicator.detail}</p>
             </div>
-            <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.leadingIndicator.detail}</p>
+            <div className="progress-summary-card rounded-[24px] border px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-medium text-white/52">{aestheticSignal.title}</p>
+                  <p className="mt-1 text-[15px] font-semibold text-white/90">{aestheticSignal.value}</p>
+                </div>
+                <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
+                  Adaptive
+                </span>
+              </div>
+              <p className="mt-2 text-[13px] leading-6 text-white/56">{aestheticSignal.detail}</p>
+            </div>
           </div>
         </Card>
       </ScrollReveal>
 
       <ScrollReveal delay={95}>
         <Card className="progress-panel">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[13px] font-medium text-white/54">Trend</p>
-              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
-                {showingBodyMetrics ? "Body metrics" : "Training volume"}
-              </h3>
-            </div>
-            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-              {showingBodyMetrics
-                ? `${bodyweightTrend.length} entries`
-                : trendData.length
-                  ? `Last ${trendData.length} sessions`
-                  : "No sessions yet"}
-            </div>
-          </div>
+          <SectionHeader
+            eyebrow="Trend"
+            title={showingBodyMetrics ? "Body metrics" : "Training volume"}
+            aside={
+              <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                {showingBodyMetrics
+                  ? `${bodyweightTrend.length} entries`
+                  : trendData.length
+                    ? `Last ${trendData.length} sessions`
+                    : "No sessions yet"}
+              </div>
+            }
+          />
           <div className="mt-4 h-52">
             {showingBodyMetrics ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -275,13 +311,12 @@ export function ProgressScreen({
 
       <ScrollReveal delay={120}>
         <Card className="progress-panel">
-          <p className="text-[13px] font-medium text-white/54">Direction this week</p>
+          <SectionHeader eyebrow="Direction this week" title={progressSignals.primarySignal.title} />
           <div className="progress-summary-card mt-4 rounded-[24px] border px-4 py-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.title}</p>
+              <p className="text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.detail}</p>
               <p className="text-[13px] font-medium text-white/72">{progressSignals.primarySignal.value}</p>
             </div>
-            <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.primarySignal.detail}</p>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-3">
             <MiniMetric label="Support" value={progressSignals.supportSignal.value} />
@@ -296,28 +331,17 @@ export function ProgressScreen({
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={170}>
-        <Card className="progress-panel">
-          <p className="text-[13px] font-medium text-white/54">{aestheticSignal.title}</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <h3 className="text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">{aestheticSignal.value}</h3>
-            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/68">Adaptive</div>
-          </div>
-          <p className="mt-3 text-[14px] leading-6 text-white/58">{aestheticSignal.detail}</p>
-        </Card>
-      </ScrollReveal>
-
       <ScrollReveal delay={245}>
         <Card className="progress-panel">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-medium text-white/54">Recent sessions</p>
-              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">Saved workouts</h3>
-            </div>
-            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-              {recentSessions.length} tracked
-            </div>
-          </div>
+          <SectionHeader
+            eyebrow="Recent sessions"
+            title="Saved workouts"
+            aside={
+              <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                {recentSessions.length} tracked
+              </div>
+            }
+          />
           <div className="mt-4 space-y-3">
             {recentSessions.length ? (
               recentSessions.map((session) => (
@@ -360,3 +384,4 @@ export function ProgressScreen({
     </>
   );
 }
+
