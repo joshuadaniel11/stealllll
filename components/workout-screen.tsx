@@ -6,77 +6,12 @@ import { Check, ChevronRight } from "lucide-react";
 import { ExitSessionModal } from "@/components/exit-session-modal";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
-import { areEquivalentExerciseNames, buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
+import { getExerciseSwapOptions, getSwapSectionLabel } from "@/lib/exercise-swaps";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
 import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
-
-const substitutionHints: Record<string, string[]> = {
-    "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
-    "Machine Hip Thrust": ["Smith Machine Hip Thrust", "Glute Bridge Machine", "Cable Glute Kickback", "Leg Press High Foot Placement"],
-    "Smith Machine Hip Thrust": ["Machine Hip Thrust", "Glute Bridge Machine", "Cable Glute Kickback", "Leg Press High Foot Placement"],
-    "Glute Bridge Machine": ["Machine Hip Thrust", "Smith Machine Hip Thrust", "Cable Glute Kickback", "Leg Press High Foot Placement"],
-    "Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-    "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-    "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-    "Lat Pullover": ["Machine Lat Pullover", "Straight-Arm Cable Pulldown", "Single-Arm Lat Pulldown"],
-    "Barbell Row": ["Seated Cable Row", "Machine Row", "Chest-Supported Dumbbell Row"],
-    "Single-Arm Seated Row": ["Seated Cable Row", "Machine Row", "Single-Arm Dumbbell Row"],
-    "Dumbbell Romanian Deadlift": ["Seated Leg Curl", "Hamstring Curl", "45 Degree Back Extension", "Back Hyperextensions"],
-    "Reverse Lunge": ["Dumbbell Step-Up", "Walking Lunge", "Leg Press High Foot Placement", "Leg Press"],
-    "Walking Lunge": ["Reverse Lunge", "Dumbbell Step-Up", "Leg Press High Foot Placement", "Leg Press"],
-    "Bulgarian Split Squat": ["Dumbbell Step-Up", "Reverse Lunge", "Walking Lunge", "Leg Press"],
-    "Kettlebell Swing": ["Sled Push", "Medicine Ball Slam", "Goblet Squat to Press", "Box Step-Up with Knee Drive"],
-    "Face Pull": ["Cable Face Pull", "Reverse Pec Deck", "Cable Lateral Raise"],
-    "Reverse Pec Deck": ["Face Pull", "Cable Face Pull", "Cable Lateral Raise"],
-    "Box Step-Up with Knee Drive": ["Dumbbell Step-Up", "Reverse Lunge", "Walking Lunge"],
-    "Medicine Ball Wall Throw": ["Medicine Ball Slam", "Battle Rope Slam", "Sled Push"],
-    "Medicine Ball Slam": ["Battle Rope Slam", "Medicine Ball Wall Throw", "Sled Push"],
-    "Goblet Squat to Press": ["Goblet Squat", "Sled Push", "Box Step-Up with Knee Drive"],
-    "Sled Push": ["Box Step-Up with Knee Drive", "Goblet Squat to Press", "Leg Press"],
-    "Flat Dumbbell Press": ["Flat Machine Press", "Smith Machine Flat Press", "Plate-Loaded Chest Press"],
-    "Incline Dumbbell Press": ["Incline Machine Press", "Smith Incline Press", "Plate-Loaded Chest Press"],
-    "Machine Chest Fly": ["Flat Machine Press", "Incline Machine Press", "Plate-Loaded Chest Press"],
-    "Chest-Supported Dumbbell Row": ["Seated Cable Row", "Machine Row", "Single-Arm Lat Pulldown"],
-    "Single-Arm Dumbbell Row": ["Seated Cable Row", "Machine Row", "Chest-Supported Dumbbell Row"],
-    "Seated Cable Row": ["Machine Row", "Single-Arm Dumbbell Row", "Chest-Supported Dumbbell Row"],
-    "Close-Grip Seated Cable Row": ["Machine Row", "Seated Cable Row", "Single-Arm Dumbbell Row"],
-    "Smith Machine Squat": ["Pendulum Squat", "Goblet Squat", "Leg Press"],
-    "Hack Squat": ["Leg Press", "Pendulum Squat", "Walking Lunge"],
-    Squat: ["Pendulum Squat", "Goblet Squat", "Leg Press"],
-    "Leg Press (Glute Bias)": ["Leg Press High Foot Placement", "Smith Machine Hip Thrust", "Walking Lunge"],
-    "Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
-    "Machine Shoulder Press": ["Plate-Loaded Shoulder Press", "Seated Dumbbell Shoulder Press", "Cable Lateral Raise"],
-    "Seated Dumbbell Shoulder Press": ["Plate-Loaded Shoulder Press", "Machine Shoulder Press", "Cable Lateral Raise"],
-    "Cable Tricep Pushdown": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Cable Tricep Extension"],
-    "Overhead Cable Tricep Extension": ["Single-Arm Cable Extension", "Rope Pushdown", "Cable Skull Crusher"],
-    "Cable Triceps Extension": ["Rope Pushdown", "Single-Arm Cable Extension", "Overhead Rope Extension"],
-    "Cable Skull Crusher": ["Overhead Cable Tricep Extension", "Rope Pushdown", "Single-Arm Cable Extension"],
-    "Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
-    "Cable Bicep Curl": ["Cable Curl", "EZ-Bar Curl", "Preacher Curl"],
-    "Dumbbell Bicep Curl": ["Cable Curl", "Preacher Curl", "EZ-Bar Curl"],
-    "Machine Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
-    Hyperextensions: ["45 Degree Back Extension", "Back Hyperextensions", "Dumbbell Romanian Deadlift", "Seated Leg Curl"],
-  };
-
-function getSubstitutions(currentExerciseName: string, muscleGroup: string, library: ExerciseLibraryItem[]) {
-  const canonicalLibrary = buildCanonicalExerciseLibrary(library);
-  const preferredNames = substitutionHints[currentExerciseName] ?? [];
-  const preferred = preferredNames
-    .map((name) => findExerciseLibraryItemByName(canonicalLibrary, name))
-    .filter((item): item is ExerciseLibraryItem => Boolean(item));
-
-  const fallback = canonicalLibrary.filter(
-    (item) =>
-      item.muscleGroup === muscleGroup &&
-      !areEquivalentExerciseNames(item.name, currentExerciseName) &&
-      !preferred.some((option) => option.id === item.id),
-  );
-
-  return [...preferred, ...fallback].slice(0, 3);
-}
 
 function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
   const index = sets.findIndex((set) => !set.completed);
@@ -220,6 +155,7 @@ export function WorkoutScreen({
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
   const [showPreviewExercises, setShowPreviewExercises] = useState(false);
+  const [showSwapOptions, setShowSwapOptions] = useState(false);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
@@ -237,6 +173,7 @@ export function WorkoutScreen({
     setLocalPreviewWorkoutId(null);
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
     setShowExercisePicker(true);
+    setShowSwapOptions(false);
   }, [activeWorkout?.id, activeWorkout?.userId, profile.id]);
 
   useEffect(() => {
@@ -264,6 +201,10 @@ export function WorkoutScreen({
     profile.id,
     showExercisePicker,
   ]);
+
+  useEffect(() => {
+    setShowSwapOptions(false);
+  }, [currentExerciseIndex, activeWorkout?.id]);
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
@@ -523,7 +464,8 @@ export function WorkoutScreen({
       !currentSet?.completed &&
       (previousSet.weight > 0 || previousSet.reps > 0),
   );
-  const substitutions = getSubstitutions(currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
+  const substitutions = getExerciseSwapOptions(profile.id, currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
+  const swapSectionLabel = getSwapSectionLabel(profile.id);
   const loadCue = getLoadCue(currentTemplate?.repRange);
   const completedExerciseCount = activeWorkout.exercises.filter(isExerciseComplete).length;
   const suggestedStart = currentTemplate ? getSuggestedStartingWeight(currentTemplate, userSessions) : null;
@@ -703,7 +645,7 @@ export function WorkoutScreen({
                     ? "Everything is logged. Finish when ready."
                     : currentExerciseComplete
                       ? "This exercise is done. Pick the next one."
-                      : "Log the set and keep the flow moving."}
+                      : "Keep the session moving."}
                 </p>
             </div>
             <button
@@ -733,10 +675,12 @@ export function WorkoutScreen({
           {currentExerciseComplete ? "Exercise complete." : `Targets ${currentExercise.muscleGroup}`}
         </p>
         {suggestedStart ? (
-          <p className="mt-1 text-sm text-muted">
-            Suggested start: <span className="text-text">{suggestedStart.suggestedWeight}kg</span> from last time&apos;s{" "}
-            {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
-          </p>
+          <div className="mt-2 rounded-[20px] border border-white/6 bg-white/[0.025] px-3 py-2.5">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Starting point</p>
+            <p className="mt-1 text-sm text-white/76">
+              {suggestedStart.suggestedWeight}kg from {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
+            </p>
+          </div>
         ) : null}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -797,22 +741,31 @@ export function WorkoutScreen({
           ) : null}
 
           {substitutions.length ? (
-          <div className="mt-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted">Swap options</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-white/42">Same target, easier fit</p>
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {substitutions.map((option) => (
-                <button
-                  key={option.id}
-                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
-                  onClick={() => onSwapExercise(currentExerciseIndex, option.id)}
-                >
-                  {option.name}
-                </button>
-              ))}
-            </div>
+          <div className="mt-2.5 rounded-[22px] border border-white/6 bg-white/[0.025] px-3 py-3">
+            <button
+              type="button"
+              onClick={() => setShowSwapOptions((value) => !value)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <p className="text-sm text-muted">Swap options</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/42">{swapSectionLabel}</p>
+              </div>
+              <span className="text-sm text-white/50">{showSwapOptions ? "Hide" : `${substitutions.length} choices`}</span>
+            </button>
+            {showSwapOptions ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {substitutions.map((option) => (
+                  <button
+                    key={option.id}
+                    className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                    onClick={() => onSwapExercise(currentExerciseIndex, option.id)}
+                  >
+                    {option.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -865,14 +818,14 @@ export function WorkoutScreen({
             setShowExitConfirmation(true);
           }}
         >
-          Exit Session
+          Save / exit
         </button>
         <button
           className="rounded-[22px] bg-[var(--card-strong)] px-3 py-2.5 text-sm font-medium text-text"
           onClick={() => setShowExercisePicker(true)}
         >
           <div className="flex items-center justify-center gap-2">
-            Pick Exercise
+            Exercises
             <ChevronRight className="h-4 w-4" />
           </div>
           <p className="caption-text mt-1 text-muted">

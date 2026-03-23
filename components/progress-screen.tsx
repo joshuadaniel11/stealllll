@@ -140,6 +140,7 @@ export function ProgressScreen({
 }) {
   const [showAllGoalCards, setShowAllGoalCards] = useState(false);
   const [showSecondarySignals, setShowSecondarySignals] = useState(false);
+  const [showDetailSections, setShowDetailSections] = useState(false);
   const {
     calendarRows,
     nextFocusDestination,
@@ -343,123 +344,146 @@ export function ProgressScreen({
 
       <ScrollReveal delay={122}>
         <Card className="progress-panel">
-          <SectionHeader
-            eyebrow="Trend"
-            title={showingBodyMetrics ? "Body metrics" : "Training volume"}
-            aside={
-              <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+          <button
+            type="button"
+            onClick={() => setShowDetailSections((value) => !value)}
+            className="flex w-full items-start justify-between gap-3 text-left"
+          >
+            <div>
+              <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
+              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
+                {showingBodyMetrics ? "Body metrics and saved sessions" : "Trend and saved sessions"}
+              </h3>
+              <p className="mt-2 text-[14px] leading-6 text-white/58">
                 {showingBodyMetrics
-                  ? `${bodyweightTrend.length} entries`
-                  : trendData.length
-                    ? `Last ${trendData.length} sessions`
-                    : "No sessions yet"}
-              </div>
-            }
-          />
-          <div className="mt-4 h-52">
-            {showingBodyMetrics ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={bodyweightTrend}>
-                  <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 20,
-                      border: "1px solid var(--stroke)",
-                      background: "var(--card)",
-                      backdropFilter: "blur(18px)",
-                    }}
-                  />
-                  <Line type="monotone" dataKey="bodyweight" stroke="var(--accent)" strokeWidth={3} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="bodyFat" stroke="var(--muted)" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : trendData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="volumeFill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
-                  <Tooltip
-                    cursor={{ stroke: "rgba(91,142,255,0.3)" }}
-                    contentStyle={{
-                      borderRadius: 20,
-                      border: "1px solid var(--stroke)",
-                      background: "var(--card)",
-                      backdropFilter: "blur(18px)",
-                    }}
-                  />
-                  <Area type="monotone" dataKey="volume" stroke="var(--accent)" fill="url(#volumeFill)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty-state h-full">Log a full workout and your first clean trend will appear here.</div>
-            )}
-          </div>
-        </Card>
-      </ScrollReveal>
+                  ? "Trend, check-ins, and saved workouts when you want the extra detail."
+                  : "Volume trend and saved workouts when you want the extra detail."}
+              </p>
+            </div>
+            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+              {showDetailSections ? "Hide" : "Open"}
+            </div>
+          </button>
 
-      {(showingBodyMetrics || measurements.length > 0) ? (
-        <ScrollReveal delay={170}>
-          <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
-        </ScrollReveal>
-      ) : null}
-
-      {recentSessions.length ? (
-        <ScrollReveal delay={200}>
-          <Card className="progress-panel">
-            <SectionHeader
-              eyebrow="Recent sessions"
-              title="Saved workouts"
-              aside={
-                <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-                  {recentSessions.length} tracked
-                </div>
-              }
-            />
-            <div className="mt-4 space-y-3">
-              {recentSessions.map((session) => (
-                <div key={session.id} className="progress-session-row rounded-[24px] border px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-[15px] font-semibold text-white/92">{session.workoutName}</p>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                            session.partial ? "bg-white/10 text-white/84" : "bg-white/6 text-white/64"
-                          }`}
-                        >
-                          {session.partial ? "Partial" : "Full"}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[13px] text-white/48">
-                        {[
-                          formatDate(session.performedAt),
-                          `${session.durationMinutes} min`,
-                          `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`,
-                        ].join(" · ")}
-                      </p>
+          {showDetailSections ? (
+            <div className="mt-5 space-y-5">
+              <div>
+                <SectionHeader
+                  eyebrow="Trend"
+                  title={showingBodyMetrics ? "Body metrics" : "Training volume"}
+                  aside={
+                    <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                      {showingBodyMetrics
+                        ? `${bodyweightTrend.length} entries`
+                        : trendData.length
+                          ? `Last ${trendData.length} sessions`
+                          : "No sessions yet"}
                     </div>
-                    <button
-                      className="rounded-[18px] bg-white/7 px-3 py-2 text-sm font-medium text-white/78"
-                      onClick={() => onEditSession(session.id)}
-                    >
-                      Edit
-                    </button>
+                  }
+                />
+                <div className="mt-4 h-52">
+                  {showingBodyMetrics ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={bodyweightTrend}>
+                        <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                        <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 20,
+                            border: "1px solid var(--stroke)",
+                            background: "var(--card)",
+                            backdropFilter: "blur(18px)",
+                          }}
+                        />
+                        <Line type="monotone" dataKey="bodyweight" stroke="var(--accent)" strokeWidth={3} dot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="bodyFat" stroke="var(--muted)" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : trendData.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendData}>
+                        <defs>
+                          <linearGradient id="volumeFill" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.45} />
+                            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="rgba(148,163,184,0.16)" vertical={false} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                        <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
+                        <Tooltip
+                          cursor={{ stroke: "rgba(91,142,255,0.3)" }}
+                          contentStyle={{
+                            borderRadius: 20,
+                            border: "1px solid var(--stroke)",
+                            background: "var(--card)",
+                            backdropFilter: "blur(18px)",
+                          }}
+                        />
+                        <Area type="monotone" dataKey="volume" stroke="var(--accent)" fill="url(#volumeFill)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="empty-state h-full">Log a full workout and your first clean trend will appear here.</div>
+                  )}
+                </div>
+              </div>
+
+              {(showingBodyMetrics || measurements.length > 0) ? (
+                <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
+              ) : null}
+
+              {recentSessions.length ? (
+                <div>
+                  <SectionHeader
+                    eyebrow="Recent sessions"
+                    title="Saved workouts"
+                    aside={
+                      <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                        {recentSessions.length} tracked
+                      </div>
+                    }
+                  />
+                  <div className="mt-4 space-y-3">
+                    {recentSessions.map((session) => (
+                      <div key={session.id} className="progress-session-row rounded-[24px] border px-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[15px] font-semibold text-white/92">{session.workoutName}</p>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                                  session.partial ? "bg-white/10 text-white/84" : "bg-white/6 text-white/64"
+                                }`}
+                              >
+                                {session.partial ? "Partial" : "Full"}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[13px] text-white/48">
+                              {[
+                                formatDate(session.performedAt),
+                                `${session.durationMinutes} min`,
+                                `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`,
+                              ].join(" · ")}
+                            </p>
+                          </div>
+                          <button
+                            className="rounded-[18px] bg-white/7 px-3 py-2 text-sm font-medium text-white/78"
+                            onClick={() => onEditSession(session.id)}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              ) : null}
             </div>
-          </Card>
-        </ScrollReveal>
-      ) : null}
+          ) : null}
+        </Card>
+      </ScrollReveal>
     </>
   );
 }

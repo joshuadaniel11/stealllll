@@ -120,6 +120,7 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
+  const moreSummary = dailyMobilityPrompt ? "Note, mobility, and quieter extras." : "Note and quieter extras.";
 
   return (
     <div className="space-y-4 pb-28">
@@ -216,7 +217,7 @@ export function HomeScreen({
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
                 More
               </p>
-              <p className="text-sm leading-6 text-white/54">Note, countdown, mobility, and extras.</p>
+              <p className="text-sm leading-6 text-white/54">{moreSummary}</p>
             </div>
             <ChevronDown
               className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -232,10 +233,6 @@ export function HomeScreen({
                 <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
                 <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
               </Card>
-
-              {recentUpdateBadge ? (
-                <p className="text-[13px] leading-6 text-white/48">{recentUpdateBadge.detail}</p>
-              ) : null}
 
               {dailyMobilityPrompt ? (
                 <DailyMobilityPromptCard
@@ -260,6 +257,10 @@ export function HomeScreen({
                   }`}
                 />
               </button>
+
+              {recentUpdateBadge ? (
+                <p className="text-[13px] leading-6 text-white/44">{recentUpdateBadge.detail}</p>
+              ) : null}
 
               {showExtras ? (
               <>

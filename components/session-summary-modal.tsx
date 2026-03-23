@@ -75,15 +75,15 @@ export function SessionSummaryModal({
           </ScrollReveal>
           <ScrollReveal delay={70} y={18} scale={0.994}>
             <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+              <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm text-muted">Length</p>
                 <p className="mt-2 text-lg font-semibold text-text">{summary.durationMinutes} min</p>
               </div>
-              <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+              <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm text-muted">Sets</p>
                 <p className="mt-2 text-lg font-semibold text-text">{summary.completedSets}</p>
               </div>
-              <div className="rounded-[28px] bg-[var(--card-strong)] px-4 py-4">
+              <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm text-muted">Felt</p>
                 <p className="mt-2 text-lg font-semibold text-text">{summary.feeling}</p>
               </div>

@@ -292,14 +292,11 @@ export function TrainingLoadCard({
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
           />
-          <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] uppercase tracking-[0.12em] text-white/34">
-            <div className="rounded-full bg-white/[0.04] px-3 py-2 text-center">Tuned targets</div>
-            <div className="rounded-full bg-amber-300/10 px-3 py-2 text-center text-amber-100">Needs work</div>
-            <div className="rounded-full bg-emerald-400/10 px-3 py-2 text-center text-emerald-100">Ahead</div>
-          </div>
+          <p className="mt-3 text-[12px] leading-6 text-white/42">
+            Lit zones show what has actually been trained this week.
+          </p>
         </div>
-
-        <ZoneContributorPanel metric={inspectedMetric} />
+        {selectedZone ? <ZoneContributorPanel metric={inspectedMetric} /> : null}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">

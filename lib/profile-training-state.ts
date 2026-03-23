@@ -479,13 +479,20 @@ function buildTrainingInsights(
   const recoverySoft = metrics.recoveryIndex.score < 68;
   const consistencyStrong = metrics.consistencyScore.score >= 75;
   const undercovered = (primaryFocusMetric?.coveragePct ?? 0) < 100;
+  const phase1Primary = metrics.phase1Insights.primaryInsight;
+  const phase2Recovery = metrics.phase2Insights.recoveryInsight ?? metrics.phase2Insights.fatigueInsight;
+  const phase3RepRange = metrics.phase3Insights.repRangeInsight;
 
   const homeAction = recoveryLow
-    ? `Recovery is slightly low. Keep ${focusDirection.toLowerCase()} clean.`
-    : `Give ${primaryFocusLabel.toLowerCase()} more this week.`;
+    ? phase2Recovery ?? `Recovery is slightly low. Keep ${focusDirection.toLowerCase()} clean.`
+    : phase1Primary && undercovered
+      ? phase1Primary
+      : phase3RepRange && undercovered
+        ? phase3RepRange
+      : `Give ${primaryFocusLabel.toLowerCase()} more this week.`;
 
   const completionNext = recoverySoft
-    ? `Recovery is slightly low. Shift to ${focusDirection.toLowerCase()} next.`
+    ? phase2Recovery ?? `Recovery is slightly low. Shift to ${focusDirection.toLowerCase()} next.`
     : strongestCovered && undercovered
       ? `${strongestCovered} are covered. Shift to ${focusDirection.toLowerCase()} next.`
       : `Keep the week moving toward ${focusDirection.toLowerCase()}.`;
@@ -513,10 +520,12 @@ function buildTrainingInsights(
             : `Coverage is building, with ${focusDirection.toLowerCase()} still next.`;
 
   const progressSignal =
-    progressLeader && progressLeader.score > 2
-      ? `${progressLeader.label} work is trending up.`
-      : progressLaggard && undercovered
-        ? `${progressLaggard.label} is flat. Give it more clean work.`
+    phase3RepRange && undercovered
+      ? phase3RepRange
+      : progressLeader && progressLeader.score > 2
+        ? `${progressLeader.label} work is trending up.`
+        : progressLaggard && undercovered
+          ? `${progressLaggard.label} is flat. Give it more clean work.`
         : consistencyStrong
           ? "Consistency is holding. Keep the rhythm."
           : profile.id === "natasha"

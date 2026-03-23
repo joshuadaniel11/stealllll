@@ -22,6 +22,8 @@ type EllipseShape = {
 
 type ShapeDef = PathShape | EllipseShape;
 
+const SECONDARY_PHONE_ZONES = new Set<TrainingLoadZone>(["biceps", "triceps", "forearms", "calves"]);
+
 const FRONT_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "frontDelts", d: "M39 51C40 47 45 45 49 46C52 47 54 50 54 54L50 68C46 67 41 63 39 51Z" },
   { kind: "path", zone: "frontDelts", d: "M81 51C80 47 75 45 71 46C68 47 66 50 66 54L70 68C74 67 79 63 81 51Z" },
@@ -283,6 +285,11 @@ export function BodyActivationVisual({
           <rect x="0" y="0" width="120" height="34" fill="url(#body-fade-top)" />
           {shapes.map((shape, index) => {
             const style = getZoneStyle(metricsByZone[shape.zone]);
+            const metric = metricsByZone[shape.zone];
+            const isSecondary = SECONDARY_PHONE_ZONES.has(shape.zone);
+            if (isSecondary && !metric?.percentage && selectedZone !== shape.zone) {
+              return null;
+            }
             return (
               <Shape
                 key={`${shape.zone}-${index}`}
