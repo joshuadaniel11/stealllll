@@ -344,12 +344,12 @@ export function WorkoutScreen({
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-3">
                     <button
-                      className="rounded-[20px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
+                      className="rounded-full px-2 py-1 text-sm text-white/46 transition hover:text-white/76"
                       onClick={() => setLocalPreviewWorkoutId(workout.id)}
                     >
-                      Preview
+                      Open
                     </button>
                     <button
                       className="rounded-[20px] bg-white px-3 py-2 text-sm font-semibold text-black"

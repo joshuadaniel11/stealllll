@@ -123,7 +123,6 @@ export function ProgressScreen({
     progressSignals,
     recentSessions,
     suggestedFocusSession,
-    totalWorkouts,
     trainingLoad,
     trendData,
     userSessions,
@@ -213,12 +212,6 @@ export function ProgressScreen({
               </div>
             }
           />
-
-          <div className="progress-summary-card mt-4 rounded-[22px] border px-4 py-4">
-            <p className="text-[12px] font-medium text-white/52">This week&apos;s read</p>
-            <p className="mt-2 text-[14px] leading-6 text-white/78">{goalDashboard.summary}</p>
-          </div>
-
           <div className="mt-4 grid grid-cols-1 gap-2.5">
             {goalDashboard.cards.map((card) => (
               <DashboardMetricCard key={card.label} card={card} />
@@ -253,7 +246,7 @@ export function ProgressScreen({
             description={profile.goalSummary}
           />
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <MiniMetric label="Total workouts" value={`${totalWorkouts}`} />
+            <MiniMetric label="Focus" value={progressSignals.primarySignal.value} />
             <MiniMetric label="This week" value={`${weeklySummary.workoutsCompleted}`} />
             <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
           </div>
@@ -265,6 +258,18 @@ export function ProgressScreen({
                 <p className="text-[13px] font-medium text-white/72">{progressSignals.leadingIndicator.value}</p>
               </div>
               <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.leadingIndicator.detail}</p>
+            </div>
+            <div className="progress-summary-card rounded-[24px] border px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-medium text-white/52">{progressSignals.primarySignal.title}</p>
+                  <p className="mt-1 text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.value}</p>
+                </div>
+                <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
+                  Direction
+                </span>
+              </div>
+              <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.primarySignal.detail}</p>
             </div>
             <div className="progress-summary-card rounded-[24px] border px-4 py-4">
               <div className="flex items-start justify-between gap-3">
@@ -344,24 +349,6 @@ export function ProgressScreen({
               <div className="empty-state h-full">Log a full workout and your first clean trend will appear here.</div>
             )}
           </div>
-        </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={135}>
-        <Card className="progress-panel">
-          <SectionHeader eyebrow="Direction this week" title={progressSignals.primarySignal.title} />
-          <div className="progress-summary-card mt-4 rounded-[24px] border px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.detail}</p>
-              <p className="text-[13px] font-medium text-white/72">{progressSignals.primarySignal.value}</p>
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <MiniMetric label="Support" value={progressSignals.supportSignal.value} />
-            <MiniMetric label="PBs hit" value={`${weeklySummary.personalBests}`} />
-            <MiniMetric label="Load leader" value={weeklySummary.mostTrainedMuscleGroup} />
-          </div>
-          <p className="mt-3 text-[13px] leading-6 text-white/56">{progressSignals.supportSignal.detail}</p>
         </Card>
       </ScrollReveal>
 

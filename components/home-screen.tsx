@@ -181,17 +181,7 @@ export function HomeScreen({
           </div>
 
           {recentUpdateBadge ? (
-            <div className="training-refresh-chip rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/46">
-                  {recentUpdateBadge.label}
-                </p>
-                <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/54">
-                  In sync
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-white/60">{recentUpdateBadge.detail}</p>
-            </div>
+            <p className="text-sm leading-6 text-white/52">{recentUpdateBadge.detail}</p>
           ) : null}
 
           {showMoveChoices ? (
@@ -286,16 +276,12 @@ export function HomeScreen({
 
           {showDetails ? (
             <div className="space-y-4">
-              <StrengthPredictionCard predictions={strengthPredictions} />
-
-              <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
-
               <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                    Recent workouts
+                    Recent
                   </p>
-                  <span className="text-xs text-white/40">Last 2</span>
+                  <span className="text-xs text-white/40">Sessions + shared</span>
                 </div>
                 {recentWorkouts.length ? (
                   <div className="space-y-2">
@@ -332,26 +318,18 @@ export function HomeScreen({
                     No sessions logged yet. Your recent workouts will appear here.
                   </p>
                 )}
-              </Card>
-
-              <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                  Together
-                </p>
-                <p className="text-sm font-medium text-white/88">
-                  {sharedSummary.weeklyHighlight}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <MiniMetric
-                    label="Shared streak"
-                    value={`${sharedSummary.teamStreak}w`}
-                  />
-                  <MiniMetric
-                    label="This week"
-                    value={String(sharedSummary.combinedWorkouts)}
-                  />
+                <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Together</p>
+                    <p className="text-[11px] text-white/42">
+                      {sharedSummary.teamStreak}w • {sharedSummary.combinedWorkouts} this week
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-white/82">
+                    {sharedSummary.weeklyHighlight}
+                  </p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 pt-1">
                   {sharedSummary.recentMilestones.slice(0, 3).map((milestone) => (
                     <div
                       key={milestone}
@@ -360,6 +338,10 @@ export function HomeScreen({
                       {milestone}
                     </div>
                   ))}
+                </div>
+                <div className="grid grid-cols-1 gap-3 pt-1">
+                  <StrengthPredictionCard predictions={strengthPredictions} />
+                  <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
                 </div>
               </Card>
             </div>
