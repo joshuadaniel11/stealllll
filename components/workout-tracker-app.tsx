@@ -4,21 +4,25 @@ import { startTransition, useEffect, useMemo, useState, type CSSProperties } fro
 import clsx from "clsx";
 import { Activity, ChartColumn, Dumbbell, Settings } from "lucide-react";
 
+import { BibleVerseModal } from "@/components/bible-verse-modal";
 import { CompletionCelebration } from "@/components/completion-celebration";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
+import { HomeScreen } from "@/components/home-screen";
 import { EditWorkoutModal } from "@/components/edit-workout-modal";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { ProfileEntryScreen } from "@/components/profile-entry-screen";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionSummaryModal, type SessionSummary } from "@/components/session-summary-modal";
 import { SettingsModal } from "@/components/settings-modal";
-import { TodaySessionScreen } from "@/components/today-session-screen";
 import { Card } from "@/components/ui";
 import { WorkoutFeelingModal } from "@/components/workout-feeling-modal";
 import { WorkoutScreen } from "@/components/workout-screen";
+import { getCoupleIntelligenceSummary } from "@/lib/couple-intelligence";
 import {
+  addStretchCompletion,
   appendSession,
   clearActiveWorkoutForUser,
+  removeStretchCompletionsForDay,
   replaceSession,
   resetProfileProgressState,
   saveMeasurementEntry,
@@ -36,6 +40,7 @@ import {
   saveLockedProfile,
   saveState,
 } from "@/lib/storage";
+import { getStrengthPredictions } from "@/lib/strength-prediction";
 import { buildCompletedSession, buildSessionSummary, countLoggedSets } from "@/lib/workout-session";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type {
@@ -51,7 +56,7 @@ import type {
   WorkoutSession,
 } from "@/lib/types";
 
-type TabId = "session" | "workout" | "progress";
+type TabId = "home" | "workout" | "progress";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -59,12 +64,90 @@ type DeferredInstallPrompt = Event & {
 };
 
 const navItems = [
-  { id: "session" as const, label: "Session", icon: Activity },
+  { id: "home" as const, label: "Home", icon: Activity },
   { id: "workout" as const, label: "Workout", icon: Dumbbell },
   { id: "progress" as const, label: "Progress", icon: ChartColumn },
 ];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function getNextWorkoutFromSessions(profile: Profile, sessions: WorkoutSession[]) {
+  if (!sessions.length) {
+    return profile.workoutPlan[0];
+  }
+
+  const lastSession = sessions[0];
+  const currentIndex = profile.workoutPlan.findIndex((workout) => workout.id === lastSession.workoutDayId);
+
+  if (currentIndex === -1) {
+    return profile.workoutPlan[0];
+  }
+
+  return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
+}
+
+function getTodayWorkout(profile: Profile, sessions: WorkoutSession[], overrideWorkoutId: string | null) {
+  if (overrideWorkoutId) {
+    return profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ?? getNextWorkoutFromSessions(profile, sessions);
+  }
+
+  return getNextWorkoutFromSessions(profile, sessions);
+}
+
+function getDaysSinceLastWorkout(sessions: WorkoutSession[]) {
+  if (!sessions.length) {
+    return null;
+  }
+
+  const lastSessionDate = new Date(sessions[0].performedAt);
+  const today = new Date();
+  lastSessionDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - lastSessionDate.getTime()) / 86400000);
+}
+
+function getWeddingCountdown() {
+  const today = new Date();
+  const weddingDate = new Date("2026-11-02T00:00:00");
+
+  if (today >= weddingDate) {
+    return { months: 0, days: 0, label: "The day is here." };
+  }
+
+  const cursor = new Date(today);
+  let months = 0;
+
+  while (true) {
+    const next = new Date(cursor);
+    next.setMonth(next.getMonth() + 1);
+    if (next <= weddingDate) {
+      months += 1;
+      cursor.setMonth(cursor.getMonth() + 1);
+      continue;
+    }
+    break;
+  }
+
+  const days = Math.max(0, Math.floor((weddingDate.getTime() - cursor.getTime()) / 86400000));
+  const label =
+    months === 0 && days <= 14
+      ? "Almost there."
+      : "Counting down to your wedding day together.";
+
+  return { months, days, label };
+}
+
+function getTodayStretch(profile: Profile) {
+  const today = days[new Date().getDay()];
+  return profile.stretchPlan.find((stretch) => stretch.dayLabel === today) ?? profile.stretchPlan[0];
+}
+
+function isSameLocalDay(a: string, b: Date) {
+  return new Date(a).toDateString() === b.toDateString();
+}
+
+
 function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = []): SetLog[] {
   return Array.from({ length: exercise.sets }, (_, index) => ({
     id: `${exercise.id}-${index}-${Date.now()}`,
@@ -144,45 +227,6 @@ function toSuggestedFocusActiveWorkout(
   };
 }
 
-function toActiveWorkoutFromSavedSession(
-  session: WorkoutSession,
-  workoutTemplate: WorkoutPlanDay | undefined,
-): ActiveWorkout {
-  const templateExercises = workoutTemplate?.exercises;
-
-  return {
-    id: `active-resume-${Date.now()}`,
-    userId: session.userId,
-    startedAt: new Date().toISOString(),
-    workoutDayId: session.workoutDayId,
-    workoutName: normalizeCompletedWorkoutName(session.workoutName),
-    templateExercises,
-    exercises: session.exercises.map((exercise, exerciseIndex) => {
-      const templateExercise = templateExercises?.[exerciseIndex];
-      const targetSetCount = templateExercise?.sets ?? exercise.sets.length;
-      const sets = Array.from({ length: targetSetCount }, (_, setIndex) => {
-        const existingSet = exercise.sets[setIndex];
-        return existingSet
-          ? { ...existingSet, id: `${exercise.exerciseId}-${setIndex}-${Date.now()}` }
-          : {
-              id: `${exercise.exerciseId}-${setIndex}-${Date.now()}`,
-              weight: exercise.sets.at(-1)?.weight ?? 0,
-              reps: 0,
-              completed: false,
-            };
-      });
-
-      return {
-        exerciseId: templateExercise?.id ?? exercise.exerciseId,
-        exerciseName: exercise.exerciseName,
-        muscleGroup: exercise.muscleGroup,
-        note: exercise.note ?? templateExercise?.note ?? "",
-        sets,
-      };
-    }),
-  };
-}
-
 function normalizeCompletedWorkoutName(workoutName: string) {
   return workoutName.replace(/\s*\(Partial\)$/i, "");
 }
@@ -227,8 +271,9 @@ export function WorkoutTrackerApp() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [isIosInstallPath, setIsIosInstallPath] = useState(false);
   const [lockedProfile, setLockedProfile] = useState<UserId | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("session");
+  const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [showDailyVerse, setShowDailyVerse] = useState(false);
   const [showWorkoutFeelingPrompt, setShowWorkoutFeelingPrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -244,6 +289,8 @@ export function WorkoutTrackerApp() {
   } | null>(null);
   const [hasEnteredProfile, setHasEnteredProfile] = useState(false);
   const [profileEntryTransition, setProfileEntryTransition] = useState<UserId | null>(null);
+  const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
+  const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<RecentTrainingUpdate | null>(null);
 
@@ -386,25 +433,43 @@ export function WorkoutTrackerApp() {
     () => state.profiles.find((profile) => profile.id === state.selectedUserId) ?? state.profiles[0],
     [state.profiles, state.selectedUserId],
   );
-  const workoutOverride = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
 
   const trainingState = useMemo(
-    () =>
-      getProfileTrainingState(selectedProfile, state.sessions, state.exerciseLibrary, {
-        workoutOverrideId: workoutOverride,
-        activeWorkout: state.activeWorkout,
-      }),
-    [selectedProfile, state.activeWorkout, state.exerciseLibrary, state.sessions, workoutOverride],
+    () => getProfileTrainingState(selectedProfile, state.sessions, state.exerciseLibrary),
+    [selectedProfile, state.exerciseLibrary, state.sessions],
   );
   const {
+    nextFocusDestination,
+    recentWorkouts,
     recentSessions,
     streak,
-    todaySession,
+    suggestedFocusSession,
     totalWorkouts,
     trendData,
     userSessions,
+    weeklyCount,
     weeklySummary: dynamicWeeklySummary,
   } = trainingState;
+  const workoutOverride = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
+  const todaysWorkout = useMemo(
+    () => getTodayWorkout(selectedProfile, userSessions, workoutOverride),
+    [selectedProfile, userSessions, workoutOverride],
+  );
+  const todaysStretch = useMemo(() => getTodayStretch(selectedProfile), [selectedProfile]);
+  const strengthPredictions = useMemo(
+    () => getStrengthPredictions(selectedProfile.id, userSessions),
+    [selectedProfile.id, userSessions],
+  );
+  const weddingCountdown = useMemo(() => getWeddingCountdown(), []);
+  const dynamicSharedSummary = useMemo(
+    () =>
+      getCoupleIntelligenceSummary({
+        sessions: state.sessions,
+        measurements: state.measurements,
+        weddingCountdown,
+      }),
+    [state.measurements, state.sessions, weddingCountdown],
+  );
   const installState = useMemo(
     () => ({
       isStandalone,
@@ -413,6 +478,14 @@ export function WorkoutTrackerApp() {
     }),
     [deferredInstallPrompt, isIosInstallPath, isStandalone],
   );
+  const workoutRhythmNote = useMemo(() => {
+    const gapDays = getDaysSinceLastWorkout(userSessions);
+    if (gapDays === null || gapDays < 3) {
+      return workoutOverride ? `Moved into place. Pick up with ${todaysWorkout.dayLabel} when ready.` : null;
+    }
+
+    return `It has been ${gapDays} days. Pick up with ${todaysWorkout.dayLabel} when ready.`;
+  }, [todaysWorkout.dayLabel, userSessions, workoutOverride]);
   const activeWorkoutTemplate = useMemo(() => {
     const matchedWorkout = selectedProfile.workoutPlan.find(
       (workout) => workout.id === state.activeWorkout?.workoutDayId,
@@ -457,6 +530,22 @@ export function WorkoutTrackerApp() {
     [editingSessionId, state.sessions],
   );
 
+
+  const dailyVerse = useMemo(() => {
+    const dayOfYear = Math.floor(
+      (new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000,
+    );
+    return state.bibleVerses[dayOfYear % state.bibleVerses.length];
+  }, [state.bibleVerses]);
+
+  const stretchCompletedToday = useMemo(
+    () =>
+      state.stretchCompletions[selectedProfile.id].some((entry) =>
+        isSameLocalDay(entry.date, new Date()),
+      ),
+    [selectedProfile.id, state.stretchCompletions],
+  );
+
   const startWorkout = (workout: WorkoutPlanDay) => {
     if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
       const activeOwner =
@@ -468,6 +557,8 @@ export function WorkoutTrackerApp() {
 
     if (state.activeWorkout?.userId === selectedProfile.id) {
       showToast(`${state.activeWorkout.workoutName} is still open. Resume it before starting another workout.`);
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
       startTransition(() => setActiveTab("workout"));
       return;
     }
@@ -482,8 +573,37 @@ export function WorkoutTrackerApp() {
         current.exerciseSwapMemory[selectedProfile.id],
       ),
     }));
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
     softHaptic(10);
     startTransition(() => setActiveTab("workout"));
+  };
+
+  const skipWorkout = () => {
+    if (typeof window !== "undefined" && !window.confirm(`Skip ${todaysWorkout.dayLabel} for now?`)) {
+      return;
+    }
+    const currentIndex = selectedProfile.workoutPlan.findIndex((workout) => workout.id === todaysWorkout.id);
+    const nextWorkout = selectedProfile.workoutPlan[(currentIndex + 1) % selectedProfile.workoutPlan.length];
+    const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
+
+    setState((current) => setWorkoutOverride(current, selectedProfile.id, nextWorkout.id));
+    showToast(`${todaysWorkout.dayLabel} was skipped. ${nextWorkout.dayLabel} is queued up next.`, {
+      actionLabel: "Undo",
+      actionKind: "undo-schedule",
+      pendingScheduleUndo: { userId: selectedProfile.id, previousNextWorkoutId },
+    });
+  };
+
+  const moveWorkout = (workoutId: string) => {
+    const workout = selectedProfile.workoutPlan.find((item) => item.id === workoutId);
+    const previousNextWorkoutId = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
+    setState((current) => setWorkoutOverride(current, selectedProfile.id, workoutId));
+    showToast(`${workout?.dayLabel ?? "Workout"} is now lined up next.`, {
+      actionLabel: "Undo",
+      actionKind: "undo-schedule",
+      pendingScheduleUndo: { userId: selectedProfile.id, previousNextWorkoutId },
+    });
   };
 
   const openWorkoutCompletionPrompt = () => {
@@ -504,7 +624,9 @@ export function WorkoutTrackerApp() {
     }
     setState((current) => clearActiveWorkoutForUser(current, selectedProfile.id));
     setShowWorkoutFeelingPrompt(false);
-    startTransition(() => setActiveTab("session"));
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
+    startTransition(() => setActiveTab("home"));
   };
 
   const savePartialWorkout = () => {
@@ -533,11 +655,13 @@ export function WorkoutTrackerApp() {
       }),
     );
     setShowWorkoutFeelingPrompt(false);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
     setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
     markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
     showToast("Progress saved. Training state updated.");
     softHaptic([8, 28, 8]);
-    startTransition(() => setActiveTab("session"));
+    startTransition(() => setActiveTab("home"));
   };
 
   const completeWorkout = (feeling: WorkoutSession["feeling"]) => {
@@ -559,13 +683,15 @@ export function WorkoutTrackerApp() {
       }),
     );
     setShowWorkoutFeelingPrompt(false);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
     setSessionSummary(buildSessionSummary(completedSession, {
       prCount: prSummary.count,
       prHighlights: prSummary.highlights,
     }));
     markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "complete");
     softHaptic([10, 36, 12]);
-    startTransition(() => setActiveTab("session"));
+    startTransition(() => setActiveTab("home"));
   };
 
   const saveMeasurement = (entry: Omit<AppState["measurements"][UserId][number], "id" | "date">) => {
@@ -597,7 +723,7 @@ export function WorkoutTrackerApp() {
       }
       const seed = createSeedState();
       setState(mergeStateWithSeed(seed, parsed));
-      startTransition(() => setActiveTab("session"));
+      startTransition(() => setActiveTab("home"));
       showToast("Backup imported successfully.");
     } catch {
       showToast("Import failed. Please use a valid workout backup file.");
@@ -706,6 +832,26 @@ export function WorkoutTrackerApp() {
     });
   };
 
+  const saveStretchCompletion = () => {
+    if (stretchCompletedToday) {
+      return;
+    }
+    setState((current) => addStretchCompletion(current, selectedProfile.id, todaysStretch.title));
+    showToast(`${selectedProfile.name} finished today's Bend stretch.`);
+  };
+
+  const toggleStretchCompletion = () => {
+    if (!stretchCompletedToday) {
+      saveStretchCompletion();
+      return;
+    }
+
+    setState((current) =>
+      removeStretchCompletionsForDay(current, selectedProfile.id, (entry) => isSameLocalDay(entry.date, new Date())),
+    );
+    showToast(`${selectedProfile.name}'s Bend stretch was marked undone.`);
+  };
+
   const closeOnboarding = () => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(ONBOARDING_KEY, "true");
@@ -724,7 +870,7 @@ export function WorkoutTrackerApp() {
     setState((current) => resetProfileProgressState(current, selectedProfile.id, seed));
     showToast(`${selectedProfile.name}'s saved progress was reset on this phone.`);
     setShowSettings(false);
-    startTransition(() => setActiveTab("session"));
+    startTransition(() => setActiveTab("home"));
   };
 
   const resetAllData = () => {
@@ -738,7 +884,7 @@ export function WorkoutTrackerApp() {
     setShowSettings(false);
     setShowOnboarding(true);
     showToast("The app was reset to a clean start.");
-    startTransition(() => setActiveTab("session"));
+    startTransition(() => setActiveTab("home"));
   };
 
   const isJoshuaTheme = selectedProfile.id === "joshua";
@@ -759,11 +905,13 @@ export function WorkoutTrackerApp() {
     softHaptic(8);
     window.setTimeout(() => {
       setSelectedExerciseId(null);
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
       setShowSettings(false);
       setState((current) => setSelectedUserId(current, profileId));
       setHasEnteredProfile(true);
       setProfileEntryTransition(null);
-      startTransition(() => setActiveTab("session"));
+      startTransition(() => setActiveTab("home"));
     }, 850);
   };
 
@@ -784,6 +932,8 @@ export function WorkoutTrackerApp() {
 
   const returnToProfileEntry = () => {
     setSelectedExerciseId(null);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(null);
     setShowSettings(false);
     if (lockedProfile) {
       return;
@@ -870,20 +1020,14 @@ export function WorkoutTrackerApp() {
     showToast("Workout counted as done. Moving to the next day.");
   };
 
-  const openTodaySession = () => {
-    setSelectedExerciseId(null);
-    softHaptic(8);
-    startTransition(() => setActiveTab("session"));
-  };
+  const openNextFocusWorkout = () => {
+    if (!nextFocusDestination) {
+      showToast("No matching workout is available right now.");
+      return;
+    }
 
-  const regenerateTodaySession = () => {
-    setState((current) => setWorkoutOverride(current, selectedProfile.id, null));
-    showToast("Today's Session was refreshed from your live training state.");
-  };
-
-  const startTodaySession = () => {
     if (state.activeWorkout?.userId === selectedProfile.id) {
-      showToast(`${state.activeWorkout.workoutName} is still open. Resume it from Workout mode.`);
+      showToast(`Current workout still open. ${nextFocusDestination.workoutName} is the best next match.`);
       startTransition(() => setActiveTab("workout"));
       return;
     }
@@ -896,37 +1040,62 @@ export function WorkoutTrackerApp() {
       return;
     }
 
-    if (todaySession.status === "resume" && todaySession.partialSessionId) {
-      const savedSession = state.sessions.find((session) => session.id === todaySession.partialSessionId);
-      if (savedSession) {
-        const workoutTemplate = selectedProfile.workoutPlan.find((workout) => workout.id === todaySession.workoutId);
-        setState((current) => ({
-          ...current,
-          activeWorkout: toActiveWorkoutFromSavedSession(savedSession, workoutTemplate),
-        }));
-        softHaptic(10);
-        startTransition(() => setActiveTab("workout"));
-        return;
-      }
+    setSelectedExerciseId(null);
+    setSuggestedSessionPreview(false);
+    setWorkoutPreviewId(nextFocusDestination.workoutId);
+    softHaptic(8);
+    startTransition(() => setActiveTab("workout"));
+  };
+
+  const openSuggestedFocusSession = () => {
+    if (!suggestedFocusSession) {
+      showToast("No suggested session is available right now.");
+      return;
     }
 
-    if (todaySession.generatedSession && todaySession.canStartDirectly) {
+    if (state.activeWorkout?.userId === selectedProfile.id) {
+      showToast(`Current workout still open. ${suggestedFocusSession.actionLabel} when you're ready.`);
+      startTransition(() => setActiveTab("workout"));
+      return;
+    }
+
+    if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
+      const activeOwner =
+        state.profiles.find((profile) => profile.id === state.activeWorkout?.userId)?.name ??
+        "The other profile";
+      showToast(`${activeOwner} still has a workout in progress on this phone.`);
+      return;
+    }
+
+    if (suggestedFocusSession.canStartDirectly) {
       setState((current) => ({
         ...current,
-        activeWorkout: toSuggestedFocusActiveWorkout(selectedProfile.id, todaySession.generatedSession!, userSessions),
+        activeWorkout: toSuggestedFocusActiveWorkout(
+          selectedProfile.id,
+          suggestedFocusSession,
+          userSessions,
+        ),
       }));
+      setSuggestedSessionPreview(false);
+      setWorkoutPreviewId(null);
       softHaptic(10);
       startTransition(() => setActiveTab("workout"));
       return;
     }
 
-    const workoutTemplate = selectedProfile.workoutPlan.find((workout) => workout.id === todaySession.workoutId);
-    if (!workoutTemplate) {
-      showToast("No usable workout template is available for today's session.");
+    const fallbackWorkoutId =
+      suggestedFocusSession.sourceWorkoutId ?? nextFocusDestination?.workoutId ?? null;
+
+    if (!fallbackWorkoutId) {
+      showToast("No workout destination is available for this focus session yet.");
       return;
     }
 
-    startWorkout(workoutTemplate);
+    setSelectedExerciseId(null);
+    setSuggestedSessionPreview(true);
+    setWorkoutPreviewId(fallbackWorkoutId);
+    softHaptic(8);
+    startTransition(() => setActiveTab("workout"));
   };
 
   if (!hasEnteredProfile) {
@@ -992,45 +1161,56 @@ export function WorkoutTrackerApp() {
         ) : null}
 
         <div className="animate-page-in">
-          {activeTab === "session" && (
-            <TodaySessionScreen
-              session={todaySession}
-              recentTrainingUpdate={
-                profileRecentTrainingUpdate
-                  ? (() => {
-                      const minutesAgo = Math.max(
-                        0,
-                        Math.round((Date.now() - new Date(profileRecentTrainingUpdate.timestamp).getTime()) / 60000),
-                      );
-                      const freshness =
-                        minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
-                      return profileRecentTrainingUpdate.kind === "partial"
-                        ? `${profileRecentTrainingUpdate.workoutName} saved ${freshness}. Today's Session has already been refreshed.`
-                        : profileRecentTrainingUpdate.kind === "edit"
-                          ? `${profileRecentTrainingUpdate.workoutName} was updated ${freshness}. Today's Session is already in sync.`
-                          : `${profileRecentTrainingUpdate.workoutName} landed ${freshness}. Today's Session has already shifted with the new load.`;
-                    })()
-                  : null
-              }
-              onPrimaryAction={startTodaySession}
-              onRegenerateAction={regenerateTodaySession}
+          {activeTab === "home" && (
+            <HomeScreen
+                profile={selectedProfile}
+                todaysWorkout={todaysWorkout}
+                activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
+                workoutRhythmNote={workoutRhythmNote}
+                weeklyCount={weeklyCount}
+                streak={streak}
+                pbCount={state.personalBests[selectedProfile.id].length}
+                strengthPredictions={strengthPredictions}
+                dailyVerse={dailyVerse}
+                dailyStretch={todaysStretch}
+                stretchCompletedToday={stretchCompletedToday}
+                sharedSummary={dynamicSharedSummary}
+                recentWorkouts={recentWorkouts}
+                weddingCountdown={weddingCountdown}
+                recentTrainingUpdate={profileRecentTrainingUpdate}
+                onOpenDailyVerse={() => setShowDailyVerse(true)}
+                onToggleStretch={toggleStretchCompletion}
+              onStartWorkout={() => startWorkout(todaysWorkout)}
+              onResumeWorkout={() => setActiveTab("workout")}
+              onPreviewWorkout={() => {
+                setSuggestedSessionPreview(false);
+                setWorkoutPreviewId(todaysWorkout.id);
+                startTransition(() => setActiveTab("workout"));
+              }}
+              onSkipWorkout={skipWorkout}
+              onMoveWorkout={moveWorkout}
+              onOpenExercise={setSelectedExerciseId}
             />
           )}
 
           {activeTab === "workout" && (
             <WorkoutScreen
               profile={selectedProfile}
+              todaysWorkoutId={todaysWorkout.id}
+              previewWorkoutId={workoutPreviewId}
+              suggestedFocusSession={suggestedFocusSession}
+              suggestedSessionPreview={suggestedSessionPreview}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
               userSessions={userSessions}
-              exerciseLibrary={state.exerciseLibrary}
-              onOpenTodaySession={openTodaySession}
-              onUpdateSet={updateSet}
-              onCopyPreviousSet={copyPreviousSet}
-              onCompleteSet={completeSet}
-              onSwapExercise={swapExercise}
-              onCompleteWorkout={openWorkoutCompletionPrompt}
-              onSaveAndExitWorkout={savePartialWorkout}
+                exerciseLibrary={state.exerciseLibrary}
+                onStartWorkout={startWorkout}
+                onUpdateSet={updateSet}
+                onCopyPreviousSet={copyPreviousSet}
+                onCompleteSet={completeSet}
+                onSwapExercise={swapExercise}
+                onCompleteWorkout={openWorkoutCompletionPrompt}
+                onSaveAndExitWorkout={savePartialWorkout}
               onCancelWorkout={cancelWorkout}
             />
           )}
@@ -1042,7 +1222,8 @@ export function WorkoutTrackerApp() {
               measurements={state.measurements[selectedProfile.id]}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
               recentTrainingUpdate={profileRecentTrainingUpdate}
-              onOpenTodaySession={openTodaySession}
+              onOpenNextFocus={openNextFocusWorkout}
+              onOpenSuggestedSession={openSuggestedFocusSession}
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}
             />
@@ -1052,6 +1233,7 @@ export function WorkoutTrackerApp() {
       </div>
 
       <ExerciseDetailModal exercise={selectedExercise} userSessions={userSessions} onClose={() => setSelectedExerciseId(null)} />
+      <BibleVerseModal verse={showDailyVerse ? dailyVerse : null} onClose={() => setShowDailyVerse(false)} />
       <CompletionCelebration
         visible={showCompletionCelebration}
         message={completionMessage}

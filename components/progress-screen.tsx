@@ -52,7 +52,8 @@ export function ProgressScreen({
   measurements,
   stretchCompletions,
   recentTrainingUpdate,
-  onOpenTodaySession,
+  onOpenNextFocus,
+  onOpenSuggestedSession,
   onSaveMeasurement,
   onEditSession,
 }: {
@@ -61,11 +62,12 @@ export function ProgressScreen({
   measurements: MeasurementEntry[];
   stretchCompletions: StretchCompletion[];
   recentTrainingUpdate: RecentTrainingUpdate | null;
-  onOpenTodaySession: () => void;
+  onOpenNextFocus: () => void;
+  onOpenSuggestedSession: () => void;
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
-  const { calendarRows, progressSignals, recentSessions, todaySession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
+  const { calendarRows, nextFocusDestination, progressSignals, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
     trainingState;
   const goalDashboard = trainingState.goalDashboard;
   const bodyweightTrend = [...measurements]
@@ -120,8 +122,10 @@ export function ProgressScreen({
           weekLabel={trainingLoad.week.label}
           activeDayCount={trainingLoad.activeDays.size}
           userId={profile.id}
-          todaySession={todaySession}
-          onOpenTodaySession={onOpenTodaySession}
+          nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
+          suggestedSession={suggestedFocusSession}
+          onOpenNextFocus={onOpenNextFocus}
+          onOpenSuggestedSession={onOpenSuggestedSession}
         />
       </ScrollReveal>
 
@@ -325,7 +329,7 @@ export function ProgressScreen({
                           formatDate(session.performedAt),
                           `${session.durationMinutes} min`,
                           `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`,
-                        ].join(" â€¢ ")}
+                        ].join(" • ")}
                       </p>
                     </div>
                     <button
