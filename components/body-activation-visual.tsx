@@ -254,6 +254,13 @@ export function BodyActivationVisual({
   const metricsByZone = getMetricMap(metrics);
   const shapes = getShapes(variant, view);
   const hasSelection = Boolean(selectedZone);
+  const zoneIsVisible = (zone: TrainingLoadZone) => {
+    const metric = metricsByZone[zone];
+    if (selectedZone === zone) {
+      return true;
+    }
+    return (metric?.effectiveSets ?? 0) > 0;
+  };
 
   return (
     <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.008))] px-5 py-5">
@@ -287,6 +294,9 @@ export function BodyActivationVisual({
             const style = getZoneStyle(metricsByZone[shape.zone]);
             const metric = metricsByZone[shape.zone];
             const isSecondary = SECONDARY_PHONE_ZONES.has(shape.zone);
+            if (!zoneIsVisible(shape.zone)) {
+              return null;
+            }
             if (isSecondary && !metric?.percentage && selectedZone !== shape.zone) {
               return null;
             }

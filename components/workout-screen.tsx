@@ -456,11 +456,6 @@ export function WorkoutScreen({
   const canCompleteSet = Boolean(
     currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed,
   );
-  const canCopyPreviousSet = Boolean(
-    previousSet &&
-      !currentSet?.completed &&
-      (previousSet.weight > 0 || previousSet.reps > 0),
-  );
   const substitutions = getExerciseSwapOptions(profile.id, currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
   const swapSectionLabel = getSwapSectionLabel(profile.id);
   const loadCue = getLoadCue(currentTemplate?.repRange);
@@ -470,6 +465,20 @@ export function WorkoutScreen({
   const currentExerciseHasPr = currentExercise.sets.some((set) => isPersonalBestSet(set, previousBestScore));
   const compressionInsight = getAdaptiveCompressionInsight(activeWorkoutTemplate, userSessions);
   const recommendedExercise = getRecommendedExercise(activeWorkout, activeWorkoutTemplate);
+  const canShowQuickFill = Boolean(currentSet && !currentSet.completed);
+
+  const applyQuickFill = (field: "weight" | "reps", value: number) => {
+    onUpdateSet(currentExerciseIndex, currentSetIndex, field, value);
+  };
+
+  const applyRepeatLastSet = () => {
+    if (!previousSet) {
+      return;
+    }
+    applyQuickFill("weight", previousSet.weight);
+    applyQuickFill("reps", previousSet.reps);
+    repsInputRef.current?.focus();
+  };
 
   const handleCompleteSet = () => {
     if (!currentSet || !canCompleteSet) {
@@ -723,18 +732,48 @@ export function WorkoutScreen({
             </label>
           </div>
 
-          {currentSetIndex > 0 ? (
-            <button
-              className={`mt-2.5 w-full rounded-[20px] px-4 py-2 text-sm font-medium transition-all ${
-                canCopyPreviousSet ? "bg-[var(--card-strong)] text-text" : "bg-[var(--card-strong)] text-muted"
-              }`}
-              disabled={!canCopyPreviousSet}
-              onClick={() => onCopyPreviousSet(currentExerciseIndex, currentSetIndex)}
-            >
-              {canCopyPreviousSet
-                ? `Same as Set ${currentSetIndex}${previousSet?.weight ? ` | ${previousSet.weight}kg` : ""}${previousSet?.reps ? ` x ${previousSet.reps}` : ""}`
-                : `Same as Set ${currentSetIndex}`}
-            </button>
+          {canShowQuickFill ? (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {suggestedStart && currentSetIndex === 0 ? (
+                <button
+                  type="button"
+                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                  onClick={() => {
+                    applyQuickFill("weight", suggestedStart.suggestedWeight);
+                    weightInputRef.current?.focus();
+                  }}
+                >
+                  Use start
+                </button>
+              ) : null}
+              {previousSet && currentSetIndex > 0 ? (
+                <button
+                  type="button"
+                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                  onClick={applyRepeatLastSet}
+                >
+                  Repeat last
+                </button>
+              ) : null}
+              {currentSet ? (
+                <>
+                  <button
+                    type="button"
+                    className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                    onClick={() => applyQuickFill("weight", Number(((currentSet.weight || 0) + 2.5).toFixed(2)))}
+                  >
+                    +2.5kg
+                  </button>
+                  <button
+                    type="button"
+                    className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                    onClick={() => applyQuickFill("reps", (currentSet.reps || 0) + 1)}
+                  >
+                    +1 rep
+                  </button>
+                </>
+              ) : null}
+            </div>
           ) : null}
 
           {substitutions.length ? (

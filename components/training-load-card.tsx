@@ -187,6 +187,10 @@ function SummaryLine({
   );
 }
 
+function hasVisibleLoadForView(metrics: TrainingLoadMetric[], view: "front" | "back") {
+  return metrics.some((metric) => TRAINING_LOAD_VIEW_ZONES[view].includes(metric.id) && metric.effectiveSets > 0);
+}
+
 export function TrainingLoadCard({
   metrics,
   groups,
@@ -220,6 +224,7 @@ export function TrainingLoadCard({
         .slice(0, 4),
     [metrics, view],
   );
+  const hasVisibleLoad = useMemo(() => hasVisibleLoadForView(metrics, view), [metrics, view]);
 
   const inspectedMetric = useMemo(
     () => metrics.find((metric) => metric.id === selectedZone) ?? null,
@@ -293,7 +298,9 @@ export function TrainingLoadCard({
             onSelectZone={setSelectedZone}
           />
           <p className="mt-3 text-[12px] leading-6 text-white/42">
-            Lit zones show what has actually been trained this week.
+            {hasVisibleLoad
+              ? "Only regions with real work this week stay visible here."
+              : `No ${view} work has loaded yet this week.`}
           </p>
         </div>
         {selectedZone ? <ZoneContributorPanel metric={inspectedMetric} /> : null}
