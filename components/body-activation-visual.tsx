@@ -21,6 +21,15 @@ type EllipseShape = {
 };
 
 type ShapeDef = PathShape | EllipseShape;
+type BodyBaseConfig = {
+  href: string;
+  crop: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
 
 const FRONT_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "frontDelts", d: "M34 56C34 49 40 44 46 46C49 47 51 50 51 54L48 70C43 69 38 66 34 56Z" },
@@ -165,32 +174,45 @@ function Shape({
   return <path {...commonProps} d={shape.d} />;
 }
 
-function BodyShell({ variant }: { variant: BodyVariant }) {
-  const shell = "rgba(118,120,136,0.08)";
-  const shellStroke = "rgba(255,255,255,0.09)";
+const BODY_BASES: Record<BodyVariant, Record<BodyView, BodyBaseConfig>> = {
+  male: {
+    front: {
+      href: "/body-map/male-base.svg",
+      crop: { x: 66, y: 18, width: 182, height: 330 },
+    },
+    back: {
+      href: "/body-map/male-base.svg",
+      crop: { x: 342, y: 18, width: 182, height: 330 },
+    },
+  },
+  female: {
+    front: {
+      href: "/body-map/female-base.svg",
+      crop: { x: 72, y: 16, width: 180, height: 332 },
+    },
+    back: {
+      href: "/body-map/female-base.svg",
+      crop: { x: 322, y: 16, width: 180, height: 332 },
+    },
+  },
+};
 
-  if (variant === "female") {
-    return (
-      <>
-        <circle cx="60" cy="19" r="10" fill={shell} stroke={shellStroke} />
-        <path d="M49 32C53 29 67 29 71 32L77 54C79 63 78 74 75 86L72 111C70 129 68 143 65 156C63 166 61 172 60 175C59 172 57 166 55 156C52 143 50 129 48 111L45 86C42 74 41 63 43 54Z" fill={shell} stroke={shellStroke} />
-        <path d="M43 47C36 52 30 60 27 71C25 79 26 87 30 92C33 87 36 80 39 71L44 58Z" fill={shell} stroke={shellStroke} />
-        <path d="M77 47C84 52 90 60 93 71C95 79 94 87 90 92C87 87 84 80 81 71L76 58Z" fill={shell} stroke={shellStroke} />
-        <path d="M31 92C34 108 37 123 40 138C42 149 44 162 47 177L51 244L43 244L35 182C31 159 28 140 27 121C26 109 27 99 31 92Z" fill={shell} stroke={shellStroke} />
-        <path d="M89 92C86 108 83 123 80 138C78 149 76 162 73 177L69 244L77 244L85 182C89 159 92 140 93 121C94 109 93 99 89 92Z" fill={shell} stroke={shellStroke} />
-      </>
-    );
-  }
+function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
+  const base = BODY_BASES[variant][view];
 
   return (
-    <>
-      <circle cx="60" cy="19" r="10" fill={shell} stroke={shellStroke} />
-      <path d="M47 32C51 28 69 28 73 32L80 56C82 66 80 79 76 91L73 113C71 131 68 145 65 158C63 168 61 174 60 177C59 174 57 168 55 158C52 145 49 131 47 113L44 91C40 79 38 66 40 56Z" fill={shell} stroke={shellStroke} />
-      <path d="M40 48C33 53 27 62 24 73C22 82 24 91 29 96C32 90 35 83 39 73L44 59Z" fill={shell} stroke={shellStroke} />
-      <path d="M80 48C87 53 93 62 96 73C98 82 96 91 91 96C88 90 85 83 81 73L76 59Z" fill={shell} stroke={shellStroke} />
-      <path d="M29 96C32 113 35 128 38 143C40 155 43 168 46 183L50 244L41 244L33 188C29 164 26 145 24 126C23 113 24 102 29 96Z" fill={shell} stroke={shellStroke} />
-      <path d="M91 96C88 113 85 128 82 143C80 155 77 168 74 183L70 244L79 244L87 188C91 164 94 145 96 126C97 113 96 102 91 96Z" fill={shell} stroke={shellStroke} />
-    </>
+    <svg x="10" y="7" width="100" height="238" viewBox={`${base.crop.x} ${base.crop.y} ${base.crop.width} ${base.crop.height}`}>
+      <image
+        href={base.href}
+        x="0"
+        y="0"
+        width="600"
+        height={variant === "male" ? "388" : "386"}
+        preserveAspectRatio="none"
+        filter="url(#body-base-tone)"
+        opacity="0.82"
+      />
+    </svg>
   );
 }
 
@@ -223,8 +245,21 @@ export function BodyActivationVisual({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_center,rgba(110,120,255,0.08),transparent_72%)]" />
       <div className="relative flex items-center justify-center">
         <svg viewBox="0 0 120 260" className="h-[312px] w-[144px]" aria-hidden="true">
+          <defs>
+            <filter id="body-base-tone" colorInterpolationFilters="sRGB">
+              <feColorMatrix
+                type="matrix"
+                values="
+                  0 0 0 0 0.92
+                  0 0 0 0 0.93
+                  0 0 0 0 1
+                  0 0 0 0.28 0
+                "
+              />
+            </filter>
+          </defs>
           <path d="M60 31L60 246" stroke="rgba(255,255,255,0.035)" strokeWidth="0.8" strokeDasharray="3 5" />
-          <BodyShell variant={variant} />
+          <BodyBaseArt variant={variant} view={view} />
           {shapes.map((shape, index) => {
             const style = getZoneStyle(metricsByZone[shape.zone]);
             return (
