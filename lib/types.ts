@@ -18,6 +18,7 @@ export type SetLog = {
   weight: number;
   reps: number;
   completed: boolean;
+  rir?: number;
 };
 
 export type ExerciseTemplate = {
@@ -55,6 +56,7 @@ export type WorkoutSession = {
   workoutName: string;
   performedAt: string;
   durationMinutes: number;
+  sessionRpe?: number;
   partial?: boolean;
   exercises: WorkoutSessionExercise[];
   feeling: "Strong" | "Solid" | "Tough";

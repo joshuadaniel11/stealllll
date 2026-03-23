@@ -195,6 +195,148 @@ function testSuggestedSessionSpreadsFocusAcrossPatterns() {
   assert.ok(new Set(exerciseGroups).size >= 2);
 }
 
+function testMetricsLayerBuildsEffectiveVolumeCoverage() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "metrics-evs-session",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 52,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "a", weight: 30, reps: 8, completed: true },
+            { id: "b", weight: 30, reps: 8, completed: true },
+            { id: "c", weight: 30, reps: 8, completed: true },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(trainingState.metrics.effectiveVolumeScore.total > 0);
+  assert.ok(trainingState.metrics.weeklyCoverage.byRegion.upperChest > 0);
+  assert.ok(trainingState.metrics.regionMetrics.some((metric) => metric.zoneId === "upperChest" && metric.evs > 0));
+}
+
+function testRecoveryIndexRespondsToAccumulatedRecentLoad() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const heavyRecentSessions = [
+    {
+      id: "recovery-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T08:00:00.000Z",
+      durationMinutes: 70,
+      sessionRpe: 9,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "machine-hip-thrust-day1", exerciseName: "Machine Hip Thrust", muscleGroup: "Glutes" as const, sets: [{ id: "a", weight: 60, reps: 8, completed: true }] }],
+    },
+    {
+      id: "recovery-2",
+      userId: "natasha",
+      workoutDayId: "natasha-back-arms",
+      workoutName: "Back + Biceps",
+      performedAt: "2026-03-22T08:00:00.000Z",
+      durationMinutes: 65,
+      sessionRpe: 8.5,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "lat-pulldown-day2-nat", exerciseName: "Lat Pulldown", muscleGroup: "Back" as const, sets: [{ id: "a", weight: 45, reps: 10, completed: true }] }],
+    },
+    {
+      id: "recovery-3",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-quads",
+      workoutName: "Glutes + Quads",
+      performedAt: "2026-03-21T08:00:00.000Z",
+      durationMinutes: 60,
+      sessionRpe: 8.5,
+      feeling: "Tough" as const,
+      exercises: [{ exerciseId: "leg-press-day3-nat", exerciseName: "Leg Press", muscleGroup: "Quads" as const, sets: [{ id: "a", weight: 120, reps: 10, completed: true }] }],
+    },
+  ];
+
+  const loadedState = getProfileTrainingState(natasha, heavyRecentSessions, seed.exerciseLibrary, referenceDate);
+  const emptyState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+
+  assert.ok(loadedState.metrics.recoveryIndex.score < emptyState.metrics.recoveryIndex.score);
+  assert.ok(loadedState.metrics.recoveryIndex.rolling3dLoad > 0);
+  assert.ok(loadedState.metrics.recoveryIndex.score >= 0 && loadedState.metrics.recoveryIndex.score <= 100);
+}
+
+function testProgressVelocityDetectsImprovingExerciseWindow() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "pv-recent",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 50,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "a", weight: 34, reps: 9, completed: true, rir: 1 },
+            { id: "b", weight: 34, reps: 9, completed: true, rir: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "pv-baseline",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-02-18T09:00:00.000Z",
+      durationMinutes: 50,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "a", weight: 30, reps: 8, completed: true, rir: 3 },
+            { id: "b", weight: 30, reps: 8, completed: true, rir: 3 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(trainingState.metrics.progressVelocity.byRegion.upperChest > 0);
+  assert.ok(trainingState.metrics.stimulusToFatigueRatio.byExercise.length > 0);
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -328,6 +470,9 @@ const tests = [
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],
   ["spread suggested session across useful patterns", testSuggestedSessionSpreadsFocusAcrossPatterns],
+  ["build effective volume and coverage metrics", testMetricsLayerBuildsEffectiveVolumeCoverage],
+  ["drop recovery index under stacked recent fatigue", testRecoveryIndexRespondsToAccumulatedRecentLoad],
+  ["detect positive progress velocity from improving work", testProgressVelocityDetectsImprovingExerciseWindow],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],

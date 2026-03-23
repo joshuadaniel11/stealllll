@@ -25,7 +25,8 @@ function isValidSetLog(value: unknown): value is SetLog {
     typeof value.id === "string" &&
     typeof value.weight === "number" &&
     typeof value.reps === "number" &&
-    typeof value.completed === "boolean"
+    typeof value.completed === "boolean" &&
+    (typeof value.rir === "undefined" || typeof value.rir === "number")
   );
 }
 
@@ -50,6 +51,7 @@ function isValidWorkoutSession(value: unknown): value is WorkoutSession {
     typeof value.workoutName === "string" &&
     typeof value.performedAt === "string" &&
     typeof value.durationMinutes === "number" &&
+    (typeof value.sessionRpe === "undefined" || typeof value.sessionRpe === "number") &&
     (!("partial" in value) || typeof value.partial === "boolean") &&
     (value.feeling === "Strong" || value.feeling === "Solid" || value.feeling === "Tough") &&
     Array.isArray(value.exercises) &&

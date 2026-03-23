@@ -8,6 +8,7 @@ import {
   getWeeklyCalendarRows,
   getWeeklyTrainingLoad,
 } from "@/lib/training-load";
+import { getProfileTrainingMetrics, type ProfileTrainingMetrics } from "@/lib/training-metrics";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
 import type { ExerciseLibraryItem, Profile, WeeklySummary, WorkoutSession } from "@/lib/types";
 
@@ -29,6 +30,7 @@ export type ProfileTrainingState = {
   calendarRows: ReturnType<typeof getWeeklyCalendarRows>;
   nextFocusDestination: SuggestedWorkoutDestination | null;
   suggestedFocusSession: SuggestedFocusSession | null;
+  metrics: ProfileTrainingMetrics;
   goalDashboard: GoalDashboard;
   progressSignals: ProgressSignals;
 };
@@ -390,6 +392,7 @@ export function getProfileTrainingState(
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
   const trendData = getTrendData(userSessions);
+  const metrics = getProfileTrainingMetrics(profile, userSessions, exerciseLibrary, trainingLoad, referenceDate);
 
   return {
     userSessions,
@@ -415,6 +418,7 @@ export function getProfileTrainingState(
       exerciseLibrary,
       trainingLoad.recentLoad,
     ),
+    metrics,
     goalDashboard: buildGoalDashboard(profile, trainingLoad, weeklySummary, streak),
     progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
   };
