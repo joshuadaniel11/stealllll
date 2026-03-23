@@ -169,6 +169,54 @@ export type Phase1TrainingInsights = {
   progressInsight: string | null;
 };
 
+export type RegionFatigueBand = "low" | "moderate" | "high";
+
+export type MrvRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  mevEstimate: number;
+  estimatedMrv: number;
+  mrvMultiplier: number;
+  mrvPressure: number;
+  nearingMrv: boolean;
+  fatigueBand: RegionFatigueBand;
+};
+
+export type MrvEstimatorMetric = {
+  byRegion: Record<TrainingLoadZone, MrvRegionMetric>;
+};
+
+export type VelocityLossRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  repDropoff: number;
+  fatigueSignal: "low" | "moderate" | "high";
+  confidenceScore: number;
+  sampleCount: number;
+};
+
+export type VelocityLossMetric = {
+  byRegion: Record<TrainingLoadZone, VelocityLossRegionMetric>;
+};
+
+export type RecoveryCurveRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  avgRecoveryHours: number | null;
+  recoverySpeed: "fast" | "normal" | "slow" | "unknown";
+  eventCount: number;
+};
+
+export type RecoveryCurveMetric = {
+  byRegion: Record<TrainingLoadZone, RecoveryCurveRegionMetric>;
+};
+
+export type Phase2RecoveryInsights = {
+  primaryInsight: string | null;
+  fatigueInsight: string | null;
+  recoveryInsight: string | null;
+};
+
 export type RegionTrainingMetric = {
   zoneId: TrainingLoadZone;
   label: string;
@@ -196,6 +244,10 @@ export type ProfileTrainingMetrics = {
   mevTracker: MevTrackerMetric;
   plateauDetection: PlateauDetectionMetric;
   phase1Insights: Phase1TrainingInsights;
+  mrvEstimator: MrvEstimatorMetric;
+  velocityLoss: VelocityLossMetric;
+  recoveryCurve: RecoveryCurveMetric;
+  phase2Insights: Phase2RecoveryInsights;
   regionMetrics: RegionTrainingMetric[];
 };
 
@@ -1119,6 +1171,242 @@ function buildPhase1TrainingInsights(
   };
 }
 
+function getFatigueBandFromFactor(fatigueFactor: number): RegionFatigueBand {
+  if (fatigueFactor >= 1.15) return "high";
+  if (fatigueFactor >= 0.97) return "moderate";
+  return "low";
+}
+
+function getMrvMultiplier(fatigueBand: RegionFatigueBand) {
+  if (fatigueBand === "high") return 1.4;
+  if (fatigueBand === "moderate") return 1.6;
+  return 1.8;
+}
+
+function buildMrvEstimator(
+  mevTracker: MevTrackerMetric,
+  regionMetrics: RegionTrainingMetric[],
+  regionFatigueBands: Record<TrainingLoadZone, RegionFatigueBand>,
+  recoveryIndex: RecoveryIndexMetric,
+): MrvEstimatorMetric {
+  return {
+    byRegion: regionMetrics.reduce<Record<TrainingLoadZone, MrvRegionMetric>>((accumulator, metric) => {
+      const mevRegion = mevTracker.byRegion[metric.zoneId];
+      const fatigueBand = regionFatigueBands[metric.zoneId] ?? "moderate";
+      const mrvMultiplier = getMrvMultiplier(fatigueBand);
+      const estimatedMrv = round(mevRegion.mevEstimate * mrvMultiplier, 2);
+      const mrvPressure = round(metric.evs / Math.max(estimatedMrv, 0.1), 2);
+      const regionRecentFatigueHigh = fatigueBand === "high" || metric.stimulusToFatigueRatio < 0.92;
+      const nearingMrv =
+        mrvPressure >= 0.9 ||
+        (recoveryIndex.score < 55 && regionRecentFatigueHigh && metric.evs > mevRegion.mevEstimate * 1.2);
+
+      accumulator[metric.zoneId] = {
+        zoneId: metric.zoneId,
+        label: metric.label,
+        mevEstimate: mevRegion.mevEstimate,
+        estimatedMrv,
+        mrvMultiplier,
+        mrvPressure,
+        nearingMrv,
+        fatigueBand,
+      };
+      return accumulator;
+    }, {} as Record<TrainingLoadZone, MrvRegionMetric>),
+  };
+}
+
+function buildVelocityLossMetric(
+  sessions: WorkoutSession[],
+  referenceDate: Date,
+): VelocityLossMetric {
+  const range = getWindowRange(referenceDate, 28);
+  const dropoffWeightedTotals = buildZoneNumberRecord();
+  const dropoffWeights = buildZoneNumberRecord();
+  const confidenceTotals = buildZoneNumberRecord();
+  const sampleCounts = buildZoneNumberRecord();
+
+  for (const session of sessions) {
+    if (!isWithinRange(session.performedAt, range)) {
+      continue;
+    }
+
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (completedSets.length < 2) {
+        continue;
+      }
+
+      const bestSetReps = Math.max(...completedSets.map((set) => set.reps));
+      const lastSet = completedSets[completedSets.length - 1]!;
+      const repDropoff = (bestSetReps - lastSet.reps) / Math.max(bestSetReps, 1);
+      const firstWeight = completedSets[0]!.weight;
+      const lastWeight = lastSet.weight;
+      const loadIncreaseRatio = firstWeight > 0 ? (lastWeight - firstWeight) / firstWeight : 0;
+      const confidence = loadIncreaseRatio >= 0.1 ? 65 : 100;
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+
+      for (const [zoneId, allocation] of contribution) {
+        dropoffWeightedTotals[zoneId] += repDropoff * allocation * completedSets.length;
+        dropoffWeights[zoneId] += allocation * completedSets.length;
+        confidenceTotals[zoneId] += confidence * allocation;
+        sampleCounts[zoneId] += 1;
+      }
+    }
+  }
+
+  return {
+    byRegion: (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, VelocityLossRegionMetric>>(
+      (accumulator, zoneId) => {
+        const repDropoff = dropoffWeights[zoneId]
+          ? dropoffWeightedTotals[zoneId] / dropoffWeights[zoneId]
+          : 0;
+        const fatigueSignal =
+          repDropoff >= 0.25 ? "high" : repDropoff >= 0.1 ? "moderate" : "low";
+
+        accumulator[zoneId] = {
+          zoneId,
+          label: TRAINING_LOAD_ZONE_META[zoneId].label,
+          repDropoff: round(repDropoff, 3),
+          fatigueSignal,
+          confidenceScore: round(
+            sampleCounts[zoneId] ? confidenceTotals[zoneId] / sampleCounts[zoneId] : 0,
+            1,
+          ),
+          sampleCount: sampleCounts[zoneId],
+        };
+        return accumulator;
+      },
+      {} as Record<TrainingLoadZone, VelocityLossRegionMetric>,
+    ),
+  };
+}
+
+function buildRecoveryCurve(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+): RecoveryCurveMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const byExercise = new Map<
+    string,
+    Array<{ performedAt: string; baseline: number; regionEvs: Partial<Record<TrainingLoadZone, number>> }>
+  >();
+
+  for (const session of [...sessions].sort((a, b) => +new Date(a.performedAt) - +new Date(b.performedAt))) {
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const libraryItem = resolveLibraryItem(exercise, lookup);
+      const classification = getExerciseClassification(exercise.exerciseName, libraryItem?.equipment);
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+      let bestEstimated1RM = 0;
+      let evsTotal = 0;
+      const regionEvs: Partial<Record<TrainingLoadZone, number>> = {};
+
+      for (const set of completedSets) {
+        const setEvs =
+          getEffectiveRepsFactor(getSetRIR(set)) *
+          getLoadFactor(set.reps) *
+          classification.stabilityFactor;
+        evsTotal += setEvs;
+        bestEstimated1RM = Math.max(bestEstimated1RM, getEstimatedOneRepMax(set.weight, set.reps));
+        for (const [zoneId, allocation] of contribution) {
+          regionEvs[zoneId] = (regionEvs[zoneId] ?? 0) + setEvs * allocation;
+        }
+      }
+
+      const key = normalizeExerciseName(exercise.exerciseName);
+      const entries = byExercise.get(key) ?? [];
+      entries.push({
+        performedAt: session.performedAt,
+        baseline: bestEstimated1RM,
+        regionEvs,
+      });
+      byExercise.set(key, entries);
+    }
+  }
+
+  const recoveryHoursByRegion = new Map<TrainingLoadZone, number[]>();
+
+  for (const entries of byExercise.values()) {
+    if (entries.length < 3) {
+      continue;
+    }
+
+    for (let index = 1; index < entries.length - 1; index += 1) {
+      const previous = entries[index - 1]!;
+      const dip = entries[index]!;
+      const future = entries[index + 1]!;
+
+      if (dip.baseline >= previous.baseline) {
+        continue;
+      }
+
+      if (future.baseline < previous.baseline) {
+        continue;
+      }
+
+      const hours = Math.max(0, (+new Date(future.performedAt) - +new Date(dip.performedAt)) / 3600000);
+      for (const [zoneId, evs] of Object.entries(dip.regionEvs) as Array<[TrainingLoadZone, number]>) {
+        if (evs <= 0) {
+          continue;
+        }
+        const values = recoveryHoursByRegion.get(zoneId) ?? [];
+        values.push(hours);
+        recoveryHoursByRegion.set(zoneId, values);
+      }
+    }
+  }
+
+  return {
+    byRegion: (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, RecoveryCurveRegionMetric>>(
+      (accumulator, zoneId) => {
+        const values = recoveryHoursByRegion.get(zoneId) ?? [];
+        const avgRecoveryHours = values.length ? round(average(values), 1) : null;
+        const recoverySpeed =
+          avgRecoveryHours === null ? "unknown" : avgRecoveryHours <= 36 ? "fast" : avgRecoveryHours <= 60 ? "normal" : "slow";
+
+        accumulator[zoneId] = {
+          zoneId,
+          label: TRAINING_LOAD_ZONE_META[zoneId].label,
+          avgRecoveryHours,
+          recoverySpeed,
+          eventCount: values.length,
+        };
+        return accumulator;
+      },
+      {} as Record<TrainingLoadZone, RecoveryCurveRegionMetric>,
+    ),
+  };
+}
+
+function buildPhase2RecoveryInsights(
+  trainingLoad: WeeklyTrainingLoad,
+  mrvEstimator: MrvEstimatorMetric,
+  velocityLoss: VelocityLossMetric,
+  recoveryCurve: RecoveryCurveMetric,
+): Phase2RecoveryInsights {
+  const focusZoneId = trainingLoad.summary.suggestedNextFocus.zoneIds[0];
+  const focusLabel = trainingLoad.summary.suggestedNextFocus.labels[0] ?? trainingLoad.summary.suggestedNextFocus.text;
+  const mrv = focusZoneId ? mrvEstimator.byRegion[focusZoneId] : null;
+  const velocity = focusZoneId ? velocityLoss.byRegion[focusZoneId] : null;
+  const curve = focusZoneId ? recoveryCurve.byRegion[focusZoneId] : null;
+
+  return {
+    primaryInsight: mrv?.nearingMrv ? `${focusLabel} are getting close to your recoverable ceiling.` : null,
+    fatigueInsight: velocity?.fatigueSignal === "high" ? `${focusLabel} are dropping off hard set to set.` : null,
+    recoveryInsight:
+      curve?.recoverySpeed === "slow"
+        ? `${focusLabel} are recovering slowly between sessions.`
+        : curve?.recoverySpeed === "fast"
+          ? `${focusLabel} are bouncing back quickly.`
+          : null,
+  };
+}
+
 export function selectRirQualityByRegion(metrics: ProfileTrainingMetrics) {
   return metrics.rirIntelligence.byRegion;
 }
@@ -1133,6 +1421,22 @@ export function selectPlateauStatusByRegion(metrics: ProfileTrainingMetrics) {
 
 export function selectPhase1TrainingInsights(metrics: ProfileTrainingMetrics) {
   return metrics.phase1Insights;
+}
+
+export function selectMrvStatusByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.mrvEstimator.byRegion;
+}
+
+export function selectVelocityLossByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.velocityLoss.byRegion;
+}
+
+export function selectRecoveryCurveByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.recoveryCurve.byRegion;
+}
+
+export function selectPhase2RecoveryInsights(metrics: ProfileTrainingMetrics) {
+  return metrics.phase2Insights;
 }
 
 export function selectNextFocusFromMetrics(
@@ -1238,6 +1542,8 @@ export function getProfileTrainingMetrics(
   const zoneEvs = buildZoneNumberRecord();
   const zoneStimulus = buildZoneNumberRecord();
   const zoneFatigue = buildZoneNumberRecord();
+  const zoneFatigueFactorTotals = buildZoneNumberRecord();
+  const zoneFatigueFactorWeights = buildZoneNumberRecord();
   const weeklyExerciseScores = new Map<string, { exerciseName: string; evs: number; stimulus: number; fatigue: number }>();
 
   for (const session of currentWeekSessions) {
@@ -1270,6 +1576,8 @@ export function getProfileTrainingMetrics(
         for (const [zoneId, allocation] of contribution) {
           zoneEvs[zoneId] += setEvs * allocation;
           zoneStimulus[zoneId] += setEvs * allocation;
+          zoneFatigueFactorTotals[zoneId] += classification.fatigueFactor * allocation;
+          zoneFatigueFactorWeights[zoneId] += allocation;
         }
       }
 
@@ -1367,6 +1675,16 @@ export function getProfileTrainingMetrics(
     progressVelocity: progressByRegion[metric.id],
     stimulusToFatigueRatio: sfrByRegion[metric.id],
   }));
+  const regionFatigueBands = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, RegionFatigueBand>>(
+    (accumulator, zoneId) => {
+      const averageFatigueFactor = zoneFatigueFactorWeights[zoneId]
+        ? zoneFatigueFactorTotals[zoneId] / zoneFatigueFactorWeights[zoneId]
+        : 1;
+      accumulator[zoneId] = getFatigueBandFromFactor(averageFatigueFactor);
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, RegionFatigueBand>,
+  );
 
   const priorityCoverageValues = priorityZones.map((zoneId) => coverageByRegion[zoneId]);
   const priorityProgressValues = priorityZones.map((zoneId) => progressByRegion[zoneId]).filter((value) => value !== 0);
@@ -1390,6 +1708,15 @@ export function getProfileTrainingMetrics(
     rirIntelligence,
     mevTracker,
     plateauDetection,
+  );
+  const mrvEstimator = buildMrvEstimator(mevTracker, regionMetrics, regionFatigueBands, recoveryIndex);
+  const velocityLoss = buildVelocityLossMetric(sessions, referenceDate);
+  const recoveryCurve = buildRecoveryCurve(sessions, exerciseLibrary);
+  const phase2Insights = buildPhase2RecoveryInsights(
+    trainingLoad,
+    mrvEstimator,
+    velocityLoss,
+    recoveryCurve,
   );
 
   return {
@@ -1451,6 +1778,10 @@ export function getProfileTrainingMetrics(
     mevTracker,
     plateauDetection,
     phase1Insights,
+    mrvEstimator,
+    velocityLoss,
+    recoveryCurve,
+    phase2Insights,
     regionMetrics,
   };
 }

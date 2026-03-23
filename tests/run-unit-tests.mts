@@ -1028,6 +1028,165 @@ function testPhase1PlateauDetectionFindsFlatCoveredAdherentRegion() {
   assert.ok(trainingState.metrics.phase1Insights.progressInsight?.includes("flat"));
 }
 
+function testPhase2MrvEstimatorFlagsPressureNearCeiling() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "mrv-1",
+      userId: "joshua",
+      workoutDayId: "joshua-shoulders-legs",
+      workoutName: "Shoulders + Legs",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 72,
+      sessionRpe: 9,
+      feeling: "Tough" as const,
+      exercises: [
+        {
+          exerciseId: "hack-squat-heavy",
+          exerciseName: "Hack Squat",
+          muscleGroup: "Quads" as const,
+          sets: Array.from({ length: 14 }, (_, index) => ({
+            id: `mrv-${index}`,
+            weight: 120,
+            reps: 8,
+            completed: true,
+            rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const quadsMrv = trainingState.metrics.mrvEstimator.byRegion.quads;
+
+  assert.ok(quadsMrv.mrvPressure > 0);
+  assert.ok(Number.isFinite(quadsMrv.mrvPressure));
+  assert.ok(quadsMrv.estimatedMrv > 0);
+}
+
+function testPhase2VelocityLossHandlesDropoffAndConfidence() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const sessions = [
+    {
+      id: "velocity-1",
+      userId: "natasha",
+      workoutDayId: "natasha-back-arms",
+      workoutName: "Back + Biceps",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 44,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2-nat",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "a", weight: 40, reps: 12, completed: true, rir: 2 },
+            { id: "b", weight: 45, reps: 10, completed: true, rir: 2 },
+            { id: "c", weight: 50, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, referenceDate);
+  const latsVelocityLoss = trainingState.metrics.velocityLoss.byRegion.lats;
+
+  assert.ok(latsVelocityLoss.repDropoff > 0.25);
+  assert.equal(latsVelocityLoss.fatigueSignal, "high");
+  assert.ok(latsVelocityLoss.confidenceScore < 100);
+}
+
+function testPhase2RecoveryCurveSupportsSparseAndRecoveredCases() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sparseState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, referenceDate);
+  assert.equal(sparseState.metrics.recoveryCurve.byRegion.upperChest.recoverySpeed, "unknown");
+
+  const sessions = [
+    {
+      id: "curve-1",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-18T08:00:00.000Z",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "a1", weight: 30, reps: 8, completed: true, rir: 2 },
+            { id: "a2", weight: 30, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "curve-2",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps-b",
+      workoutName: "Chest + Triceps B",
+      performedAt: "2026-03-19T08:00:00.000Z",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day4",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "b1", weight: 30, reps: 6, completed: true, rir: 2 },
+            { id: "b2", weight: 30, reps: 6, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "curve-3",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-20T20:00:00.000Z",
+      durationMinutes: 48,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "c1", weight: 30, reps: 8, completed: true, rir: 2 },
+            { id: "c2", weight: 30, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const recoveredState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const upperChestCurve = recoveredState.metrics.recoveryCurve.byRegion.upperChest;
+
+  assert.ok(upperChestCurve.eventCount >= 1);
+  assert.equal(upperChestCurve.recoverySpeed, "fast");
+  assert.ok((upperChestCurve.avgRecoveryHours ?? 0) <= 36);
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -1180,6 +1339,9 @@ const tests = [
   ["build phase1 rir intelligence with safe fallback", testPhase1RirIntelligenceHandlesMissingRirAndBoundsRisk],
   ["track mev states by region", testPhase1MevTrackerReflectsBelowAtAndAboveStates],
   ["detect plateaus from flat covered adherent work", testPhase1PlateauDetectionFindsFlatCoveredAdherentRegion],
+  ["estimate mrv pressure without blowing up on real data", testPhase2MrvEstimatorFlagsPressureNearCeiling],
+  ["derive velocity loss and lower confidence when load rises across sets", testPhase2VelocityLossHandlesDropoffAndConfidence],
+  ["support sparse and recovered inter-session recovery curves", testPhase2RecoveryCurveSupportsSparseAndRecoveredCases],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],
