@@ -20,6 +20,7 @@ import { getCurrentWeekWindow } from "@/lib/training-load";
 import type { GoalDashboardCard, ProfileTrainingState } from "@/lib/profile-training-state";
 import { getAestheticSignal } from "@/lib/workout-intelligence";
 import type { MeasurementEntry, Profile, RecentTrainingUpdate, StretchCompletion } from "@/lib/types";
+import { ChevronRight } from "lucide-react";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(value));
@@ -67,6 +68,65 @@ function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
       <p className="mt-3 text-[1.75rem] font-semibold tracking-[-0.05em] text-white/94">{card.value}</p>
       <p className="mt-1 text-[13px] leading-6 text-white/54">{card.detail}</p>
     </div>
+  );
+}
+
+function FocusDirectionCard({
+  focusText,
+  coverageLabels,
+  helperText,
+  sessionSummary,
+  onOpen,
+}: {
+  focusText: string;
+  coverageLabels: Array<{ label: string; percentage: number }>;
+  helperText: string;
+  sessionSummary: { focusText: string; estimatedDurationMinutes: number; exerciseCount: number } | null;
+  onOpen: () => void;
+}) {
+  return (
+    <Card className="progress-panel">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-medium text-white/52">Focus direction</p>
+          <h3 className="mt-1 text-[1.5rem] font-semibold tracking-[-0.05em] text-white/94">{focusText}</h3>
+          <p className="mt-2 text-[13px] leading-6 text-white/56">{helperText}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-medium text-white/72 transition active:scale-[0.98]"
+        >
+          Open
+          <ChevronRight className="h-4 w-4 text-white/46" />
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
+        <div className="progress-summary-card rounded-[24px] border px-4 py-4">
+          <p className="text-[12px] font-medium text-white/48">Needs attention</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {coverageLabels.map((item) => (
+              <span
+                key={item.label}
+                className="rounded-full border border-white/8 bg-white/[0.05] px-3 py-1.5 text-[12px] font-medium text-white/78"
+              >
+                {item.label} {item.percentage}%
+              </span>
+            ))}
+          </div>
+        </div>
+        {sessionSummary ? (
+          <div className="progress-subcard rounded-[24px] border px-4 py-4">
+            <p className="text-[12px] font-medium text-white/48">Suggested session</p>
+            <p className="mt-2 text-[15px] font-semibold text-white/90">{sessionSummary.focusText}</p>
+            <p className="mt-2 text-[13px] leading-6 text-white/56">
+              {sessionSummary.exerciseCount} moves - ~{sessionSummary.estimatedDurationMinutes} min
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -145,6 +205,10 @@ export function ProgressScreen({
   const showingBodyMetrics = bodyweightTrend.length > 0;
   const weeklyRead = getWeeklyRead(trainingState);
   const weeklyFocusText = getWeeklyFocusText(trainingState);
+  const focusCoverage = trainingLoad.summary.needsWork.slice(0, 2).map((metric) => ({
+    label: metric.label,
+    percentage: metric.percentage,
+  }));
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
         const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
@@ -183,6 +247,24 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={12}>
+        <FocusDirectionCard
+          focusText={weeklyFocusText}
+          coverageLabels={focusCoverage}
+          helperText={nextFocusDestination?.helperText ?? "Open the best matching workout for this week."}
+          sessionSummary={
+            suggestedFocusSession
+              ? {
+                  focusText: suggestedFocusSession.focusText,
+                  estimatedDurationMinutes: suggestedFocusSession.estimatedDurationMinutes,
+                  exerciseCount: suggestedFocusSession.exercises.length,
+                }
+              : null
+          }
+          onOpen={onOpenSuggestedSession}
+        />
+      </ScrollReveal>
+
+      <ScrollReveal delay={24}>
         <TrainingLoadCard
           metrics={trainingLoad.metrics}
           groups={trainingLoad.groups}
@@ -191,13 +273,10 @@ export function ProgressScreen({
           weekLabel={trainingLoad.week.label}
           activeDayCount={trainingLoad.activeDays.size}
           userId={profile.id}
-          nextFocusHelperText={nextFocusDestination?.helperText ?? "Open matching workout"}
-          suggestedSession={suggestedFocusSession}
-          onOpenSuggestedSession={onOpenSuggestedSession}
         />
       </ScrollReveal>
 
-      <ScrollReveal delay={26}>
+      <ScrollReveal delay={40}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Goal dashboard"
@@ -217,7 +296,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={50}>
+      <ScrollReveal delay={62}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Workout calendar"
@@ -235,7 +314,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={74}>
+      <ScrollReveal delay={86}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Weekly snapshot"
@@ -284,7 +363,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={110}>
+      <ScrollReveal delay={122}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Trend"
@@ -349,11 +428,11 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={160}>
+      <ScrollReveal delay={170}>
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={190}>
+      <ScrollReveal delay={200}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Recent sessions"

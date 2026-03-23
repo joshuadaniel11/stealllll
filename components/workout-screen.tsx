@@ -271,23 +271,34 @@ export function WorkoutScreen({
         <ScrollReveal delay={0} y={14} scale={0.996}>
         <Card className="space-y-5">
           <div className="space-y-2">
-            <p className="text-sm text-muted">Your training split</p>
-            <h2 className="large-title mt-2 font-semibold text-text">Start with today&apos;s session</h2>
+            <p className="text-sm text-muted">Your plan</p>
+            <h2 className="large-title mt-2 font-semibold text-text">Start with the next session</h2>
+            <p className="text-sm leading-6 text-muted">Your planned day stays first. The full split sits below it.</p>
           </div>
 
           <div className="progress-focus-card rounded-[26px] border px-5 py-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">{heroPresentation.splitLabel}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">{heroPresentation.splitLabel}</p>
+                <h3 className="mt-3 text-[1.95rem] font-semibold tracking-[-0.06em] text-white/94">{heroPresentation.title}</h3>
+              </div>
               <span className="rounded-full bg-white/[0.07] px-3 py-1 text-[11px] font-medium text-white/62">
-                {todaysPartial ? "Resume ready" : "Queued today"}
+                {todaysPartial ? "Resume ready" : "Planned next"}
               </span>
             </div>
-            <h3 className="mt-3 text-[1.95rem] font-semibold tracking-[-0.06em] text-white/94">{heroPresentation.title}</h3>
             <p className="mt-2 text-sm leading-6 text-white/58">
               {todaysPartial
-                ? `${todaysPartial.workoutName} is ready to resume.`
+                ? `${todaysPartial.workoutName} is ready to pick back up.`
                 : getSessionSupportLine(todaysWorkout)}
             </p>
+            {todaysPartial ? (
+              <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Resume state</p>
+                <p className="mt-1 text-sm font-medium text-white/84">
+                  {todaysPartial.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets already logged
+                </p>
+              </div>
+            ) : null}
             <div className="mt-4 flex items-center justify-between gap-3">
               <button
                 className="rounded-[24px] bg-white px-4 py-3 text-sm font-semibold text-black"
@@ -306,7 +317,7 @@ export function WorkoutScreen({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[12px] font-medium text-white/52">Full split</p>
+              <p className="text-[12px] font-medium text-white/52">Training split</p>
               <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{profile.workoutPlan.length} days</p>
             </div>
             {profile.workoutPlan.map((workout) => (
@@ -314,10 +325,10 @@ export function WorkoutScreen({
                 key={workout.id}
                 className={`rounded-[24px] border px-4 py-4 transition duration-300 ${
                   workout.id === localPreviewWorkoutId
-                    ? "border-white/10 bg-white/[0.06] text-text"
+                    ? "border-white/10 bg-white/[0.055] text-text"
                     : workout.id === todaysWorkoutId
-                      ? "border-white/8 bg-white/[0.045] text-text"
-                      : "border-white/5 bg-[var(--card-strong)]/70 text-text"
+                      ? "border-white/8 bg-white/[0.04] text-text"
+                      : "border-white/4 bg-[var(--card-strong)]/55 text-text"
                 }`}
               >
                 <div className="flex items-center justify-between gap-4">
@@ -326,12 +337,12 @@ export function WorkoutScreen({
                       <p className="text-[15px] font-medium">{workout.name}</p>
                       {workout.id === todaysWorkoutId ? (
                         <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/70">
-                          Today
+                          Planned
                         </span>
                       ) : null}
                       {partialByWorkout[workout.id] ? (
                         <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/78">
-                          Resume
+                          Resume ready
                         </span>
                       ) : null}
                     </div>
@@ -352,7 +363,11 @@ export function WorkoutScreen({
                       Open
                     </button>
                     <button
-                      className="rounded-[20px] bg-white px-3 py-2 text-sm font-semibold text-black"
+                      className={`rounded-[20px] px-3 py-2 text-sm font-semibold ${
+                        workout.id === todaysWorkoutId || partialByWorkout[workout.id]
+                          ? "bg-white text-black"
+                          : "bg-white/8 text-white/78"
+                      }`}
                       onClick={() => onStartWorkout(workout)}
                     >
                       {partialByWorkout[workout.id] ? "Resume" : "Start"}
@@ -370,10 +385,10 @@ export function WorkoutScreen({
             <div className="sheet-panel sheet-detent-large animate-sheet-up">
               <Card className="sheet-card bg-[var(--surface)]">
                 <div className="sheet-drag-handle" />
-                <p className="text-sm text-muted">Workout preview</p>
+                <p className="text-sm text-muted">Planned session</p>
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
-                  {previewWorkout.focus} | {previewWorkout.durationMinutes} min
+                  {previewWorkout.focus} • {previewWorkout.durationMinutes} min
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted">
                   {getPreviewTease(profile.id, previewWorkout.id)}
@@ -385,7 +400,7 @@ export function WorkoutScreen({
                       <div>
                         <p className="text-sm font-medium text-text">Saved partial ready</p>
                         <p className="mt-1 text-sm leading-6 text-muted">
-                          {previewPartialSession.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets are already logged here, so starting this day will resume instead of restarting.
+                          {previewPartialSession.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets are already logged here, so this day will resume instead of restarting.
                         </p>
                       </div>
                       <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-black">
@@ -399,7 +414,7 @@ export function WorkoutScreen({
                   <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-text">Today&apos;s focus session</p>
+                        <p className="text-sm font-medium text-text">Suggested session</p>
                         <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.focusText}</p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {suggestedFocusSession.targetLabels.map((label) => (
@@ -478,7 +493,7 @@ export function WorkoutScreen({
                     className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
                     onClick={() => onStartWorkout(previewWorkout)}
                   >
-                    {previewPartialSession ? "Resume Session" : "Begin Session"}
+                    {previewPartialSession ? "Resume Session" : "Start Session"}
                   </button>
                 </div>
               </Card>
