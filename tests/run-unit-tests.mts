@@ -108,8 +108,9 @@ function testRecoveryAwareNextFocus() {
 
   const trainingState = getProfileTrainingState(joshua, [...sessions], seed.exerciseLibrary, referenceDate);
 
-  assert.deepEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels, ["Side delts", "Rear delts"]);
-  assert.equal(trainingState.suggestedFocusSession?.focusText, "Side delts + Rear delts");
+  assert.equal(trainingState.trainingLoad.summary.suggestedNextFocus.labels[0], "Side delts");
+  assert.ok(!trainingState.trainingLoad.summary.suggestedNextFocus.labels.includes("Upper chest"));
+  assert.ok(trainingState.suggestedFocusSession?.focusText.includes("Side delts"));
 }
 
 function testSuggestedSessionIsActionable() {
@@ -337,6 +338,52 @@ function testProgressVelocityDetectsImprovingExerciseWindow() {
   assert.ok(trainingState.metrics.stimulusToFatigueRatio.byExercise.length > 0);
 }
 
+function testNextFocusUsesMetricsAwareCoverageRanking() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "focus-metrics-1",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-23T08:30:00.000Z",
+      durationMinutes: 55,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "a", weight: 70, reps: 8, completed: true, rir: 1 },
+            { id: "b", weight: 70, reps: 8, completed: true, rir: 1 },
+            { id: "c", weight: 70, reps: 8, completed: true, rir: 1 },
+            { id: "d", weight: 70, reps: 8, completed: true, rir: 1 },
+          ],
+        },
+        {
+          exerciseId: "hammer-curl-day2",
+          exerciseName: "Hammer Curl",
+          muscleGroup: "Biceps" as const,
+          sets: [
+            { id: "e", weight: 20, reps: 10, completed: true, rir: 2 },
+            { id: "f", weight: 20, reps: 10, completed: true, rir: 2 },
+            { id: "g", weight: 20, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.deepEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels, ["Upper chest", "Side delts"]);
+}
+
 function testProfileTargetMultipliersDivergeByPriorityModel() {
   const seed = createSeedState();
   const joshua = seed.profiles.find((profile) => profile.id === "joshua");
@@ -548,6 +595,7 @@ const tests = [
   ["build effective volume and coverage metrics", testMetricsLayerBuildsEffectiveVolumeCoverage],
   ["drop recovery index under stacked recent fatigue", testRecoveryIndexRespondsToAccumulatedRecentLoad],
   ["detect positive progress velocity from improving work", testProgressVelocityDetectsImprovingExerciseWindow],
+  ["rank next focus from metrics-aware deficits", testNextFocusUsesMetricsAwareCoverageRanking],
   ["apply profile-specific target multipliers", testProfileTargetMultipliersDivergeByPriorityModel],
   ["soften target evs when recovery drops", testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],

@@ -8,7 +8,11 @@ import {
   getWeeklyCalendarRows,
   getWeeklyTrainingLoad,
 } from "@/lib/training-load";
-import { getProfileTrainingMetrics, type ProfileTrainingMetrics } from "@/lib/training-metrics";
+import {
+  getProfileTrainingMetrics,
+  selectNextFocusFromMetrics,
+  type ProfileTrainingMetrics,
+} from "@/lib/training-metrics";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
 import type { ExerciseLibraryItem, Profile, WeeklySummary, WorkoutSession } from "@/lib/types";
 
@@ -393,6 +397,14 @@ export function getProfileTrainingState(
   const streak = getWorkoutStreak(userSessions, referenceDate);
   const trendData = getTrendData(userSessions);
   const metrics = getProfileTrainingMetrics(profile, userSessions, exerciseLibrary, trainingLoad, referenceDate);
+  const suggestedNextFocus = selectNextFocusFromMetrics(profile, trainingLoad, metrics);
+  const derivedTrainingLoad = {
+    ...trainingLoad,
+    summary: {
+      ...trainingLoad.summary,
+      suggestedNextFocus,
+    },
+  };
 
   return {
     userSessions,
@@ -403,23 +415,23 @@ export function getProfileTrainingState(
     recentSessions: userSessions.slice(0, 4),
     trendData,
     weeklySummary,
-    trainingLoad,
+    trainingLoad: derivedTrainingLoad,
     calendarRows: getWeeklyCalendarRows(userSessions, 6, referenceDate),
     nextFocusDestination: getSuggestedWorkoutDestination(
       profile.id,
       profile.workoutPlan,
-      trainingLoad.summary.suggestedNextFocus,
-      trainingLoad.recentLoad,
+      suggestedNextFocus,
+      derivedTrainingLoad.recentLoad,
     ),
     suggestedFocusSession: getSuggestedFocusSession(
       profile.id,
       profile.workoutPlan,
-      trainingLoad.summary.suggestedNextFocus,
+      suggestedNextFocus,
       exerciseLibrary,
-      trainingLoad.recentLoad,
+      derivedTrainingLoad.recentLoad,
     ),
     metrics,
-    goalDashboard: buildGoalDashboard(profile, trainingLoad, weeklySummary, streak),
+    goalDashboard: buildGoalDashboard(profile, derivedTrainingLoad, weeklySummary, streak),
     progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
   };
 }

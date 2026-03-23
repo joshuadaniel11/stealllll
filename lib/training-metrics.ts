@@ -5,6 +5,7 @@ import {
   getCurrentWeekWindow,
   getExerciseMuscleContribution,
   getProfilePriorityZones,
+  type NextWorkoutFocus,
   type TrainingLoadZone,
   type WeeklyTrainingLoad,
 } from "@/lib/training-load";
@@ -95,6 +96,19 @@ export type ProfileTrainingMetrics = {
   regionMetrics: RegionTrainingMetric[];
 };
 
+type NextFocusCandidate = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  score: number;
+  coveragePct: number;
+  evs: number;
+  targetEVS: number;
+  progressVelocity: number;
+  stimulusToFatigueRatio: number;
+  priorityMultiplier: number;
+  stablePriorityIndex: number;
+};
+
 const PROFILE_PRIORITY_MULTIPLIERS: Record<string, Partial<Record<TrainingLoadZone, number>>> = {
   joshua: {
     upperChest: 1.3,
@@ -138,6 +152,11 @@ function average(values: number[]) {
 
 function getPriorityMultiplier(profile: Profile, zoneId: TrainingLoadZone) {
   return PROFILE_PRIORITY_MULTIPLIERS[profile.id]?.[zoneId] ?? 1;
+}
+
+function getStablePriorityIndex(profile: Profile, zoneId: TrainingLoadZone) {
+  const index = getProfilePriorityZones(profile.id).indexOf(zoneId);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
 function buildZoneNumberRecord(initial = 0) {
@@ -448,6 +467,106 @@ function getRecoveryModifier(recoveryIndex: RecoveryIndexMetric) {
   if (recoveryIndex.score >= 60) return 0.96;
   if (recoveryIndex.score >= 45) return 0.92;
   return 0.88;
+}
+
+function getNextFocusRecoveryAdjustment(recoveryIndex: RecoveryIndexMetric, metric: RegionTrainingMetric) {
+  const highRecentFatigue = metric.stimulusToFatigueRatio < 0.92 && metric.coveragePct > 35;
+  return recoveryIndex.score < 55 && highRecentFatigue ? 0.9 : 1;
+}
+
+function getNextFocusMomentumAdjustment(metric: RegionTrainingMetric) {
+  return metric.progressVelocity <= 0 && metric.coveragePct < 100 ? 1.08 : 1;
+}
+
+function getNextFocusEfficiencyAdjustment(metric: RegionTrainingMetric) {
+  return metric.stimulusToFatigueRatio > 0 && metric.stimulusToFatigueRatio < 0.92 ? 0.94 : 1;
+}
+
+export function selectNextFocusFromMetrics(
+  profile: Profile,
+  trainingLoad: WeeklyTrainingLoad,
+  metrics: ProfileTrainingMetrics,
+): NextWorkoutFocus {
+  const priorityZones = new Set(getProfilePriorityZones(profile.id));
+  const regionMetrics = metrics.regionMetrics.filter((metric) => priorityZones.has(metric.zoneId));
+  const lowActivity = trainingLoad.summary.lowActivity;
+
+  if (!regionMetrics.length) {
+    return trainingLoad.summary.suggestedNextFocus;
+  }
+
+  if (lowActivity) {
+    const fallback = regionMetrics
+      .sort((a, b) => {
+        if (a.stimulusToFatigueRatio !== b.stimulusToFatigueRatio) {
+          return a.stimulusToFatigueRatio - b.stimulusToFatigueRatio;
+        }
+        return getStablePriorityIndex(profile, a.zoneId) - getStablePriorityIndex(profile, b.zoneId);
+      })
+      .slice(0, 2);
+
+    const labels = fallback.map((metric) => metric.label);
+    return {
+      zoneIds: fallback.map((metric) => metric.zoneId),
+      labels,
+      text: labels.join(" + "),
+    };
+  }
+
+  const candidates = regionMetrics.map((metric) => {
+    const deficitWeight = Math.max(0, 1 - metric.coveragePct / 100);
+    const recoveryAdjustment = getNextFocusRecoveryAdjustment(metrics.recoveryIndex, metric);
+    const momentumAdjustment = getNextFocusMomentumAdjustment(metric);
+    const efficiencyAdjustment = getNextFocusEfficiencyAdjustment(metric);
+    const score =
+      metric.priorityMultiplier *
+      deficitWeight *
+      recoveryAdjustment *
+      momentumAdjustment *
+      efficiencyAdjustment;
+
+    return {
+      zoneId: metric.zoneId,
+      label: metric.label,
+      score,
+      coveragePct: metric.coveragePct,
+      evs: metric.evs,
+      targetEVS: metric.targetEVS,
+      progressVelocity: metric.progressVelocity,
+      stimulusToFatigueRatio: metric.stimulusToFatigueRatio,
+      priorityMultiplier: metric.priorityMultiplier,
+      stablePriorityIndex: getStablePriorityIndex(profile, metric.zoneId),
+    };
+  });
+
+  const selectFromPool = (pool: NextFocusCandidate[]) =>
+    [...pool]
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        const aEvsGap = a.targetEVS - a.evs;
+        const bEvsGap = b.targetEVS - b.evs;
+        if (bEvsGap !== aEvsGap) {
+          return bEvsGap - aEvsGap;
+        }
+        if (a.progressVelocity !== b.progressVelocity) {
+          return a.progressVelocity - b.progressVelocity;
+        }
+        return a.stablePriorityIndex - b.stablePriorityIndex;
+      })
+      .slice(0, 2);
+
+  const clearlyLagging = candidates.filter((candidate) => candidate.coveragePct < 82);
+  const belowTarget = candidates.filter((candidate) => candidate.coveragePct < 100);
+  const selected = clearlyLagging.length >= 2 ? selectFromPool(clearlyLagging) : belowTarget.length >= 2 ? selectFromPool(belowTarget) : selectFromPool(candidates);
+
+  const labels = selected.map((metric) => metric.label);
+  return {
+    zoneIds: selected.map((metric) => metric.zoneId),
+    labels,
+    text: labels.join(" + "),
+  };
 }
 
 export function getProfileTrainingMetrics(
