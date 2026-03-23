@@ -1227,7 +1227,6 @@ export function WorkoutTrackerApp() {
               }}
               onSkipWorkout={skipWorkout}
               onMoveWorkout={moveWorkout}
-              onOpenExercise={setSelectedExerciseId}
               onOpenRecentWorkout={(workoutDayId, exerciseId) => {
                 const workout = selectedProfile.workoutPlan.find((item) => item.id === workoutDayId);
                 if (workout) {

@@ -75,7 +75,6 @@ type HomeScreenProps = {
   onPreviewWorkout: (workoutId: string) => void;
   onSkipWorkout: () => void;
   onMoveWorkout: (workoutId: string) => void;
-  onOpenExercise: (exerciseId: string) => void;
   onOpenRecentWorkout: (workoutDayId: string, exerciseId?: string) => void;
 };
 
@@ -102,7 +101,6 @@ export function HomeScreen({
   onPreviewWorkout,
   onSkipWorkout,
   onMoveWorkout,
-  onOpenExercise,
   onOpenRecentWorkout,
 }: HomeScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
