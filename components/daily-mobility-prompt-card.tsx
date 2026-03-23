@@ -13,13 +13,13 @@ export function DailyMobilityPromptCard({
   onToggle: () => void;
 }) {
   return (
-    <Card className="space-y-5 px-5 py-5">
+    <Card className="space-y-4 px-4 py-4">
       <div className="space-y-2">
         <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/42">
           Mobility
         </p>
-        <h3 className="text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
-          {prompt.focusRegions.join(" • ")}
+        <h3 className="text-[1.4rem] font-semibold tracking-[-0.05em] text-white/94">
+          {prompt.focusRegions.join(" - ")}
         </h3>
         <p className="text-sm leading-6 text-white/56">Today&apos;s focus</p>
       </div>
@@ -43,7 +43,7 @@ export function DailyMobilityPromptCard({
           {prompt.secondaryStretches.map((stretch) => (
             <div
               key={stretch.name}
-              className="rounded-[18px] border border-white/6 bg-white/[0.02] px-4 py-3"
+              className="rounded-[18px] border border-white/5 bg-white/[0.02] px-4 py-3"
             >
               <p className="text-[13px] font-medium text-white/82">{stretch.name}</p>
               <p className="mt-1 text-sm leading-6 text-white/48">{stretch.why}</p>
@@ -54,7 +54,7 @@ export function DailyMobilityPromptCard({
 
       <div className="rounded-[20px] border border-white/7 bg-white/[0.03] px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/38">Note</p>
-        <p className="mt-2 text-sm leading-6 text-white/68">{prompt.note}</p>
+        <p className="mt-2 text-sm leading-6 text-white/66">{prompt.note}</p>
       </div>
 
       <button
