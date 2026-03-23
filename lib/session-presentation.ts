@@ -96,5 +96,5 @@ export function getSessionSupportLine(workout: WorkoutPlanDay, rhythmNote?: stri
     return rhythmNote;
   }
 
-  return `${workout.exercises.length} exercises • ${workout.durationMinutes} min`;
+  return `${workout.exercises.length} exercises - ${workout.durationMinutes} min`;
 }
