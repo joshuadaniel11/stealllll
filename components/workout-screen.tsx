@@ -345,7 +345,7 @@ export function WorkoutScreen({
                 <p className="text-sm text-muted">Planned session</p>
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
-                  {previewWorkout.focus} - {previewWorkout.durationMinutes} min
+                  {previewWorkout.exercises.length} exercises - ~{previewWorkout.durationMinutes} min
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted">
                   {getPreviewTease(profile.id, previewWorkout.id)}
@@ -355,10 +355,10 @@ export function WorkoutScreen({
                   <div className="mt-4 rounded-[24px] bg-white/[0.06] px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-text">Saved partial ready</p>
-                        <p className="mt-1 text-sm leading-6 text-muted">
-                          {previewPartialSession.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets are already logged here, so this day will resume instead of restarting.
-                        </p>
+                          <p className="text-sm font-medium text-text">Saved partial ready</p>
+                          <p className="mt-1 text-sm leading-6 text-muted">
+                            {previewPartialSession.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets are already logged here.
+                          </p>
                       </div>
                       <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-black">
                         Resume
@@ -379,22 +379,19 @@ export function WorkoutScreen({
                       </span>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3 text-sm text-muted">
-                      <p>
-                        {suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min
-                      </p>
-                      <p>{suggestedFocusSession.targetLabels.slice(0, 2).join(" + ")}</p>
+                        <p>{suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min</p>
+                        <p>{suggestedFocusSession.targetLabels.slice(0, 2).join(" + ")}</p>
+                      </div>
                     </div>
-                  </div>
                 ) : null}
 
                 <div className="mt-5 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-text">Session plan</p>
-                      <p className="mt-1 text-sm leading-6 text-muted">
-                        {previewWorkout.exercises.length} exercises with {previewWorkout.exercises[0]?.name}
-                        {previewWorkout.exercises.length > 1 ? ` first.` : "."}
-                      </p>
+                        <p className="mt-1 text-sm leading-6 text-muted">
+                          Starts with {previewWorkout.exercises[0]?.name}.
+                        </p>
                     </div>
                     <button
                       type="button"

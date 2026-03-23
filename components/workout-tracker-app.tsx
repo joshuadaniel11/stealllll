@@ -1279,12 +1279,16 @@ export function WorkoutTrackerApp() {
           onClose={() => setShowWorkoutFeelingPrompt(false)}
         />
       )}
-      <SessionSummaryModal
-        summary={sessionSummary}
-        nextInsight={trainingState.insights.completionNext}
-        onClose={() => setSessionSummary(null)}
-        onMarkComplete={markPartialSessionComplete}
-      />
+        <SessionSummaryModal
+          summary={sessionSummary}
+          nextInsight={trainingState.insights.completionNext}
+          onClose={() => setSessionSummary(null)}
+          onMarkComplete={markPartialSessionComplete}
+          onViewProgress={() => {
+            setSessionSummary(null);
+            startTransition(() => setActiveTab("progress"));
+          }}
+        />
       <EditWorkoutModal
         session={editingSession}
         onClose={() => setEditingSessionId(null)}

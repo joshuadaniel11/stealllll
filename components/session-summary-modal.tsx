@@ -47,11 +47,13 @@ export function SessionSummaryModal({
   nextInsight,
   onClose,
   onMarkComplete,
+  onViewProgress,
 }: {
   summary: SessionSummary | null;
   nextInsight?: string | null;
   onClose: () => void;
   onMarkComplete?: (summary: SessionSummary) => void;
+  onViewProgress?: () => void;
 }) {
   if (!summary) {
     return null;
@@ -126,11 +128,19 @@ export function SessionSummaryModal({
                   Count as done
                 </button>
               ) : null}
+              {!summary.partial && onViewProgress ? (
+                <button
+                  className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                  onClick={onViewProgress}
+                >
+                  View progress
+                </button>
+              ) : null}
               <button
                 className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
                 onClick={onClose}
               >
-                Done
+                {summary.partial ? "Done" : "Close"}
               </button>
             </div>
           </ScrollReveal>
