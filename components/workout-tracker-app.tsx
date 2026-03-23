@@ -491,14 +491,19 @@ export function WorkoutTrackerApp() {
     }),
     [deferredInstallPrompt, isIosInstallPath, isStandalone],
   );
+  const nextFocusText = trainingState.trainingLoad.summary.suggestedNextFocus.text;
   const workoutRhythmNote = useMemo(() => {
     const gapDays = getDaysSinceLastWorkout(userSessions);
     if (gapDays === null || gapDays < 3) {
-      return workoutOverride ? `Moved into place. Pick up with ${todaysWorkout.dayLabel} when ready.` : null;
+      if (workoutOverride) {
+        return `Moved into place. Focus sits on ${nextFocusText.toLowerCase()} this week.`;
+      }
+
+      return `Focus sits on ${nextFocusText.toLowerCase()} this week.`;
     }
 
-    return `It has been ${gapDays} days. Pick up with ${todaysWorkout.dayLabel} when ready.`;
-  }, [todaysWorkout.dayLabel, userSessions, workoutOverride]);
+    return `${gapDays} days off. Focus sits on ${nextFocusText.toLowerCase()} this week.`;
+  }, [nextFocusText, userSessions, workoutOverride]);
   const activeWorkoutTemplate = useMemo(() => {
     const matchedWorkout = selectedProfile.workoutPlan.find(
       (workout) => workout.id === state.activeWorkout?.workoutDayId,
@@ -1058,33 +1063,6 @@ export function WorkoutTrackerApp() {
     showToast("Workout counted as done. Moving to the next day.");
   };
 
-  const openNextFocusWorkout = () => {
-    if (!nextFocusDestination) {
-      showToast("No matching workout is available right now.");
-      return;
-    }
-
-    if (state.activeWorkout?.userId === selectedProfile.id) {
-      showToast(`Current workout still open. ${nextFocusDestination.workoutName} is the best next match.`);
-      startTransition(() => setActiveTab("workout"));
-      return;
-    }
-
-    if (state.activeWorkout && state.activeWorkout.userId !== selectedProfile.id) {
-      const activeOwner =
-        state.profiles.find((profile) => profile.id === state.activeWorkout?.userId)?.name ??
-        "The other profile";
-      showToast(`${activeOwner} still has a workout in progress on this phone.`);
-      return;
-    }
-
-    setSelectedExerciseId(null);
-    setSuggestedSessionPreview(false);
-    setWorkoutPreviewId(nextFocusDestination.workoutId);
-    softHaptic(8);
-    startTransition(() => setActiveTab("workout"));
-  };
-
   const openSuggestedFocusSession = () => {
     if (!suggestedFocusSession) {
       showToast("No suggested session is available right now.");
@@ -1272,7 +1250,6 @@ export function WorkoutTrackerApp() {
               measurements={state.measurements[selectedProfile.id]}
               stretchCompletions={state.stretchCompletions[selectedProfile.id]}
               recentTrainingUpdate={profileRecentTrainingUpdate}
-              onOpenNextFocus={openNextFocusWorkout}
               onOpenSuggestedSession={openSuggestedFocusSession}
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}
@@ -1314,6 +1291,7 @@ export function WorkoutTrackerApp() {
       )}
       <SessionSummaryModal
         summary={sessionSummary}
+        nextFocusText={trainingState.trainingLoad.summary.suggestedNextFocus.text}
         onClose={() => setSessionSummary(null)}
         onMarkComplete={markPartialSessionComplete}
       />

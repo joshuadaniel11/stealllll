@@ -180,11 +180,7 @@ function SummaryLine({
       ? lowActivity
         ? "No meaningful load logged yet this week"
         : "Still building"
-      : label === "Priority focus"
-        ? lowActivity
-          ? "Start with your first priority zones"
-          : "Still building"
-        : "Still building";
+      : "Still building";
 
   const value = metrics.length
     ? metrics.map((metric) => metric.label).join(", ")
@@ -195,47 +191,6 @@ function SummaryLine({
       <p className="text-[12px] font-medium text-white/48">{label}</p>
       <p className="mt-1 text-[14px] font-medium text-white/84">{value}</p>
     </div>
-  );
-}
-
-function NextFocusCard({
-  label,
-  focusText,
-  helperText,
-  lowActivity,
-  onOpen,
-}: {
-  label: string;
-  focusText: string;
-  helperText: string;
-  lowActivity?: boolean;
-  onOpen: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="progress-focus-card w-full rounded-[22px] border px-4 py-4 text-left transition active:scale-[0.995]"
-    >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[12px] font-medium text-white/48">{label}</p>
-          <p className="mt-1 text-[1.1rem] font-semibold tracking-[-0.03em] text-white/92">{focusText}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white/68">
-            Next workout
-          </span>
-          <ChevronRight className="h-4 w-4 text-white/44" />
-        </div>
-      </div>
-      <p className="mt-3 text-[13px] leading-6 text-white/58">
-        {lowActivity
-          ? "Starting with your highest-priority zones."
-          : "Pulled from the most undertrained priority regions this week."}
-      </p>
-      <p className="mt-2 text-[11px] font-medium text-white/44">{helperText}</p>
-    </button>
   );
 }
 
@@ -255,7 +210,7 @@ function SuggestedSessionCard({
       <button type="button" onClick={onOpen} className="w-full text-left transition active:scale-[0.995]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[12px] font-medium text-white/48">Today&apos;s focus session</p>
+            <p className="text-[12px] font-medium text-white/48">Suggested session</p>
             <p className="mt-1 text-[1.05rem] font-semibold tracking-[-0.03em] text-white/90">{session.focusText}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {session.targetLabels.map((label) => (
@@ -338,7 +293,6 @@ export function TrainingLoadCard({
   userId,
   nextFocusHelperText,
   suggestedSession,
-  onOpenNextFocus,
   onOpenSuggestedSession,
 }: {
   metrics: TrainingLoadMetric[];
@@ -350,7 +304,6 @@ export function TrainingLoadCard({
   userId: UserId;
   nextFocusHelperText: string;
   suggestedSession: SuggestedFocusSession | null;
-  onOpenNextFocus: () => void;
   onOpenSuggestedSession: () => void;
 }) {
   const [view, setView] = useState<"front" | "back">("front");
@@ -400,18 +353,9 @@ export function TrainingLoadCard({
         <div className="space-y-2">
           <DetailLabel label="This week" />
           <div className="grid gap-2">
-          <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
-          <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
+            <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
           </div>
         </div>
-
-        <NextFocusCard
-          label="Next focus"
-          focusText={summary.suggestedNextFocus.text}
-          helperText={nextFocusHelperText}
-          lowActivity={summary.lowActivity}
-          onOpen={onOpenNextFocus}
-        />
 
         <SuggestedSessionCard
           session={suggestedSession}

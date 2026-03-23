@@ -116,7 +116,7 @@ export function HomeScreen({
       ? "Resume ready"
       : "Queued today";
   const homeStateDetail = activeWorkoutName
-    ? `${activeWorkoutName} is still open. Pick it back up where you left it.`
+    ? `${activeWorkoutName} is still open.`
     : pendingPartial
       ? `${pendingPartial.workoutName} is ready to resume.`
       : getSessionSupportLine(todaysWorkout, workoutRhythmNote);
@@ -128,10 +128,10 @@ export function HomeScreen({
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
 
   return (
-    <div className="space-y-6 pb-28">
+    <div className="space-y-5 pb-28">
       <ScrollReveal delay={30}>
-        <Card className="home-session-hero space-y-5 px-6 py-6">
-          <div className="space-y-4">
+        <Card className="home-session-hero space-y-4 px-6 py-6">
+          <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
                 {sessionPresentation.splitLabel}
@@ -150,7 +150,7 @@ export function HomeScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-2.5">
             <button
               type="button"
               onClick={() =>
@@ -177,10 +177,6 @@ export function HomeScreen({
               </button>
             </div>
           </div>
-
-          {recentUpdateBadge ? (
-            <p className="text-sm leading-6 text-white/52">{recentUpdateBadge.detail}</p>
-          ) : null}
 
           {showMoveChoices ? (
             <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
@@ -216,42 +212,7 @@ export function HomeScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={55}>
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="home-quiet-card space-y-2 px-4 py-4">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
-            <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
-            <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
-          </Card>
-          <Card className="home-quiet-card space-y-2 px-4 py-4">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
-            <p className="text-xl font-semibold tracking-[-0.04em] text-white">
-              {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
-            </p>
-            <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
-          </Card>
-        </div>
-      </ScrollReveal>
-
-      <ScrollReveal delay={75}>
-        <div className="grid grid-cols-3 gap-3">
-          <MiniMetric label="Sessions" value={String(weeklyCount)} />
-          <MiniMetric label="Streak" value={`${streak}d`} />
-          <MiniMetric label="PRs" value={String(pbCount)} />
-        </div>
-      </ScrollReveal>
-
-      {dailyMobilityPrompt ? (
-        <ScrollReveal delay={120}>
-          <DailyMobilityPromptCard
-            prompt={dailyMobilityPrompt}
-            completed={stretchCompletedToday}
-            onToggle={onToggleStretch}
-          />
-        </ScrollReveal>
-      ) : null}
-
-      <ScrollReveal delay={150}>
-        <Card className="space-y-4">
+        <Card className="space-y-3 px-4 py-4">
           <button
             type="button"
             onClick={() => setShowDetails((value) => !value)}
@@ -261,8 +222,8 @@ export function HomeScreen({
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
                 More
               </p>
-              <p className="text-sm leading-6 text-white/62">
-                Extra detail, recent sessions, and shared momentum.
+              <p className="text-sm leading-6 text-white/54">
+                Note, countdown, mobility, and extras.
               </p>
             </div>
             <ChevronDown
@@ -274,6 +235,39 @@ export function HomeScreen({
 
           {showDetails ? (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="home-quiet-card space-y-2 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
+                  <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
+                  <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
+                </Card>
+                <Card className="home-quiet-card space-y-2 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
+                  <p className="text-xl font-semibold tracking-[-0.04em] text-white">
+                    {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
+                  </p>
+                  <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <MiniMetric label="Sessions" value={String(weeklyCount)} />
+                <MiniMetric label="Streak" value={`${streak}d`} />
+                <MiniMetric label="PRs" value={String(pbCount)} />
+              </div>
+
+              {recentUpdateBadge ? (
+                <p className="text-sm leading-6 text-white/50">{recentUpdateBadge.detail}</p>
+              ) : null}
+
+              {dailyMobilityPrompt ? (
+                <DailyMobilityPromptCard
+                  prompt={dailyMobilityPrompt}
+                  completed={stretchCompletedToday}
+                  onToggle={onToggleStretch}
+                />
+              ) : null}
+
               <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
