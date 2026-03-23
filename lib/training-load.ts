@@ -710,6 +710,36 @@ function getPriorityRank(userId: UserId, zone: TrainingLoadZone) {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
+function getAveragePenaltyForZones(zoneIds: TrainingLoadZone[], recentLoad?: RecentLoadProfile) {
+  if (!zoneIds.length || !recentLoad) {
+    return 0;
+  }
+
+  return (
+    zoneIds.reduce((sum, zoneId) => sum + (recentLoad.zonePenalties[zoneId] ?? 0), 0) /
+    zoneIds.length
+  );
+}
+
+function getFocusHelperText(
+  focusLabels: string[],
+  matchedZoneLabels: string[],
+  isFallback: boolean,
+) {
+  const focusText = focusLabels.join(" + ");
+  const matchedText = matchedZoneLabels.join(" + ");
+
+  if (isFallback) {
+    return `Closest real workout for ${focusText}`;
+  }
+
+  if (matchedText && matchedText !== focusText) {
+    return `Best match for ${matchedText}`;
+  }
+
+  return `Best match for ${focusText}`;
+}
+
 function buildSuggestedNextFocus(
   userId: UserId,
   metrics: TrainingLoadMetric[],
@@ -741,7 +771,14 @@ function buildSuggestedNextFocus(
       .slice(0, 2);
 
   const selectedMetrics = lowActivity
-    ? pickZones(priorityMetrics.slice(0, Math.min(4, priorityMetrics.length)))
+    ? [...priorityMetrics.slice(0, Math.min(5, priorityMetrics.length))]
+        .sort((a, b) => {
+          if (recentLoad.zonePenalties[a.id] !== recentLoad.zonePenalties[b.id]) {
+            return recentLoad.zonePenalties[a.id] - recentLoad.zonePenalties[b.id];
+          }
+          return getPriorityRank(userId, a.id) - getPriorityRank(userId, b.id);
+        })
+        .slice(0, 2)
     : (() => {
         const lagging = priorityMetrics.filter((metric) => metric.percentage < 80);
         if (lagging.length >= 2) {
@@ -832,9 +869,7 @@ export function getSuggestedWorkoutDestination(
     workoutName: bestMatch.workout.name,
     matchedZoneIds,
     matchedLabels,
-    helperText: bestMatch.matchedZoneIds.length
-      ? `Open matching workout`
-      : `Open closest workout`,
+    helperText: getFocusHelperText(focus.labels, matchedLabels, bestMatch.matchedZoneIds.length === 0),
     isFallback: bestMatch.matchedZoneIds.length === 0,
   };
 }
@@ -922,13 +957,18 @@ export function getSuggestedFocusSession(
   const matchedTemplateExercises = dedupedTemplateExercises.filter((exercise) => exercise.totalFocusScore > 0);
   const selectedExercises: FocusExerciseCandidate[] = [];
   const targetCount = 4;
+  const usedMuscleGroups = new Set<MuscleGroup>();
 
   for (const zoneId of focus.zoneIds) {
     const bestForZone = matchedTemplateExercises.find(
-      (exercise) => !selectedExercises.includes(exercise) && exercise.matchedZoneIds.includes(zoneId),
+      (exercise) =>
+        !selectedExercises.includes(exercise) &&
+        exercise.matchedZoneIds.includes(zoneId) &&
+        (!usedMuscleGroups.has(exercise.muscleGroup) || exercise.matchedZoneIds.length > 1),
     );
     if (bestForZone) {
       selectedExercises.push(bestForZone);
+      usedMuscleGroups.add(bestForZone.muscleGroup);
     }
   }
 
@@ -939,7 +979,11 @@ export function getSuggestedFocusSession(
     if (selectedExercises.includes(exercise)) {
       continue;
     }
+    if (usedMuscleGroups.has(exercise.muscleGroup) && selectedExercises.length < Math.min(targetCount, 3)) {
+      continue;
+    }
     selectedExercises.push(exercise);
+    usedMuscleGroups.add(exercise.muscleGroup);
   }
 
   if (selectedExercises.length < targetCount) {
@@ -1006,6 +1050,7 @@ export function getSuggestedFocusSession(
         continue;
       }
       selectedExercises.push(fallbackExercise);
+      usedMuscleGroups.add(fallbackExercise.muscleGroup);
     }
   }
 
@@ -1049,7 +1094,11 @@ export function getSuggestedFocusSession(
     targetLabels,
     totalSets,
     estimatedDurationMinutes,
-    helperText: sourceWorkoutName ? `Built from ${sourceWorkoutName}` : "Built from your current focus priorities",
+    helperText: sourceWorkoutName
+      ? getAveragePenaltyForZones(focus.zoneIds, recentLoad) >= 0.5
+        ? `Built from ${sourceWorkoutName}, with fresher support work around your focus`
+        : `Built from ${sourceWorkoutName}`
+      : "Built from your current focus priorities",
     actionLabel: canStartDirectly ? "Start session" : "Open workout",
     canStartDirectly,
     isFallback: selectedExercises.some((exercise) => exercise.sourceWorkoutId === null),

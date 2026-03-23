@@ -149,6 +149,50 @@ function testSuggestedSessionIsActionable() {
   assert.equal(trainingState.suggestedFocusSession?.canStartDirectly, true);
 }
 
+function testLowActivityFocusStillAvoidsJustTrainedPriority() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const sessions = [
+    {
+      id: "recent-glute-bias",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T09:30:00.000Z",
+      durationMinutes: 28,
+      feeling: "Solid",
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes",
+          sets: [{ id: "a", weight: 45, reps: 8, completed: true }],
+        },
+      ],
+    },
+  ] as const;
+
+  const trainingState = getProfileTrainingState(natasha, [...sessions], seed.exerciseLibrary, referenceDate);
+
+  assert.notEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels[0], "Upper glutes");
+  assert.notEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels[0], "Glute max");
+}
+
+function testSuggestedSessionSpreadsFocusAcrossPatterns() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const trainingState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, referenceDate);
+  const exerciseGroups = trainingState.suggestedFocusSession?.exercises.map((exercise) => exercise.muscleGroup) ?? [];
+
+  assert.ok(new Set(exerciseGroups).size >= 2);
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -177,6 +221,8 @@ const tests = [
   ["merge imported state safely", testSafeStateMerge],
   ["bias next focus away from just-trained zones", testRecoveryAwareNextFocus],
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
+  ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],
+  ["spread suggested session across useful patterns", testSuggestedSessionSpreadsFocusAcrossPatterns],
   ["canonicalize exercise library names", testExerciseLibraryCanonicalization],
   ["keep favorite exercise ids resolvable", testFavoriteIdsStayResolvable],
 ] as const;
