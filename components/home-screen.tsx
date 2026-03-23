@@ -8,6 +8,7 @@ import { DailyMobilityPromptCard } from "@/components/daily-mobility-prompt-card
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
+import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
   BibleVerse,
@@ -24,40 +25,6 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
-}
-
-const workoutMotivationByProfile: Record<string, Record<string, string>> = {
-  natasha: {
-    "natasha-glutes-hams":
-      "Build your lower-body shape with the kind of smooth glute work Joshua keeps noticing.",
-    "natasha-back-arms":
-      "Keep your back and arms sharp enough that Joshua keeps staring when you walk away.",
-    "natasha-glutes-quads":
-      "Train legs and curves with the kind of fullness that makes your whole silhouette land harder.",
-    "natasha-upper-core":
-      "Keep your waist and upper-body shape crisp, clean, and a little dangerous.",
-    "natasha-core-explosive":
-      "Move sharply, feel light, and carry that teasing energy through the rest of the day.",
-  },
-  joshua: {
-    "joshua-chest-triceps":
-      "Build chest and triceps with the kind of upper-body thickness Natasha feels immediately.",
-    "joshua-back-biceps":
-      "Train back and biceps until that wider frame and stronger arms start speaking for themselves.",
-    "joshua-legs":
-      "Build shoulders and legs so the whole athletic look feels harder, cleaner, and more obvious.",
-    "joshua-shoulders-arms":
-      "Hit chest and triceps again so the extra size and strength keep showing up where it counts.",
-    "joshua-upper-strength":
-      "Finish back and biceps hard so that wider, stronger look keeps getting harder to ignore.",
-  },
-};
-
-function getWorkoutMotivation(profileId: string, workoutId: string) {
-  return (
-    workoutMotivationByProfile[profileId]?.[workoutId] ??
-    "Train with intent today and let the results speak for themselves."
-  );
 }
 
 function formatRecentTrainingUpdate(update: {
@@ -141,10 +108,7 @@ export function HomeScreen({
   const [showDetails, setShowDetails] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
-  const dailyMotivation = getWorkoutMotivation(
-    profile.id,
-    todaysWorkout.id,
-  );
+  const sessionPresentation = getSessionPresentation(profile, todaysWorkout);
   const latestSession = recentWorkouts[0] ?? null;
   const pendingPartial =
     latestSession?.partial && latestSession.workoutDayId === todaysWorkout.id ? latestSession : null;
@@ -154,90 +118,62 @@ export function HomeScreen({
       ? "Resume ready"
       : "Queued today";
   const homeStateDetail = activeWorkoutName
-    ? `${activeWorkoutName} is still open on this phone. Jump back in where you left it.`
+    ? `${activeWorkoutName} is still open. Pick it back up where you left it.`
     : pendingPartial
-      ? `You saved part of ${pendingPartial.workoutName}. Resume it when ready, or leave it and move on later.`
-      : workoutRhythmNote ?? "Today is lined up. Start clean and train with intent.";
+      ? `${pendingPartial.workoutName} is ready to resume.`
+      : getSessionSupportLine(todaysWorkout, workoutRhythmNote);
   const primaryActionLabel = activeWorkoutName
-    ? "Resume Workout Mode"
+    ? "Resume Session"
     : pendingPartial
-      ? "Resume Partial Workout"
-      : "Begin Session";
+      ? "Resume Session"
+      : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
 
   return (
-    <div className="space-y-5 pb-28">
-      <ScrollReveal delay={0}>
-        <div className="text-center">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">
-            Until November 2, 2026
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white">
-            {weddingCountdown.months} months {"\u2022"} {weddingCountdown.days} days
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-white/58">
-            {weddingCountdown.label}
-          </p>
-        </div>
-      </ScrollReveal>
-
+    <div className="space-y-6 pb-28">
       <ScrollReveal delay={30}>
-        <Card className="space-y-3">
-          <div className="space-y-1.5">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-              Today&apos;s note
-            </p>
-            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white">{profile.name}</h1>
-            <p className="text-sm leading-7 text-white/70">{dailyMotivation}</p>
-          </div>
-        </Card>
-      </ScrollReveal>
-
-      <ScrollReveal delay={60}>
-        <Card className="space-y-4">
-          <div className="space-y-3">
+        <Card className="home-session-hero space-y-5 px-6 py-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                Today&apos;s workout
+              <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
+                {sessionPresentation.splitLabel}
               </p>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/62">
+              <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/58">
                 {homeStateLabel}
               </span>
             </div>
-            <div className="space-y-1.5">
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">
-                {todaysWorkout.name}
+            <div className="space-y-2">
+              <h2 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-white">
+                {sessionPresentation.title}
               </h2>
-              <p className="text-sm leading-6 text-white/62">
-                {todaysWorkout.focus} {"\u2022"} {todaysWorkout.exercises.length} exercises {"\u2022"}{" "}
-                {todaysWorkout.durationMinutes} min
+              <p className="text-sm leading-6 text-white/56">
+                {homeStateDetail}
               </p>
             </div>
-            <p className="text-sm leading-6 text-white/58">{homeStateDetail}</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-3">
             <button
               type="button"
               onClick={() =>
                 activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
               }
-              className="rounded-[24px] bg-white px-5 py-4 text-base font-medium tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
+              className="rounded-[26px] bg-white px-5 py-4 text-base font-semibold tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
             >
               {primaryActionLabel}
             </button>
-            <div className="flex items-center justify-between gap-3 text-sm text-white/70">
+            <div className="flex items-center justify-between gap-3 text-sm">
               <button
                 type="button"
                 onClick={() => onPreviewWorkout(todaysWorkout.id)}
-                className="rounded-full px-1 py-1 transition text-white/74 hover:text-white"
+                className="rounded-full px-1 py-1 transition text-white/58 hover:text-white/82"
               >
-                Preview workout
+                Preview
               </button>
               <button
                 type="button"
                 onClick={() => setShowMoveChoices((value) => !value)}
-                className="rounded-full px-1 py-1 transition text-white/52 hover:text-white"
+                className="rounded-full px-1 py-1 transition text-white/42 hover:text-white/72"
               >
                 Move or skip
               </button>
@@ -245,21 +181,21 @@ export function HomeScreen({
           </div>
 
           {recentUpdateBadge ? (
-            <div className="training-refresh-chip rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-3">
+            <div className="training-refresh-chip rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[11px] uppercase tracking-[0.18em] text-white/46">
                   {recentUpdateBadge.label}
                 </p>
-                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/58">
+                <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/54">
                   In sync
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-white/68">{recentUpdateBadge.detail}</p>
+              <p className="mt-2 text-sm leading-6 text-white/60">{recentUpdateBadge.detail}</p>
             </div>
           ) : null}
 
           {showMoveChoices ? (
-            <div className="space-y-2 rounded-[22px] border border-white/10 bg-white/5 p-3">
+            <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
               {profile.workoutPlan.map((workout) => (
                 <button
                   key={workout.id}
@@ -268,7 +204,7 @@ export function HomeScreen({
                     onMoveWorkout(workout.id);
                     setShowMoveChoices(false);
                   }}
-                  className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
+                  className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/[0.05]"
                 >
                   <span className="text-sm font-medium text-white/86">
                     {workout.dayLabel} {"\u2022"} {workout.name}
@@ -282,7 +218,7 @@ export function HomeScreen({
                   onSkipWorkout();
                   setShowMoveChoices(false);
                 }}
-                className="w-full rounded-[18px] border border-white/10 px-3 py-3 text-sm text-white/65 transition hover:bg-white/6"
+                className="w-full rounded-[18px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.05]"
               >
                 Skip for now
               </button>
@@ -291,7 +227,24 @@ export function HomeScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={90}>
+      <ScrollReveal delay={55}>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="home-quiet-card space-y-2 px-4 py-4">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
+            <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
+            <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
+          </Card>
+          <Card className="home-quiet-card space-y-2 px-4 py-4">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
+            <p className="text-xl font-semibold tracking-[-0.04em] text-white">
+              {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
+            </p>
+            <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
+          </Card>
+        </div>
+      </ScrollReveal>
+
+      <ScrollReveal delay={75}>
         <div className="grid grid-cols-3 gap-3">
           <MiniMetric label="Sessions" value={String(weeklyCount)} />
           <MiniMetric label="Streak" value={`${streak}d`} />
@@ -317,11 +270,11 @@ export function HomeScreen({
             className="flex w-full items-center justify-between text-left"
           >
             <div className="space-y-1">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
                 More
               </p>
               <p className="text-sm leading-6 text-white/62">
-                Extra insight, quiet motivation, and recent activity.
+                Extra detail, recent sessions, and shared momentum.
               </p>
             </div>
             <ChevronDown

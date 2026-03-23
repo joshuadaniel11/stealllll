@@ -8,6 +8,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import { areEquivalentExerciseNames, buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
+import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
@@ -256,6 +257,9 @@ export function WorkoutScreen({
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
     const previewPartialSession = previewWorkout ? partialByWorkout[previewWorkout.id] ?? null : null;
+    const todaysWorkout = profile.workoutPlan.find((workout) => workout.id === todaysWorkoutId) ?? profile.workoutPlan[0];
+    const heroPresentation = getSessionPresentation(profile, todaysWorkout);
+    const todaysPartial = partialByWorkout[todaysWorkout.id] ?? null;
     const showSuggestedSessionBlock =
       suggestedSessionPreview &&
       suggestedFocusSession &&
@@ -265,41 +269,74 @@ export function WorkoutScreen({
     return (
       <>
         <ScrollReveal delay={0} y={14} scale={0.996}>
-        <Card>
-          <p className="text-sm text-muted">Workout plan</p>
-          <h2 className="large-title mt-2 font-semibold text-text">Choose your next lift</h2>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            Queued days, saved partials, and previews stay in one place so you always know whether you&apos;re starting fresh or picking back up.
-          </p>
-          <div className="mt-4 space-y-3">
+        <Card className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm text-muted">Your training split</p>
+            <h2 className="large-title mt-2 font-semibold text-text">Start with today&apos;s session</h2>
+          </div>
+
+          <div className="progress-focus-card rounded-[26px] border px-5 py-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">{heroPresentation.splitLabel}</p>
+              <span className="rounded-full bg-white/[0.07] px-3 py-1 text-[11px] font-medium text-white/62">
+                {todaysPartial ? "Resume ready" : "Queued today"}
+              </span>
+            </div>
+            <h3 className="mt-3 text-[1.95rem] font-semibold tracking-[-0.06em] text-white/94">{heroPresentation.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-white/58">
+              {todaysPartial
+                ? `${todaysPartial.workoutName} is ready to resume.`
+                : getSessionSupportLine(todaysWorkout)}
+            </p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                className="rounded-[24px] bg-white px-4 py-3 text-sm font-semibold text-black"
+                onClick={() => onStartWorkout(todaysWorkout)}
+              >
+                {todaysPartial ? "Resume Session" : "Start Session"}
+              </button>
+              <button
+                className="rounded-full px-2 py-1 text-sm text-white/54 transition hover:text-white/78"
+                onClick={() => setLocalPreviewWorkoutId(todaysWorkout.id)}
+              >
+                Preview
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[12px] font-medium text-white/52">Full split</p>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{profile.workoutPlan.length} days</p>
+            </div>
             {profile.workoutPlan.map((workout) => (
               <div
                 key={workout.id}
-                className={`rounded-[28px] border px-4 py-4 transition duration-300 ${
+                className={`rounded-[24px] border px-4 py-4 transition duration-300 ${
                   workout.id === localPreviewWorkoutId
-                    ? "border-white/12 bg-white/[0.07] text-text"
+                    ? "border-white/10 bg-white/[0.06] text-text"
                     : workout.id === todaysWorkoutId
-                      ? "border-white/10 bg-accentSoft text-text"
-                      : "border-white/6 bg-[var(--card-strong)] text-text"
+                      ? "border-white/8 bg-white/[0.045] text-text"
+                      : "border-white/5 bg-[var(--card-strong)]/70 text-text"
                 }`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-base font-medium">{workout.name}</p>
+                      <p className="text-[15px] font-medium">{workout.name}</p>
                       {workout.id === todaysWorkoutId ? (
-                        <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/78">
-                          Queued today
+                        <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/70">
+                          Today
                         </span>
                       ) : null}
                       {partialByWorkout[workout.id] ? (
-                        <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-black">
-                          Partial saved
+                        <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/78">
+                          Resume
                         </span>
                       ) : null}
                     </div>
                     <p className="caption-text mt-1 text-muted">
-                      {workout.dayLabel} - {workout.exercises.length} exercises
+                      {getSessionPresentation(profile, workout).splitLabel} • {workout.exercises.length} exercises
                     </p>
                     {partialByWorkout[workout.id] ? (
                       <p className="mt-1 text-[11px] font-medium text-white/64">
@@ -309,16 +346,16 @@ export function WorkoutScreen({
                   </div>
                   <div className="flex gap-2">
                     <button
-                      className="rounded-[22px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
+                      className="rounded-[20px] bg-black/10 px-3 py-2 text-sm font-medium text-muted"
                       onClick={() => setLocalPreviewWorkoutId(workout.id)}
                     >
                       Preview
                     </button>
                     <button
-                      className="rounded-[22px] bg-white px-3 py-2 text-sm font-semibold text-black"
+                      className="rounded-[20px] bg-white px-3 py-2 text-sm font-semibold text-black"
                       onClick={() => onStartWorkout(workout)}
                     >
-                      {partialByWorkout[workout.id] ? "Resume" : "Begin"}
+                      {partialByWorkout[workout.id] ? "Resume" : "Start"}
                     </button>
                   </div>
                 </div>

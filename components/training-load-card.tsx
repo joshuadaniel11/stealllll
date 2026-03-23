@@ -182,7 +182,7 @@ function SummaryLine({
         : "Still building"
       : label === "Priority focus"
         ? lowActivity
-          ? "Start with the first priority regions for this profile"
+          ? "Start with your first priority zones"
           : "Still building"
         : "Still building";
 
@@ -231,8 +231,8 @@ function NextFocusCard({
       </div>
       <p className="mt-3 text-[13px] leading-6 text-white/58">
         {lowActivity
-          ? "Starting from your highest-priority regions for this profile until more current-week data is logged."
-          : "Based on the most undertrained priority regions in your current-week load."}
+          ? "Starting with your highest-priority zones."
+          : "Pulled from the most undertrained priority regions this week."}
       </p>
       <p className="mt-2 text-[11px] font-medium text-white/44">{helperText}</p>
     </button>
@@ -389,7 +389,7 @@ export function TrainingLoadCard({
         <div>
           <p className="text-[13px] font-medium text-white/54">Training Load</p>
           <h3 className="mt-1 text-[1.5rem] font-semibold tracking-[-0.05em] text-white/94">Current week</h3>
-          <p className="mt-2 text-[14px] leading-6 text-white/56">{weekLabel}</p>
+          <p className="mt-2 text-[13px] leading-6 text-white/54">{weekLabel}</p>
         </div>
         <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
           {activeDayCount} {activeDayCount === 1 ? "day" : "days"}
@@ -398,7 +398,7 @@ export function TrainingLoadCard({
 
       <div className="mt-4 grid gap-4">
         <div className="space-y-2">
-          <DetailLabel label="Coach read" />
+          <DetailLabel label="This week" />
           <div className="grid gap-2">
           <SummaryLine label="Most trained" metrics={summary.mostTrained} lowActivity={summary.lowActivity} />
           <SummaryLine label="Priority focus" metrics={summary.needsWork} lowActivity={summary.lowActivity} />
@@ -423,7 +423,7 @@ export function TrainingLoadCard({
             <div>
               <p className="text-sm font-medium text-white/78">Worked muscle map</p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
-                Tap a lit zone to inspect what drove it this week
+                Tap a lit zone to inspect it
               </p>
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -461,7 +461,7 @@ export function TrainingLoadCard({
         <ZoneContributorPanel metric={inspectedMetric} />
 
         <div className="space-y-2">
-          <DetailLabel label="Coverage detail" />
+          <DetailLabel label="Coverage" />
           <div className="grid grid-cols-2 gap-2">
             {orderedGroups.map((group) => (
               <GroupMetricCard key={group.id} metric={group} />
@@ -470,7 +470,7 @@ export function TrainingLoadCard({
         </div>
 
         <div className="space-y-2">
-          <DetailLabel label="Visible load leaders" />
+          <DetailLabel label="Loaded zones" />
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-white/82">Most loaded visible zones</p>
             <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{view} side</p>

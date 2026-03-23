@@ -70,6 +70,27 @@ function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
   );
 }
 
+function getWeeklyRead(trainingState: ProfileTrainingState) {
+  const { trainingLoad, weeklySummary } = trainingState;
+  const nextText = trainingLoad.summary.suggestedNextFocus.text;
+  const topLoaded = trainingLoad.summary.mostTrained.map((metric) => metric.label).join(", ");
+  const lagging = trainingLoad.summary.needsWork.map((metric) => metric.label).join(", ");
+
+  if (weeklySummary.workoutsCompleted === 0) {
+    return {
+      title: "No training logged yet this week",
+      detail: "Start with your priority zones and let the week build from there.",
+    };
+  }
+
+  return {
+    title: `${nextText} need attention`,
+    detail: topLoaded
+      ? `${topLoaded} are leading. ${lagging || nextText} still need work.`
+      : `${lagging || nextText} still need work next.`,
+  };
+}
+
 export function ProgressScreen({
   profile,
   trainingState,
@@ -120,6 +141,7 @@ export function ProgressScreen({
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
+  const weeklyRead = getWeeklyRead(trainingState);
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
         const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
@@ -135,19 +157,28 @@ export function ProgressScreen({
 
   return (
     <>
-      {recentUpdateLabel ? (
-        <ScrollReveal delay={0}>
-          <div className="progress-refresh-card training-refresh-chip rounded-[24px] border px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[12px] font-medium tracking-[-0.01em] text-white/62">Training state refreshed</p>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/72">Live</span>
-            </div>
-            <p className="mt-2 text-[13px] leading-6 text-white/64">{recentUpdateLabel}</p>
-          </div>
-        </ScrollReveal>
-      ) : null}
-
       <ScrollReveal delay={0}>
+        <Card className="progress-panel">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium text-white/52">Weekly read</p>
+              <h2 className="mt-2 text-[1.85rem] font-semibold tracking-[-0.06em] text-white/94">{weeklyRead.title}</h2>
+              <p className="mt-2 text-[14px] leading-6 text-white/56">{weeklyRead.detail}</p>
+            </div>
+            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/68">
+              {weeklySummary.workoutsCompleted} this week
+            </div>
+          </div>
+          {recentUpdateLabel ? (
+            <div className="progress-summary-card mt-4 rounded-[22px] border px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-white/42">In sync</p>
+              <p className="mt-2 text-[13px] leading-6 text-white/60">{recentUpdateLabel}</p>
+            </div>
+          ) : null}
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={12}>
         <TrainingLoadCard
           metrics={trainingLoad.metrics}
           groups={trainingLoad.groups}
@@ -163,7 +194,7 @@ export function ProgressScreen({
         />
       </ScrollReveal>
 
-      <ScrollReveal delay={12}>
+      <ScrollReveal delay={26}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Goal dashboard"
@@ -189,12 +220,12 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={25}>
+      <ScrollReveal delay={50}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Workout calendar"
             title="Last 6 weeks"
-            description="A cleaner read on your rhythm, with this week kept in focus."
+            description="Your recent rhythm, with this week kept in focus."
             aside={
               <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
                 {weeklySummary.workoutsCompleted} this week
@@ -207,7 +238,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={50}>
+      <ScrollReveal delay={74}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Weekly snapshot"
@@ -244,7 +275,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={95}>
+      <ScrollReveal delay={110}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Trend"
@@ -309,7 +340,7 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={120}>
+      <ScrollReveal delay={135}>
         <Card className="progress-panel">
           <SectionHeader eyebrow="Direction this week" title={progressSignals.primarySignal.title} />
           <div className="progress-summary-card mt-4 rounded-[24px] border px-4 py-4">
@@ -327,11 +358,11 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={145}>
+      <ScrollReveal delay={160}>
         <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
       </ScrollReveal>
 
-      <ScrollReveal delay={245}>
+      <ScrollReveal delay={190}>
         <Card className="progress-panel">
           <SectionHeader
             eyebrow="Recent sessions"

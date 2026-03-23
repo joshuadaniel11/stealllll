@@ -11,12 +11,12 @@
   --text: #f8f5f7;
   --muted: #b8afb8;
   --accent: #df7d9f;
-  --accent-soft: rgba(223, 125, 159, 0.14);
+  --accent-soft: rgba(223, 125, 159, 0.1);
   --success: #5f9b82;
   --warning: #b88a59;
-  --shadow-card: 0 22px 56px rgba(0, 0, 0, 0.36);
-  --shadow-soft: 0 12px 26px rgba(0, 0, 0, 0.24);
-  --shadow-glow: 0 12px 30px rgba(223, 125, 159, 0.1);
+  --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.18);
+  --shadow-glow: 0 10px 22px rgba(223, 125, 159, 0.06);
   --page-glow-top: radial-gradient(circle at top, rgba(223, 125, 159, 0.09), transparent 18%);
   --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(223, 125, 159, 0.06), transparent 14%);
   --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.02), transparent 28%);
@@ -129,10 +129,10 @@ body.app-standalone {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
     rgba(16, 18, 22, 0.78);
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.045);
   box-shadow:
-    0 18px 42px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 14px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .progress-subcard {
@@ -174,8 +174,22 @@ body.app-standalone {
 
 .progress-focus-card {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 12px 30px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.home-session-hero {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.045), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012)),
+    rgba(10, 12, 16, 0.72);
+}
+
+.home-quiet-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012)),
+    rgba(255, 255, 255, 0.018);
+  border-color: rgba(255, 255, 255, 0.04);
 }
 
 .content-stack > * {
@@ -218,10 +232,10 @@ body.app-standalone {
   --text: #ffffff;
   --muted: #d2c8cc;
   --accent: #b94657;
-  --accent-soft: rgba(185, 70, 87, 0.16);
-  --shadow-card: 0 20px 56px rgba(0, 0, 0, 0.48);
-  --shadow-soft: 0 12px 26px rgba(0, 0, 0, 0.28);
-  --shadow-glow: 0 14px 28px rgba(185, 70, 87, 0.08);
+  --accent-soft: rgba(185, 70, 87, 0.12);
+  --shadow-card: 0 18px 46px rgba(0, 0, 0, 0.38);
+  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.22);
+  --shadow-glow: 0 10px 22px rgba(185, 70, 87, 0.06);
   --page-glow-top: radial-gradient(circle at top, rgba(185, 70, 87, 0.08), transparent 17%);
   --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(185, 70, 87, 0.05), transparent 14%);
   --page-glow-bottom: radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.015), transparent 30%);
@@ -234,10 +248,10 @@ body.app-standalone {
   --stroke: rgba(255, 214, 228, 0.08);
   --muted: #c7aebb;
   --accent: #ef6f9a;
-  --accent-soft: rgba(239, 111, 154, 0.16);
+  --accent-soft: rgba(239, 111, 154, 0.12);
   --success: #6a9d87;
   --warning: #b48b63;
-  --shadow-glow: 0 14px 30px rgba(239, 111, 154, 0.12);
+  --shadow-glow: 0 10px 22px rgba(239, 111, 154, 0.08);
   --page-glow-top: radial-gradient(circle at top, rgba(239, 111, 154, 0.11), transparent 19%);
   --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(239, 111, 154, 0.08), transparent 14%);
 }
@@ -606,10 +620,10 @@ h3 {
 .calendar-day-cell-complete {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(180deg, rgba(153, 123, 255, 1), rgba(96, 71, 228, 0.98));
+    linear-gradient(180deg, rgba(145, 122, 240, 0.96), rgba(96, 71, 228, 0.94));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 12px 26px rgba(95, 70, 220, 0.28);
+    0 10px 20px rgba(95, 70, 220, 0.2);
 }
 
 .calendar-day-cell-today {
@@ -848,7 +862,7 @@ h3 {
 .tabbar-shell {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
-    rgba(18, 20, 27, 0.72);
+    rgba(18, 20, 27, 0.68);
   backdrop-filter: blur(30px) saturate(138%);
   transition:
     background-color 320ms ease,
@@ -858,32 +872,32 @@ h3 {
   padding-bottom: calc(0.85rem + var(--safe-bottom));
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.28),
+    0 14px 28px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .tabbar-button {
   min-width: 82px;
-  border-radius: 22px;
-  padding: 0.78rem 0.95rem;
+  border-radius: 20px;
+  padding: 0.72rem 0.9rem;
   letter-spacing: -0.01em;
 }
 
 .theme-joshua .tabbar-button-active {
-  background: rgba(185, 70, 87, 0.16);
+  background: rgba(185, 70, 87, 0.12);
   color: #fff7f8;
 }
 
 .theme-natasha .tabbar-button-active {
-  background: rgba(239, 111, 154, 0.18);
+  background: rgba(239, 111, 154, 0.13);
   color: #fff7fb;
 }
 
 .tabbar-button-active {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.045);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 10px 22px rgba(0, 0, 0, 0.14);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 8px 18px rgba(0, 0, 0, 0.1);
 }
 
 input,
