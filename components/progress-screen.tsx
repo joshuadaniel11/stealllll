@@ -91,6 +91,11 @@ function getWeeklyRead(trainingState: ProfileTrainingState) {
   };
 }
 
+function getWeeklyFocusText(trainingState: ProfileTrainingState) {
+  const labels = trainingState.trainingLoad.summary.suggestedNextFocus.labels.slice(0, 2);
+  return labels.length ? labels.join(" + ") : trainingState.trainingLoad.summary.suggestedNextFocus.text;
+}
+
 export function ProgressScreen({
   profile,
   trainingState,
@@ -142,6 +147,7 @@ export function ProgressScreen({
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
   const weeklyRead = getWeeklyRead(trainingState);
+  const weeklyFocusText = getWeeklyFocusText(trainingState);
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
         const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
@@ -161,8 +167,9 @@ export function ProgressScreen({
         <Card className="progress-panel">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[13px] font-medium text-white/52">Weekly read</p>
+              <p className="text-[13px] font-medium text-white/52">This week</p>
               <h2 className="mt-2 text-[1.85rem] font-semibold tracking-[-0.06em] text-white/94">{weeklyRead.title}</h2>
+              <p className="mt-2 text-[14px] font-medium text-white/72">Focus: {weeklyFocusText}</p>
               <p className="mt-2 text-[14px] leading-6 text-white/56">{weeklyRead.detail}</p>
             </div>
             <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/68">
