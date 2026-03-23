@@ -15,13 +15,27 @@ import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, Worko
 
 const substitutionHints: Record<string, string[]> = {
     "Barbell Hip Thrust": ["Smith Machine Hip Thrust", "Machine Hip Thrust", "Glute Bridge Machine"],
-    "Machine Hip Thrust": ["Smith Machine Hip Thrust", "Glute Bridge Machine", "Leg Press High Foot Placement"],
+    "Machine Hip Thrust": ["Smith Machine Hip Thrust", "Glute Bridge Machine", "Cable Glute Kickback", "Leg Press High Foot Placement"],
+    "Smith Machine Hip Thrust": ["Machine Hip Thrust", "Glute Bridge Machine", "Cable Glute Kickback", "Leg Press High Foot Placement"],
+    "Glute Bridge Machine": ["Machine Hip Thrust", "Smith Machine Hip Thrust", "Cable Glute Kickback", "Leg Press High Foot Placement"],
     "Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
     "Wide-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
     "Neutral-Grip Lat Pulldown": ["Single-Arm Lat Pulldown", "Assisted Pull-Up", "Machine Lat Pullover"],
-    "Lat Pullover": ["Machine Lat Pullover", "Straight-Arm Pulldown", "Single-Arm Lat Pulldown"],
+    "Lat Pullover": ["Machine Lat Pullover", "Straight-Arm Cable Pulldown", "Single-Arm Lat Pulldown"],
     "Barbell Row": ["Seated Cable Row", "Machine Row", "Chest-Supported Dumbbell Row"],
     "Single-Arm Seated Row": ["Seated Cable Row", "Machine Row", "Single-Arm Dumbbell Row"],
+    "Dumbbell Romanian Deadlift": ["Seated Leg Curl", "Hamstring Curl", "45 Degree Back Extension", "Back Hyperextensions"],
+    "Reverse Lunge": ["Dumbbell Step-Up", "Walking Lunge", "Leg Press High Foot Placement", "Leg Press"],
+    "Walking Lunge": ["Reverse Lunge", "Dumbbell Step-Up", "Leg Press High Foot Placement", "Leg Press"],
+    "Bulgarian Split Squat": ["Dumbbell Step-Up", "Reverse Lunge", "Walking Lunge", "Leg Press"],
+    "Kettlebell Swing": ["Sled Push", "Medicine Ball Slam", "Goblet Squat to Press", "Box Step-Up with Knee Drive"],
+    "Face Pull": ["Cable Face Pull", "Reverse Pec Deck", "Cable Lateral Raise"],
+    "Reverse Pec Deck": ["Face Pull", "Cable Face Pull", "Cable Lateral Raise"],
+    "Box Step-Up with Knee Drive": ["Dumbbell Step-Up", "Reverse Lunge", "Walking Lunge"],
+    "Medicine Ball Wall Throw": ["Medicine Ball Slam", "Battle Rope Slam", "Sled Push"],
+    "Medicine Ball Slam": ["Battle Rope Slam", "Medicine Ball Wall Throw", "Sled Push"],
+    "Goblet Squat to Press": ["Goblet Squat", "Sled Push", "Box Step-Up with Knee Drive"],
+    "Sled Push": ["Box Step-Up with Knee Drive", "Goblet Squat to Press", "Leg Press"],
     "Flat Dumbbell Press": ["Flat Machine Press", "Smith Machine Flat Press", "Plate-Loaded Chest Press"],
     "Incline Dumbbell Press": ["Incline Machine Press", "Smith Incline Press", "Plate-Loaded Chest Press"],
     "Machine Chest Fly": ["Flat Machine Press", "Incline Machine Press", "Plate-Loaded Chest Press"],
@@ -44,7 +58,7 @@ const substitutionHints: Record<string, string[]> = {
     "Cable Bicep Curl": ["Cable Curl", "EZ-Bar Curl", "Preacher Curl"],
     "Dumbbell Bicep Curl": ["Cable Curl", "Preacher Curl", "EZ-Bar Curl"],
     "Machine Preacher Curl": ["Cable Curl", "EZ-Bar Curl", "Incline Dumbbell Curl"],
-    Hyperextensions: ["45 Degree Back Extension", "Back Hyperextensions", "Romanian Deadlift"],
+    Hyperextensions: ["45 Degree Back Extension", "Back Hyperextensions", "Dumbbell Romanian Deadlift", "Seated Leg Curl"],
   };
 
 function getSubstitutions(currentExerciseName: string, muscleGroup: string, library: ExerciseLibraryItem[]) {
@@ -61,7 +75,7 @@ function getSubstitutions(currentExerciseName: string, muscleGroup: string, libr
       !preferred.some((option) => option.id === item.id),
   );
 
-  return [...preferred, ...fallback].slice(0, 2);
+  return [...preferred, ...fallback].slice(0, 3);
 }
 
 function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
@@ -785,8 +799,8 @@ export function WorkoutScreen({
           {substitutions.length ? (
           <div className="mt-2.5">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted">Quick swap</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-white/42">Same target, cleaner fit</p>
+              <p className="text-sm text-muted">Swap options</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-white/42">Same target, easier fit</p>
             </div>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {substitutions.map((option) => (
