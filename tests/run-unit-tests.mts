@@ -858,6 +858,176 @@ function testTrainingInsightsStayCentralizedAndActionable() {
   assert.ok(trainingState.insights.progressSignal.length > 0);
 }
 
+function testPhase1RirIntelligenceHandlesMissingRirAndBoundsRisk() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "phase1-rir-1",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 45,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "a", weight: 60, reps: 10, completed: true },
+            { id: "b", weight: 60, reps: 10, completed: true },
+            { id: "c", weight: 60, reps: 10, completed: true, rir: 4 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const lats = trainingState.metrics.rirIntelligence.byRegion.lats;
+
+  assert.ok(lats.missingRirRatio > 0.6);
+  assert.equal(lats.averageRir, 2.5);
+  assert.ok(lats.confidenceScore < 100);
+  assert.ok(lats.sandbagRisk >= 0.2 && lats.sandbagRisk <= 0.85);
+  assert.ok(lats.overshootRisk >= 0.2 && lats.overshootRisk <= 0.85);
+}
+
+function testPhase1MevTrackerReflectsBelowAtAndAboveStates() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const emptyState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+  assert.equal(emptyState.metrics.mevTracker.byRegion.gluteMax.status, "below");
+  const gluteMaxMev = emptyState.metrics.mevTracker.byRegion.gluteMax.mevEstimate;
+  const hipThrustGluteMaxPerSet = 0.625;
+  const lowerAtBound = gluteMaxMev * 0.9;
+  const upperAtBound = gluteMaxMev * 1.15;
+  const atSetCount =
+    Array.from({ length: 40 }, (_, index) => index + 1).find((count) => {
+      const currentEvs = count * hipThrustGluteMaxPerSet;
+      return currentEvs >= lowerAtBound && currentEvs <= upperAtBound;
+    }) ?? 1;
+  const aboveSetCount = Math.ceil((gluteMaxMev * 1.2) / hipThrustGluteMaxPerSet);
+
+  const atSessions = [
+    {
+      id: "phase1-mev-at",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 40,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+            sets: Array.from({ length: atSetCount }, (_, index) => ({
+              id: `at-${index}`,
+              weight: 55,
+              reps: 8,
+              completed: true,
+              rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+  const atState = getProfileTrainingState(natasha, atSessions, seed.exerciseLibrary, referenceDate);
+  assert.equal(atState.metrics.mevTracker.byRegion.gluteMax.status, "at");
+
+  const aboveSessions = [
+    {
+      ...atSessions[0],
+      id: "phase1-mev-above",
+      exercises: [
+        {
+          ...atSessions[0].exercises[0],
+            sets: Array.from({ length: aboveSetCount }, (_, index) => ({
+              id: `above-${index}`,
+              weight: 55,
+              reps: 8,
+              completed: true,
+              rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+  const aboveState = getProfileTrainingState(natasha, aboveSessions, seed.exerciseLibrary, referenceDate);
+  assert.equal(aboveState.metrics.mevTracker.byRegion.gluteMax.status, "above");
+}
+
+function testPhase1PlateauDetectionFindsFlatCoveredAdherentRegion() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const buildChestSession = (
+    id: string,
+    performedAt: string,
+    reps: number,
+    workoutDayId: string,
+    setCount = 8,
+  ) => ({
+    id,
+    userId: "joshua" as const,
+    workoutDayId,
+    workoutName: workoutDayId === "joshua-chest-triceps" ? "Chest + Triceps A" : "Chest + Triceps B",
+    performedAt,
+    durationMinutes: 52,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: `${workoutDayId}-${id}`,
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: Array.from({ length: setCount }, (_, index) => ({
+          id: `${id}-${index}`,
+          weight: 30,
+          reps,
+          completed: true,
+          rir: 2,
+        })),
+      },
+    ],
+  });
+
+  const sessions = [
+    buildChestSession("plateau-c1", "2026-03-23T06:00:00.000Z", 6, "joshua-chest-triceps"),
+    buildChestSession("plateau-c2", "2026-03-23T09:00:00.000Z", 6, "joshua-chest-triceps-b"),
+    buildChestSession("plateau-c3", "2026-03-23T12:00:00.000Z", 6, "joshua-chest-triceps"),
+    buildChestSession("plateau-c4", "2026-03-23T15:00:00.000Z", 6, "joshua-chest-triceps-b"),
+    buildChestSession("plateau-p1", "2026-03-16T06:00:00.000Z", 7, "joshua-chest-triceps"),
+    buildChestSession("plateau-p2", "2026-03-15T09:00:00.000Z", 7, "joshua-chest-triceps-b"),
+    buildChestSession("plateau-p3", "2026-03-14T12:00:00.000Z", 7, "joshua-chest-triceps"),
+    buildChestSession("plateau-p4", "2026-03-13T15:00:00.000Z", 7, "joshua-chest-triceps-b"),
+    buildChestSession("plateau-o1", "2026-03-08T06:00:00.000Z", 8, "joshua-chest-triceps"),
+    buildChestSession("plateau-o2", "2026-03-07T09:00:00.000Z", 8, "joshua-chest-triceps-b"),
+    buildChestSession("plateau-o3", "2026-03-06T12:00:00.000Z", 8, "joshua-chest-triceps"),
+    buildChestSession("plateau-o4", "2026-03-05T15:00:00.000Z", 8, "joshua-chest-triceps-b"),
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const upperChestPlateau = trainingState.metrics.plateauDetection.byRegion.upperChest;
+
+  assert.equal(upperChestPlateau.weeksFlat, 2);
+  assert.ok(upperChestPlateau.weeklyCoveragePct >= 75);
+  assert.ok(upperChestPlateau.adherence >= 0.7);
+  assert.equal(upperChestPlateau.plateauDetected, true);
+  assert.ok(trainingState.metrics.phase1Insights.progressInsight?.includes("flat"));
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -1007,6 +1177,9 @@ const tests = [
   ["keep symmetry and consistency inside clean bounds", testSymmetryAndConsistencyRespectBoundaries],
   ["drop adaptation score under repeated exposure", testAdaptationScoreDropsWithRepeatedExposure],
   ["build centralized premium training insights", testTrainingInsightsStayCentralizedAndActionable],
+  ["build phase1 rir intelligence with safe fallback", testPhase1RirIntelligenceHandlesMissingRirAndBoundsRisk],
+  ["track mev states by region", testPhase1MevTrackerReflectsBelowAtAndAboveStates],
+  ["detect plateaus from flat covered adherent work", testPhase1PlateauDetectionFindsFlatCoveredAdherentRegion],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],

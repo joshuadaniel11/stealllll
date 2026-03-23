@@ -112,6 +112,63 @@ export type SymmetryScoreMetric = {
   }>;
 };
 
+export type RirQualityRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  averageRir: number;
+  rirStdDev: number;
+  rirConsistencyScore: number;
+  sandbagRisk: number;
+  overshootRisk: number;
+  confidenceScore: number;
+  missingRirRatio: number;
+  sampleCount: number;
+};
+
+export type RirIntelligenceMetric = {
+  averageConsistencyScore: number;
+  byRegion: Record<TrainingLoadZone, RirQualityRegionMetric>;
+};
+
+export type MevStatus = "below" | "at" | "above";
+
+export type MevRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  baseMev: number;
+  priorityMultiplier: number;
+  recoveryModifier: number;
+  mevEstimate: number;
+  currentEvs: number;
+  status: MevStatus;
+};
+
+export type MevTrackerMetric = {
+  byRegion: Record<TrainingLoadZone, MevRegionMetric>;
+};
+
+export type PlateauRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  plateauDetected: boolean;
+  plateauConfidence: number;
+  weeksFlat: number;
+  adherence: number;
+  weeklyCoveragePct: number;
+  currentWeekProgress: number;
+  previousWeekProgress: number;
+};
+
+export type PlateauDetectionMetric = {
+  byRegion: Record<TrainingLoadZone, PlateauRegionMetric>;
+};
+
+export type Phase1TrainingInsights = {
+  primaryInsight: string | null;
+  recoveryInsight: string | null;
+  progressInsight: string | null;
+};
+
 export type RegionTrainingMetric = {
   zoneId: TrainingLoadZone;
   label: string;
@@ -135,6 +192,10 @@ export type ProfileTrainingMetrics = {
   adaptationScore: AdaptationScoreMetric;
   consistencyScore: ConsistencyScoreMetric;
   symmetryScore: SymmetryScoreMetric;
+  rirIntelligence: RirIntelligenceMetric;
+  mevTracker: MevTrackerMetric;
+  plateauDetection: PlateauDetectionMetric;
+  phase1Insights: Phase1TrainingInsights;
   regionMetrics: RegionTrainingMetric[];
 };
 
@@ -175,6 +236,8 @@ const PROFILE_PRIORITY_MULTIPLIERS: Record<string, Partial<Record<TrainingLoadZo
   },
 };
 
+const PHASE1_MEV_BASE_FACTOR = 0.72;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -190,6 +253,16 @@ function average(values: number[]) {
   }
 
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function standardDeviation(values: number[]) {
+  if (values.length <= 1) {
+    return 0;
+  }
+
+  const mean = average(values);
+  const variance = average(values.map((value) => (value - mean) ** 2));
+  return Math.sqrt(variance);
 }
 
 function getPriorityMultiplier(profile: Profile, zoneId: TrainingLoadZone) {
@@ -751,6 +824,12 @@ function getRecoveryModifier(recoveryIndex: RecoveryIndexMetric) {
   return 0.88;
 }
 
+function getMevRecoveryModifier(recoveryIndex: RecoveryIndexMetric) {
+  if (recoveryIndex.score < 55) return 0.9;
+  if (recoveryIndex.score > 80) return 1.05;
+  return 1;
+}
+
 function getNextFocusRecoveryAdjustment(recoveryIndex: RecoveryIndexMetric, metric: RegionTrainingMetric) {
   const highRecentFatigue = metric.stimulusToFatigueRatio < 0.92 && metric.coveragePct > 35;
   return recoveryIndex.score < 55 && highRecentFatigue ? 0.9 : 1;
@@ -762,6 +841,298 @@ function getNextFocusMomentumAdjustment(metric: RegionTrainingMetric) {
 
 function getNextFocusEfficiencyAdjustment(metric: RegionTrainingMetric) {
   return metric.stimulusToFatigueRatio > 0 && metric.stimulusToFatigueRatio < 0.92 ? 0.94 : 1;
+}
+
+function buildRirIntelligence(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+  regionMetrics: RegionTrainingMetric[],
+  recoveryIndex: RecoveryIndexMetric,
+): RirIntelligenceMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const range = getWindowRange(referenceDate, 14);
+  const rirValuesByRegion = new Map<TrainingLoadZone, number[]>();
+  const missingRirCounts = buildZoneNumberRecord();
+  const totalSetCounts = buildZoneNumberRecord();
+
+  for (const session of sessions) {
+    if (!isWithinRange(session.performedAt, range)) {
+      continue;
+    }
+
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const libraryItem = resolveLibraryItem(exercise, lookup);
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+      if (!contribution.length) {
+        continue;
+      }
+
+      for (const set of completedSets) {
+        const explicitRir = (set as SetLog & { rir?: number }).rir;
+        for (const [zoneId, allocation] of contribution) {
+          if (allocation < 0.2) {
+            continue;
+          }
+          totalSetCounts[zoneId] += 1;
+          if (typeof explicitRir !== "number") {
+            missingRirCounts[zoneId] += 1;
+          }
+        }
+      }
+    }
+  }
+
+  const byRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, RirQualityRegionMetric>>(
+    (accumulator, zoneId) => {
+      const explicitValues: number[] = [];
+
+      for (const session of sessions) {
+        if (!isWithinRange(session.performedAt, range)) {
+          continue;
+        }
+
+        for (const exercise of session.exercises) {
+          const completedSets = exercise.sets.filter((set) => set.completed);
+          if (!completedSets.length) {
+            continue;
+          }
+
+          const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+          const allocation = contribution.find(([candidateZoneId]) => candidateZoneId === zoneId)?.[1] ?? 0;
+          if (allocation < 0.2) {
+            continue;
+          }
+
+          for (const set of completedSets) {
+            const explicitRir = (set as SetLog & { rir?: number }).rir;
+            if (typeof explicitRir === "number") {
+              explicitValues.push(clamp(explicitRir, 0, 6));
+            }
+          }
+        }
+      }
+
+      const totalSamples = totalSetCounts[zoneId];
+      const missingRirRatio = totalSamples ? missingRirCounts[zoneId] / totalSamples : 1;
+      const fallbackRir = missingRirRatio > 0.6 ? 2.5 : explicitValues.length ? average(explicitValues) : 2.5;
+      const averageRir = missingRirRatio > 0.6 ? 2.5 : explicitValues.length ? average(explicitValues) : fallbackRir;
+      const rirStdDev = explicitValues.length > 1 ? standardDeviation(explicitValues) : 0;
+      const rirConsistencyScore = clamp(100 - rirStdDev * 20, 0, 100);
+      const regionMetric = regionMetrics.find((metric) => metric.zoneId === zoneId);
+      const progressVelocity = regionMetric?.progressVelocity ?? 0;
+      const evs = regionMetric?.evs ?? 0;
+      const targetEvs = regionMetric?.targetEVS ?? 1;
+      const highEvs = evs >= targetEvs * 0.95;
+      const elevatedFatigue = (regionMetric?.stimulusToFatigueRatio ?? 1) < 0.92;
+      const sandbagRisk =
+        averageRir >= 4 && progressVelocity <= 0
+          ? 0.85
+          : averageRir >= 3 && highEvs && progressVelocity <= 0
+            ? 0.65
+            : 0.2;
+      const overshootRisk =
+        averageRir <= 0 && recoveryIndex.score < 60
+          ? 0.85
+          : averageRir <= 1 && elevatedFatigue
+            ? 0.65
+            : 0.2;
+      const confidenceScore = clamp(
+        missingRirRatio > 0.6 ? 55 : 100 - missingRirRatio * 60,
+        35,
+        100,
+      );
+
+      accumulator[zoneId] = {
+        zoneId,
+        label: TRAINING_LOAD_ZONE_META[zoneId].label,
+        averageRir: round(averageRir, 2),
+        rirStdDev: round(rirStdDev, 2),
+        rirConsistencyScore: round(rirConsistencyScore, 1),
+        sandbagRisk: round(sandbagRisk, 2),
+        overshootRisk: round(overshootRisk, 2),
+        confidenceScore: round(confidenceScore, 1),
+        missingRirRatio: round(missingRirRatio, 2),
+        sampleCount: totalSamples,
+      };
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, RirQualityRegionMetric>,
+  );
+
+  return {
+    averageConsistencyScore: round(average(Object.values(byRegion).map((metric) => metric.rirConsistencyScore)), 1),
+    byRegion,
+  };
+}
+
+function buildMevTracker(
+  profile: Profile,
+  recoveryIndex: RecoveryIndexMetric,
+  regionMetrics: RegionTrainingMetric[],
+): MevTrackerMetric {
+  const recoveryModifier = getMevRecoveryModifier(recoveryIndex);
+
+  return {
+    byRegion: regionMetrics.reduce<Record<TrainingLoadZone, MevRegionMetric>>((accumulator, metric) => {
+      const baseMev = round(metric.baseTargetEVS * PHASE1_MEV_BASE_FACTOR, 2);
+      const mevEstimate = round(baseMev * metric.priorityMultiplier * recoveryModifier, 2);
+      const status: MevStatus =
+        metric.evs < mevEstimate * 0.9 ? "below" : metric.evs <= mevEstimate * 1.15 ? "at" : "above";
+
+      accumulator[metric.zoneId] = {
+        zoneId: metric.zoneId,
+        label: metric.label,
+        baseMev,
+        priorityMultiplier: metric.priorityMultiplier,
+        recoveryModifier,
+        mevEstimate,
+        currentEvs: metric.evs,
+        status,
+      };
+      return accumulator;
+    }, {} as Record<TrainingLoadZone, MevRegionMetric>),
+  };
+}
+
+function buildWeeklyRegionProgressByOffset(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+  offsetDays: number,
+) {
+  const recentWindow = getWindowRange(referenceDate, 7, offsetDays);
+  const baselineWindow = getWindowRange(referenceDate, 7, offsetDays + 7);
+  const recentExerciseMetrics = aggregateExerciseWindow(sessions, exerciseLibrary, recentWindow);
+  const baselineExerciseMetrics = aggregateExerciseWindow(sessions, exerciseLibrary, baselineWindow);
+  const regionProgressScores = buildZoneNumberRecord();
+  const regionProgressWeights = buildZoneNumberRecord();
+
+  for (const [exerciseKey, recent] of recentExerciseMetrics) {
+    const baseline = baselineExerciseMetrics.get(exerciseKey);
+    if (!baseline) {
+      continue;
+    }
+
+    const progressScore =
+      0.5 * getPctChange(recent.bestEstimated1RM, baseline.bestEstimated1RM) +
+      0.3 * getBestRepsAtFixedLoadChange(recent, baseline) +
+      0.2 * getPctChange(recent.evsTotal, baseline.evsTotal);
+
+    for (const [zoneId, regionEvs] of Object.entries(recent.regionEvs) as Array<[TrainingLoadZone, number]>) {
+      regionProgressScores[zoneId] += progressScore * regionEvs;
+      regionProgressWeights[zoneId] += regionEvs;
+    }
+  }
+
+  return (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, number>>(
+    (accumulator, zoneId) => {
+      accumulator[zoneId] = regionProgressWeights[zoneId]
+        ? round(regionProgressScores[zoneId] / regionProgressWeights[zoneId], 1)
+        : 0;
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, number>,
+  );
+}
+
+function buildPlateauDetection(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  regionMetrics: RegionTrainingMetric[],
+  consistencyScore: ConsistencyScoreMetric,
+  referenceDate: Date,
+): PlateauDetectionMetric {
+  const currentWeekProgress = buildWeeklyRegionProgressByOffset(sessions, exerciseLibrary, referenceDate, 0);
+  const previousWeekProgress = buildWeeklyRegionProgressByOffset(sessions, exerciseLibrary, referenceDate, 7);
+  const adherence = consistencyScore.scheduledSessionsCompleted28d;
+
+  return {
+    byRegion: regionMetrics.reduce<Record<TrainingLoadZone, PlateauRegionMetric>>((accumulator, metric) => {
+      const currentWeekPv = currentWeekProgress[metric.zoneId] ?? 0;
+      const previousWeekPv = previousWeekProgress[metric.zoneId] ?? 0;
+      const weeksFlat = currentWeekPv <= 0 ? (previousWeekPv <= 0 ? 2 : 1) : 0;
+      const plateauDetected = weeksFlat >= 2 && metric.coveragePct >= 75 && adherence >= 0.7;
+      const normalizedAdherence = clamp(adherence, 0, 1);
+      const normalizedVolumeSufficiency = clamp(metric.coveragePct / 100, 0, 1);
+      const normalizedNegativeOrFlatProgress =
+        currentWeekPv <= 0 ? clamp((-Math.min(currentWeekPv, 0) + 2) / 2, 0.5, 1) : 0;
+      const plateauConfidence = round(
+        average([normalizedAdherence, normalizedVolumeSufficiency, normalizedNegativeOrFlatProgress]) * 100,
+        1,
+      );
+
+      accumulator[metric.zoneId] = {
+        zoneId: metric.zoneId,
+        label: metric.label,
+        plateauDetected,
+        plateauConfidence,
+        weeksFlat,
+        adherence: round(adherence, 2),
+        weeklyCoveragePct: metric.coveragePct,
+        currentWeekProgress: currentWeekPv,
+        previousWeekProgress: previousWeekPv,
+      };
+      return accumulator;
+    }, {} as Record<TrainingLoadZone, PlateauRegionMetric>),
+  };
+}
+
+function buildPhase1TrainingInsights(
+  profile: Profile,
+  trainingLoad: WeeklyTrainingLoad,
+  rirIntelligence: RirIntelligenceMetric,
+  mevTracker: MevTrackerMetric,
+  plateauDetection: PlateauDetectionMetric,
+): Phase1TrainingInsights {
+  const focusZoneId = trainingLoad.summary.suggestedNextFocus.zoneIds[0];
+  const focusLabel = trainingLoad.summary.suggestedNextFocus.labels[0] ?? trainingLoad.summary.suggestedNextFocus.text;
+  const focusMev = focusZoneId ? mevTracker.byRegion[focusZoneId] : null;
+  const focusRir = focusZoneId ? rirIntelligence.byRegion[focusZoneId] : null;
+  const plateauCandidate = Object.values(plateauDetection.byRegion)
+    .filter((metric) => metric.plateauDetected)
+    .sort((a, b) => b.plateauConfidence - a.plateauConfidence)[0] ?? null;
+
+  return {
+    primaryInsight:
+      focusMev?.status === "below"
+        ? `${focusLabel} are still below minimum effective work.`
+        : focusMev?.status === "above"
+          ? `${focusLabel} are above minimum work. Push quality, not more.`
+          : focusLabel
+            ? `${focusLabel} are sitting in a useful range.`
+            : null,
+    recoveryInsight:
+      focusRir?.overshootRisk === 0.85
+        ? `${focusLabel} are being pushed hard. Recovery needs respect.`
+        : focusRir?.sandbagRisk === 0.85
+          ? `${focusLabel} may be underpushed. Bring the effort in.`
+          : null,
+    progressInsight: plateauCandidate
+      ? `${plateauCandidate.label} look flat. Change the stimulus.`
+      : null,
+  };
+}
+
+export function selectRirQualityByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.rirIntelligence.byRegion;
+}
+
+export function selectMevStatusByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.mevTracker.byRegion;
+}
+
+export function selectPlateauStatusByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.plateauDetection.byRegion;
+}
+
+export function selectPhase1TrainingInsights(metrics: ProfileTrainingMetrics) {
+  return metrics.phase1Insights;
 }
 
 export function selectNextFocusFromMetrics(
@@ -1004,6 +1375,22 @@ export function getProfileTrainingMetrics(
   const adaptationScore = buildAdaptationScore(sessions, exerciseLibrary, referenceDate);
   const consistencyScore = buildConsistencyScore(profile, sessions, referenceDate);
   const symmetryScore = buildSymmetryScore(profile, coverageByRegion);
+  const rirIntelligence = buildRirIntelligence(sessions, exerciseLibrary, referenceDate, regionMetrics, recoveryIndex);
+  const mevTracker = buildMevTracker(profile, recoveryIndex, regionMetrics);
+  const plateauDetection = buildPlateauDetection(
+    sessions,
+    exerciseLibrary,
+    regionMetrics,
+    consistencyScore,
+    referenceDate,
+  );
+  const phase1Insights = buildPhase1TrainingInsights(
+    profile,
+    trainingLoad,
+    rirIntelligence,
+    mevTracker,
+    plateauDetection,
+  );
 
   return {
     effectiveVolumeScore: {
@@ -1060,6 +1447,10 @@ export function getProfileTrainingMetrics(
     adaptationScore,
     consistencyScore,
     symmetryScore,
+    rirIntelligence,
+    mevTracker,
+    plateauDetection,
+    phase1Insights,
     regionMetrics,
   };
 }
