@@ -86,7 +86,8 @@ export type MobilityStretch = {
 };
 
 export type MobilityPromptTemplate = {
-  dayLabel: string;
+  key?: string;
+  dayLabel?: string;
   focusRegions: string[];
   primaryStretch: MobilityStretch;
   secondaryStretches?: MobilityStretch[];
@@ -95,7 +96,8 @@ export type MobilityPromptTemplate = {
 
 export type DailyMobilityPrompt = Omit<MobilityPromptTemplate, "secondaryStretches"> & {
   secondaryStretches: MobilityStretch[];
-  feedback: string;
+  ctaLabel: string;
+  rotationDay: number;
 };
 
 export type Profile = {

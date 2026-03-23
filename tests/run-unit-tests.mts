@@ -219,39 +219,24 @@ function testFavoriteIdsStayResolvable() {
 }
 
 function testDailyMobilityPromptSelection() {
-  const seed = createSeedState();
-  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+  const prompt = selectDailyMobilityPrompt("joshua", new Date("2026-01-01T12:00:00+13:00"));
 
-  assert.ok(joshua);
+  assert.deepEqual(prompt.focusRegions, ["Hips", "Control"]);
+  assert.equal(prompt.primaryStretch.name, "Deep hip flexor stretch");
+  assert.equal(prompt.ctaLabel, "Start 30s");
+  assert.equal(prompt.rotationDay, 1);
+}
 
-  const prompt = selectDailyMobilityPrompt(
-    joshua,
-    [
-      {
-        id: "stretch-1",
-        userId: "joshua",
-        date: "2026-03-22T08:00:00.000Z",
-        stretchTitle: "Doorway pec stretch",
-      },
-      {
-        id: "stretch-2",
-        userId: "joshua",
-        date: "2026-03-23T08:00:00.000Z",
-        stretchTitle: "Bench lat stretch",
-      },
-      {
-        id: "stretch-3",
-        userId: "joshua",
-        date: "2026-03-24T08:00:00.000Z",
-        stretchTitle: "Half-kneeling hip flexor stretch",
-      },
-    ],
-    new Date("2026-03-27T12:00:00+13:00"),
+function testMobilityRotationAvoidsLongRepeats() {
+  const focusKeys = Array.from({ length: 30 }, (_, index) =>
+    selectDailyMobilityPrompt("natasha", new Date(`2026-01-${String(index + 1).padStart(2, "0")}T12:00:00+13:00`)).key,
   );
 
-  assert.deepEqual(prompt.focusRegions, ["Shoulders", "Thoracic spine", "Neck"]);
-  assert.equal(prompt.primaryStretch.name, "Wall slide with lift-off");
-  assert.equal(prompt.feedback, "Consistency building");
+  let streak = 1;
+  for (let index = 1; index < focusKeys.length; index += 1) {
+    streak = focusKeys[index] === focusKeys[index - 1] ? streak + 1 : 1;
+    assert.ok(streak <= 2);
+  }
 }
 
 function testStretchCompletionDedupesSameDay() {
@@ -344,6 +329,7 @@ const tests = [
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],
   ["spread suggested session across useful patterns", testSuggestedSessionSpreadsFocusAcrossPatterns],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
+  ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],
   ["append partial sessions safely", testAppendSessionClearsActiveWorkoutAndQueuesOverride],
   ["clear queued workout when a partial is marked done", testReplaceSessionAdvanceCycleClearsQueuedWorkout],

@@ -466,8 +466,8 @@ export function WorkoutTrackerApp() {
     [selectedProfile, userSessions, workoutOverride],
   );
   const todaysMobilityPrompt = useMemo(
-    () => selectDailyMobilityPrompt(selectedProfile, state.stretchCompletions[selectedProfile.id]),
-    [selectedProfile, state.stretchCompletions],
+    () => selectDailyMobilityPrompt(selectedProfile.id),
+    [selectedProfile.id],
   );
   const strengthPredictions = useMemo(
     () => getStrengthPredictions(selectedProfile.id, userSessions),
