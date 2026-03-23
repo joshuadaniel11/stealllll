@@ -166,30 +166,30 @@ function Shape({
 }
 
 function BodyShell({ variant }: { variant: BodyVariant }) {
-  const shell = "rgba(101,101,114,0.14)";
-  const shellStroke = "rgba(255,255,255,0.055)";
+  const shell = "rgba(118,120,136,0.08)";
+  const shellStroke = "rgba(255,255,255,0.09)";
 
   if (variant === "female") {
     return (
       <>
-        <circle cx="60" cy="21" r="12" fill={shell} stroke={shellStroke} />
-        <path d="M46 37C49 31 71 31 74 37L81 63C83 72 82 84 79 96L76 120C74 138 72 151 69 165C66 176 62 184 60 188C58 184 54 176 51 165C48 151 46 138 44 120L41 96C38 84 37 72 39 63Z" fill={shell} stroke={shellStroke} />
-        <path d="M39 55C31 61 24 72 21 85C19 94 21 104 26 109C30 103 34 96 37 86L42 68Z" fill={shell} stroke={shellStroke} />
-        <path d="M81 55C89 61 96 72 99 85C101 94 99 104 94 109C90 103 86 96 83 86L78 68Z" fill={shell} stroke={shellStroke} />
-        <path d="M27 109C29 126 32 142 35 159C37 171 39 183 42 198L48 248L39 248L31 205C27 184 24 165 22 144C21 130 22 118 27 109Z" fill={shell} stroke={shellStroke} />
-        <path d="M93 109C91 126 88 142 85 159C83 171 81 183 78 198L72 248L81 248L89 205C93 184 96 165 98 144C99 130 98 118 93 109Z" fill={shell} stroke={shellStroke} />
+        <circle cx="60" cy="19" r="10" fill={shell} stroke={shellStroke} />
+        <path d="M49 32C53 29 67 29 71 32L77 54C79 63 78 74 75 86L72 111C70 129 68 143 65 156C63 166 61 172 60 175C59 172 57 166 55 156C52 143 50 129 48 111L45 86C42 74 41 63 43 54Z" fill={shell} stroke={shellStroke} />
+        <path d="M43 47C36 52 30 60 27 71C25 79 26 87 30 92C33 87 36 80 39 71L44 58Z" fill={shell} stroke={shellStroke} />
+        <path d="M77 47C84 52 90 60 93 71C95 79 94 87 90 92C87 87 84 80 81 71L76 58Z" fill={shell} stroke={shellStroke} />
+        <path d="M31 92C34 108 37 123 40 138C42 149 44 162 47 177L51 244L43 244L35 182C31 159 28 140 27 121C26 109 27 99 31 92Z" fill={shell} stroke={shellStroke} />
+        <path d="M89 92C86 108 83 123 80 138C78 149 76 162 73 177L69 244L77 244L85 182C89 159 92 140 93 121C94 109 93 99 89 92Z" fill={shell} stroke={shellStroke} />
       </>
     );
   }
 
   return (
     <>
-      <circle cx="60" cy="21" r="12" fill={shell} stroke={shellStroke} />
-      <path d="M43 36C47 30 73 30 77 36L85 65C87 75 85 88 81 101L78 121C76 139 73 153 69 166C65 178 61 186 60 188C59 186 55 178 51 166C47 153 44 139 42 121L39 101C35 88 33 75 35 65Z" fill={shell} stroke={shellStroke} />
-      <path d="M35 54C27 60 20 72 17 86C15 96 18 107 24 112C28 105 32 97 35 87L40 68Z" fill={shell} stroke={shellStroke} />
-      <path d="M85 54C93 60 100 72 103 86C105 96 102 107 96 112C92 105 88 97 85 87L80 68Z" fill={shell} stroke={shellStroke} />
-      <path d="M24 112C27 130 30 146 33 163C35 176 38 188 41 203L47 248L37 248L29 207C25 186 21 167 19 146C18 131 19 120 24 112Z" fill={shell} stroke={shellStroke} />
-      <path d="M96 112C93 130 90 146 87 163C85 176 82 188 79 203L73 248L83 248L91 207C95 186 99 167 101 146C102 131 101 120 96 112Z" fill={shell} stroke={shellStroke} />
+      <circle cx="60" cy="19" r="10" fill={shell} stroke={shellStroke} />
+      <path d="M47 32C51 28 69 28 73 32L80 56C82 66 80 79 76 91L73 113C71 131 68 145 65 158C63 168 61 174 60 177C59 174 57 168 55 158C52 145 49 131 47 113L44 91C40 79 38 66 40 56Z" fill={shell} stroke={shellStroke} />
+      <path d="M40 48C33 53 27 62 24 73C22 82 24 91 29 96C32 90 35 83 39 73L44 59Z" fill={shell} stroke={shellStroke} />
+      <path d="M80 48C87 53 93 62 96 73C98 82 96 91 91 96C88 90 85 83 81 73L76 59Z" fill={shell} stroke={shellStroke} />
+      <path d="M29 96C32 113 35 128 38 143C40 155 43 168 46 183L50 244L41 244L33 188C29 164 26 145 24 126C23 113 24 102 29 96Z" fill={shell} stroke={shellStroke} />
+      <path d="M91 96C88 113 85 128 82 143C80 155 77 168 74 183L70 244L79 244L87 188C91 164 94 145 96 126C97 113 96 102 91 96Z" fill={shell} stroke={shellStroke} />
     </>
   );
 }
@@ -219,10 +219,11 @@ export function BodyActivationVisual({
   const shapes = getShapes(variant, view);
 
   return (
-    <div className="relative overflow-hidden rounded-[32px] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.07),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] px-5 py-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_center,rgba(102,96,255,0.12),transparent_70%)]" />
+    <div className="relative overflow-hidden rounded-[32px] border border-white/7 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01))] px-5 py-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_center,rgba(110,120,255,0.08),transparent_72%)]" />
       <div className="relative flex items-center justify-center">
-        <svg viewBox="0 0 120 260" className="h-[320px] w-[156px]" aria-hidden="true">
+        <svg viewBox="0 0 120 260" className="h-[312px] w-[144px]" aria-hidden="true">
+          <path d="M60 31L60 246" stroke="rgba(255,255,255,0.035)" strokeWidth="0.8" strokeDasharray="3 5" />
           <BodyShell variant={variant} />
           {shapes.map((shape, index) => {
             const style = getZoneStyle(metricsByZone[shape.zone]);
