@@ -15,10 +15,10 @@ import type {
 
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
-    <div className="rounded-[20px] border border-white/6 bg-white/[0.035] px-3 py-3">
+    <div className="progress-subcard rounded-[20px] border px-3 py-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-white/84">{metric.label}</p>
-        <p className="text-sm font-semibold text-white">{metric.percentage}%</p>
+        <p className="text-[13px] font-medium text-white/68">{metric.label}</p>
+        <p className="text-[13px] font-semibold text-white/88">{metric.percentage}%</p>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/7">
         <div
@@ -31,7 +31,7 @@ function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
           }}
         />
       </div>
-      <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-white/36">
+      <p className="mt-2 text-[11px] font-medium text-white/42">
         {metric.effectiveSets.toFixed(1)} / {metric.targetSets} effective sets
       </p>
     </div>
@@ -65,7 +65,7 @@ function getZoneStatus(metric: TrainingLoadMetric) {
 function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null }) {
   if (!metric) {
     return (
-      <div className="rounded-[20px] border border-dashed border-white/8 bg-white/[0.02] px-4 py-4 text-sm text-white/48">
+      <div className="progress-subcard rounded-[20px] border border-dashed px-4 py-4 text-sm text-white/48">
         Tap a muscle region to inspect what contributed to it this week.
       </div>
     );
@@ -74,16 +74,16 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
   const status = getZoneStatus(metric);
 
   return (
-    <div className="rounded-[22px] border border-white/6 bg-white/[0.03] px-4 py-4">
+    <div className="progress-subcard rounded-[22px] border px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-white/84">{metric.label}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
+          <p className="text-[14px] font-medium text-white/86">{metric.label}</p>
+          <p className="mt-1 text-[11px] font-medium text-white/40">
             {metric.effectiveSets.toFixed(1)} / {metric.targetSets} target sets
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold text-white">{metric.percentage}%</p>
+          <p className="text-[14px] font-semibold text-white/90">{metric.percentage}%</p>
           <span
             className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${status.toneClass}`}
           >
@@ -91,19 +91,21 @@ function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null })
           </span>
         </div>
       </div>
-      <p className="mt-3 text-sm leading-6 text-white/56">{status.note}</p>
+      <p className="mt-3 text-[13px] leading-6 text-white/56">{status.note}</p>
 
       <div className="mt-3 space-y-2">
         {metric.contributors.length ? (
           metric.contributors.map((contributor) => (
             <div
               key={`${metric.id}-${contributor.exerciseName}`}
-              className="flex items-center justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2"
+              className="rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2"
             >
-              <p className="text-sm text-white/80">{contributor.exerciseName}</p>
-              <p className="text-[11px] uppercase tracking-[0.12em] text-white/38">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] text-white/80">{contributor.exerciseName}</p>
+                <p className="text-[11px] font-medium text-white/42">
                 {contributor.effectiveSets.toFixed(1)} sets
-              </p>
+                </p>
+              </div>
             </div>
           ))
         ) : (
@@ -125,7 +127,7 @@ function TopZoneList({
 }) {
   if (!zones.length) {
     return (
-      <div className="rounded-[20px] border border-dashed border-white/8 bg-white/[0.02] px-4 py-4 text-sm text-white/48">
+      <div className="progress-subcard rounded-[20px] border border-dashed px-4 py-4 text-sm text-white/48">
         No completed sets yet this week. Once you log a session, the visible zones for this side will light up here.
       </div>
     );
@@ -138,22 +140,22 @@ function TopZoneList({
           key={zone.id}
           type="button"
           onClick={() => onSelectZone(zone.id)}
-          className={`flex w-full items-center justify-between rounded-[18px] border px-3 py-3 text-left transition ${
+          className={`progress-subcard flex w-full items-center justify-between rounded-[18px] border px-3 py-3 text-left transition ${
             selectedZone === zone.id
               ? "border-white/18 bg-white/[0.08]"
-              : "border-white/6 bg-white/[0.03]"
+              : ""
           }`}
         >
           <div className="flex items-center gap-3">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
             <div>
-              <p className="text-sm font-medium text-white/84">{zone.label}</p>
-              <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">
+              <p className="text-[13px] font-medium text-white/82">{zone.label}</p>
+              <p className="text-[11px] font-medium text-white/40">
                 {zone.effectiveSets.toFixed(1)} effective sets
               </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-white">{zone.percentage}%</p>
+          <p className="text-[13px] font-semibold text-white/88">{zone.percentage}%</p>
         </button>
       ))}
     </div>
@@ -185,9 +187,9 @@ function SummaryLine({
     : emptyLabel;
 
   return (
-    <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
-      <p className="mt-1 text-sm font-medium text-white/84">{value}</p>
+    <div className="progress-subcard rounded-[18px] border px-4 py-3">
+      <p className="text-[12px] font-medium text-white/48">{label}</p>
+      <p className="mt-1 text-[14px] font-medium text-white/84">{value}</p>
     </div>
   );
 }
@@ -209,26 +211,26 @@ function NextFocusCard({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-[20px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-4 text-left transition active:scale-[0.995]"
+      className="progress-focus-card w-full rounded-[22px] border px-4 py-4 text-left transition active:scale-[0.995]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{label}</p>
-          <p className="mt-1 text-base font-semibold text-white/92">{focusText}</p>
+          <p className="text-[12px] font-medium text-white/48">{label}</p>
+          <p className="mt-1 text-[1.1rem] font-semibold tracking-[-0.03em] text-white/92">{focusText}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
-            Next workout
-          </span>
+            <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white/68">
+              Next workout
+            </span>
           <ChevronRight className="h-4 w-4 text-white/44" />
         </div>
       </div>
-      <p className="mt-2 text-sm leading-6 text-white/56">
+      <p className="mt-3 text-[13px] leading-6 text-white/58">
         {lowActivity
           ? "Starting from your highest-priority regions for this profile until more current-week data is logged."
           : "Based on the most undertrained priority regions in your current-week load."}
       </p>
-      <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-white/34">{helperText}</p>
+      <p className="mt-2 text-[11px] font-medium text-white/44">{helperText}</p>
     </button>
   );
 }
@@ -245,17 +247,17 @@ function SuggestedSessionCard({
   }
 
   return (
-    <div className="rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-4">
+    <div className="progress-focus-card rounded-[22px] border px-4 py-4">
       <button type="button" onClick={onOpen} className="w-full text-left transition active:scale-[0.995]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">Today&apos;s focus session</p>
-            <p className="mt-1 text-base font-semibold text-white/90">{session.focusText}</p>
+            <p className="text-[12px] font-medium text-white/48">Today&apos;s focus session</p>
+            <p className="mt-1 text-[1.05rem] font-semibold tracking-[-0.03em] text-white/90">{session.focusText}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {session.targetLabels.map((label) => (
                 <span
                   key={label}
-                  className="rounded-full border border-white/8 bg-white/[0.045] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/58"
+                  className="rounded-full border border-white/8 bg-white/[0.05] px-2.5 py-1 text-[10px] font-medium text-white/60"
                 >
                   {label}
                 </span>
@@ -263,7 +265,7 @@ function SuggestedSessionCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/58">
+            <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white/68">
               {session.exercises.length} moves
             </span>
             <ChevronRight className="h-4 w-4 text-white/44" />
@@ -272,13 +274,13 @@ function SuggestedSessionCard({
       </button>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">Session length</p>
-          <p className="mt-1 text-sm font-medium text-white/84">~{session.estimatedDurationMinutes} min</p>
+        <div className="progress-subcard rounded-[16px] border px-3 py-2.5">
+          <p className="text-[10px] font-medium text-white/42">Session length</p>
+          <p className="mt-1 text-[13px] font-medium text-white/84">~{session.estimatedDurationMinutes} min</p>
         </div>
-        <div className="rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">Total sets</p>
-          <p className="mt-1 text-sm font-medium text-white/84">{session.totalSets || "Flexible"}</p>
+        <div className="progress-subcard rounded-[16px] border px-3 py-2.5">
+          <p className="text-[10px] font-medium text-white/42">Total sets</p>
+          <p className="mt-1 text-[13px] font-medium text-white/84">{session.totalSets || "Flexible"}</p>
         </div>
       </div>
 
@@ -288,20 +290,20 @@ function SuggestedSessionCard({
             key={`${exercise.name}-${index}`}
             type="button"
             onClick={onOpen}
-            className="flex w-full items-start justify-between rounded-[16px] border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition active:scale-[0.995]"
+            className="progress-subcard flex w-full items-start justify-between rounded-[16px] border px-3 py-2.5 text-left transition active:scale-[0.995]"
           >
             <div>
-              <p className="text-sm font-medium text-white/84">
+              <p className="text-[13px] font-medium text-white/84">
                 {index + 1}. {exercise.name}
               </p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
+              <p className="mt-1 text-[11px] font-medium text-white/42">
                 {exercise.sets && exercise.repRange
                   ? `${exercise.sets} x ${exercise.repRange}`
                   : exercise.muscleGroup}
               </p>
             </div>
             <div className="max-w-[42%] text-right">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/34">
+              <p className="text-[10px] font-medium text-white/42">
                 {exercise.matchedLabels.join(" + ")}
               </p>
             </div>
@@ -310,11 +312,11 @@ function SuggestedSessionCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{session.helperText}</p>
+        <p className="text-[11px] font-medium text-white/42">{session.helperText}</p>
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-white/70 transition active:scale-[0.98]"
+          className="rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-medium text-white/74 transition active:scale-[0.98]"
         >
           {session.actionLabel}
         </button>
@@ -378,14 +380,14 @@ export function TrainingLoadCard({
   }, [selectedZone, visibleTopZones]);
 
   return (
-    <Card>
+    <Card className="progress-panel">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-muted">Training Load</p>
-          <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-text">Current week</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">{weekLabel}</p>
+          <p className="text-[13px] font-medium text-white/54">Training Load</p>
+          <h3 className="mt-1 text-[1.5rem] font-semibold tracking-[-0.05em] text-white/94">Current week</h3>
+          <p className="mt-2 text-[14px] leading-6 text-white/56">{weekLabel}</p>
         </div>
-        <div className="rounded-full bg-accentSoft px-3 py-1 text-xs text-accent">
+        <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
           {activeDayCount} {activeDayCount === 1 ? "day" : "days"}
         </div>
       </div>
@@ -409,7 +411,7 @@ export function TrainingLoadCard({
           onOpen={onOpenSuggestedSession}
         />
 
-        <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
+        <div className="progress-summary-card rounded-[24px] border p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-white/78">Worked muscle map</p>
