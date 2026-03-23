@@ -227,11 +227,15 @@ export function TrainingLoadCard({
   );
 
   useEffect(() => {
-    if (selectedZone && visibleTopZones.some((metric) => metric.id === selectedZone)) {
+    if (!selectedZone) {
       return;
     }
 
-    setSelectedZone(visibleTopZones[0]?.id ?? null);
+    if (visibleTopZones.some((metric) => metric.id === selectedZone)) {
+      return;
+    }
+
+    setSelectedZone(null);
   }, [selectedZone, visibleTopZones]);
 
   return (

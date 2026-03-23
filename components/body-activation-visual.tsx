@@ -185,19 +185,45 @@ function Shape({
 }
 
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const frame = variant === "male" ? { x: 13, y: 10, width: 94, height: 232 } : { x: 14, y: 10, width: 92, height: 232 };
-  const href =
+  const shellFill = "rgba(255,255,255,0.02)";
+  const shellStroke = "rgba(244,246,255,0.12)";
+  const contourStroke = "rgba(228,232,255,0.075)";
+  const detailStroke = "rgba(228,232,255,0.048)";
+  const frame = variant === "male" ? { x: 14, y: 12, width: 92, height: 228 } : { x: 16, y: 12, width: 88, height: 228 };
+  const frontShell =
     variant === "male"
-      ? view === "front"
-        ? "https://commons.wikimedia.org/wiki/Special:Redirect/file/Male_front_3d-shaded_human_illustration.svg"
-        : "https://commons.wikimedia.org/wiki/Special:Redirect/file/Male_back_3d-shaded_human_illustration.svg"
-      : view === "front"
-        ? "https://commons.wikimedia.org/wiki/Special:Redirect/file/Female_front_3d-shaded_human_illustration.svg"
-        : "https://commons.wikimedia.org/wiki/Special:Redirect/file/Female_back_3d-shaded_human_illustration.svg";
+      ? "M60 29C54 29 50 31 48 34C44 40 42 45 39 48C33 55 31 65 32 75C33 87 36 95 38 106C40 120 42 137 46 150C48 158 50 164 52 171C54 178 54 190 53 206L51 244H57L59 207C59 190 59 177 60 166C61 177 61 190 61 207L63 244H69L67 206C66 190 66 178 68 171C70 164 72 158 74 150C78 137 80 120 82 106C84 95 87 87 88 75C89 65 87 55 81 48C78 45 76 40 72 34C70 31 66 29 60 29Z"
+      : "M60 29C55 29 51 31 49 34C45 40 43 45 40 48C35 54 33 63 34 73C35 84 37 94 39 106C41 120 43 137 46 150C48 158 50 165 53 173C55 180 55 191 54 206L52 244H58L59 207C59 191 59 179 60 169C61 179 61 191 61 207L62 244H68L66 206C65 191 65 180 67 173C70 165 72 158 74 150C77 137 79 120 81 106C83 94 85 84 86 73C87 63 85 54 80 48C77 45 75 40 71 34C69 31 65 29 60 29Z";
+  const backShell =
+    variant === "male"
+      ? "M60 29C54 29 50 31 48 34C44 40 42 45 39 48C33 55 31 65 32 75C33 87 35 97 38 109C40 121 42 138 46 151C48 159 50 166 52 173C54 180 54 191 53 206L51 244H57L59 207C59 191 59 179 60 169C61 179 61 191 61 207L63 244H69L67 206C66 191 66 180 68 173C70 166 72 159 74 151C78 138 80 121 82 109C85 97 87 87 88 75C89 65 87 55 81 48C78 45 76 40 72 34C70 31 66 29 60 29Z"
+      : "M60 29C55 29 51 31 49 34C45 40 43 45 40 48C35 54 33 63 34 73C35 84 37 95 39 108C41 121 43 138 46 151C48 159 50 166 53 174C55 181 55 191 54 206L52 244H58L59 207C59 191 59 180 60 170C61 180 61 191 61 207L62 244H68L66 206C65 191 65 181 67 174C70 166 72 159 74 151C77 138 79 121 81 108C83 95 85 84 86 73C87 63 85 54 80 48C77 45 75 40 71 34C69 31 65 29 60 29Z";
 
   return (
     <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
-      <image href={href} x="0" y="0" width="120" height="260" preserveAspectRatio="xMidYMid meet" opacity="0.22" />
+      <circle cx="60" cy="18" r={variant === "male" ? 10.5 : 10} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d={view === "front" ? frontShell : backShell} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d={variant === "male" ? "M43 48C38 60 36 74 36 90" : "M44 49C40 60 38 74 38 90"} fill="none" stroke={contourStroke} strokeWidth="0.9" strokeLinecap="round" />
+      <path d={variant === "male" ? "M77 48C82 60 84 74 84 90" : "M76 49C80 60 82 74 82 90"} fill="none" stroke={contourStroke} strokeWidth="0.9" strokeLinecap="round" />
+      {view === "front" ? (
+        <>
+          <path d="M48 54C51 51 55 50 60 50C65 50 69 51 72 54" fill="none" stroke={contourStroke} strokeWidth="0.85" strokeLinecap="round" />
+          <path d="M48 68C51 66 55 65 60 65C65 65 69 66 72 68" fill="none" stroke={contourStroke} strokeWidth="0.78" strokeLinecap="round" />
+          <path d="M60 50L60 142" fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
+          <path d="M54 100L54 140" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M66 100L66 140" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M49 151C52 155 56 157 60 157C64 157 68 155 71 151" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="M48 50L60 68L72 50" fill="none" stroke={contourStroke} strokeWidth="0.88" strokeLinecap="round" />
+          <path d="M46 73C50 76 55 77 60 77C65 77 70 76 74 73" fill="none" stroke={contourStroke} strokeWidth="0.78" strokeLinecap="round" />
+          <path d="M60 68L60 145" fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
+          <path d="M55 80L55 142" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M65 80L65 142" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M49 146C53 151 56 153 60 153C64 153 67 151 71 146" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+        </>
+      )}
     </svg>
   );
 }
