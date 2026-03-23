@@ -74,13 +74,11 @@ function DashboardMetricCard({ card }: { card: GoalDashboardCard }) {
 function FocusDirectionCard({
   focusText,
   coverageLabels,
-  helperText,
   sessionSummary,
   onOpen,
 }: {
   focusText: string;
   coverageLabels: Array<{ label: string; percentage: number }>;
-  helperText: string;
   sessionSummary: { focusText: string; estimatedDurationMinutes: number; exerciseCount: number } | null;
   onOpen: () => void;
 }) {
@@ -90,7 +88,6 @@ function FocusDirectionCard({
         <div>
           <p className="text-[13px] font-medium text-white/52">Focus direction</p>
           <h3 className="mt-1 text-[1.5rem] font-semibold tracking-[-0.05em] text-white/94">{focusText}</h3>
-          <p className="mt-2 text-[13px] leading-6 text-white/56">{helperText}</p>
         </div>
         <button
           type="button"
@@ -215,10 +212,10 @@ export function ProgressScreen({
         const freshness =
           minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
         return recentTrainingUpdate.kind === "partial"
-          ? `${recentTrainingUpdate.workoutName} saved ${freshness}. Your load, map, and next recommendation are already refreshed.`
+          ? `${recentTrainingUpdate.workoutName} saved ${freshness}. Your training read is already refreshed.`
           : recentTrainingUpdate.kind === "edit"
-            ? `${recentTrainingUpdate.workoutName} was updated ${freshness}. This week's training read is already in sync.`
-            : `${recentTrainingUpdate.workoutName} landed ${freshness}. Today's summaries and next suggestions have already shifted.`;
+            ? `${recentTrainingUpdate.workoutName} was updated ${freshness}. This week's training read is in sync.`
+            : `${recentTrainingUpdate.workoutName} landed ${freshness}. This week's direction already shifted.`;
       })()
     : null;
 
@@ -250,7 +247,6 @@ export function ProgressScreen({
         <FocusDirectionCard
           focusText={weeklyFocusText}
           coverageLabels={focusCoverage}
-          helperText={nextFocusDestination?.helperText ?? "Open the best matching workout for this week."}
           sessionSummary={
             suggestedFocusSession
               ? {

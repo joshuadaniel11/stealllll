@@ -273,7 +273,6 @@ export function WorkoutScreen({
           <div className="space-y-2">
             <p className="text-sm text-muted">Your plan</p>
             <h2 className="large-title mt-2 font-semibold text-text">Start with the next session</h2>
-            <p className="text-sm leading-6 text-muted">Your planned day stays first. The full split sits below it.</p>
           </div>
 
           <div className="progress-focus-card rounded-[26px] border px-5 py-5">
@@ -347,7 +346,7 @@ export function WorkoutScreen({
                       ) : null}
                     </div>
                     <p className="caption-text mt-1 text-muted">
-                      {getSessionPresentation(profile, workout).splitLabel} • {workout.exercises.length} exercises
+                      {getSessionPresentation(profile, workout).splitLabel} - {workout.exercises.length} exercises
                     </p>
                     {partialByWorkout[workout.id] ? (
                       <p className="mt-1 text-[11px] font-medium text-white/64">
@@ -388,7 +387,7 @@ export function WorkoutScreen({
                 <p className="text-sm text-muted">Planned session</p>
                 <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
-                  {previewWorkout.focus} • {previewWorkout.durationMinutes} min
+                  {previewWorkout.focus} - {previewWorkout.durationMinutes} min
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted">
                   {getPreviewTease(profile.id, previewWorkout.id)}
@@ -428,7 +427,7 @@ export function WorkoutScreen({
                         </div>
                       </div>
                       <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
-                        Open workout
+                        Guided
                       </span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -566,12 +565,10 @@ export function WorkoutScreen({
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
             </h1>
-            <p className="mt-2 text-sm text-muted">
-              Pick the exercise you want to log next. Finished ones stay marked done.
-            </p>
+            <p className="mt-2 text-sm text-muted">Pick the next exercise and keep moving.</p>
             {compressionInsight ? (
               <div className="mt-4 rounded-[22px] bg-[var(--card-strong)] px-4 py-4">
-                <p className="text-sm font-medium text-text">Smart short version</p>
+                <p className="text-sm font-medium text-text">Short version</p>
                 <p className="mt-1 text-sm text-muted">{compressionInsight.note}</p>
                 <p className="mt-2 text-sm text-text">
                   {compressionInsight.suggestedExerciseNames.join(" • ")}
@@ -632,7 +629,7 @@ export function WorkoutScreen({
                 className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-text"
                 onClick={() => setShowExercisePicker(false)}
               >
-                Resume current
+                Back to session
               </button>
               <button
                 className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
@@ -685,32 +682,32 @@ export function WorkoutScreen({
         ) : null}
         {nextExerciseName ? (
           <p className="caption-text mt-2 text-muted">
-            Next up: <span className="text-text">{nextExerciseName}</span>
+            Next: <span className="text-text">{nextExerciseName}</span>
           </p>
         ) : (
-          <p className="caption-text mt-2 text-muted">Final exercise in this session.</p>
+          <p className="caption-text mt-2 text-muted">Final exercise.</p>
         )}
 
         <div className="mt-3 rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-muted">Session progress</p>
+                <p className="text-sm text-muted">Progress</p>
               <p className="mt-1 text-sm font-medium text-text">
                 {completedExerciseCount} of {activeWorkout.exercises.length} exercises done
               </p>
-              <p className="mt-1 text-[11px] font-medium text-white/50">
-                {workoutComplete
-                  ? "Everything is logged. You can finish the workout now."
-                  : currentExerciseComplete
-                    ? "This exercise is wrapped. Pick another one from the list."
-                    : "Log this set and the flow will move you forward automatically."}
-              </p>
+                <p className="mt-1 text-[11px] font-medium text-white/50">
+                  {workoutComplete
+                    ? "Everything is logged. Finish when ready."
+                    : currentExerciseComplete
+                      ? "This exercise is done. Pick the next one."
+                      : "Log the set and keep the flow moving."}
+                </p>
             </div>
             <button
               className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-2 text-sm text-text"
               onClick={() => setShowExercisePicker(true)}
             >
-              Pick exercise
+              Exercises
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -730,7 +727,7 @@ export function WorkoutScreen({
           </div>
         </div>
         <p className="mt-2 text-sm text-muted">
-          {currentExerciseComplete ? "Exercise complete. Pick another one from the list above." : `Targets ${currentExercise.muscleGroup}`}
+          {currentExerciseComplete ? "Exercise complete." : `Targets ${currentExercise.muscleGroup}`}
         </p>
         {suggestedStart ? (
           <p className="mt-1 text-sm text-muted">

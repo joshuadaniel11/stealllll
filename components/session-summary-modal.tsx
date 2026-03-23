@@ -68,7 +68,7 @@ export function SessionSummaryModal({
               <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
               {summary.partial ? (
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  This workout can be resumed from the Workout tab whenever you&apos;re ready.
+                  Resume it from Workout whenever you&apos;re ready.
                 </p>
               ) : null}
             </div>
@@ -97,7 +97,7 @@ export function SessionSummaryModal({
               <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm text-muted">Next up</p>
                 <p className="mt-2 text-base font-semibold text-text">{nextFocusText}</p>
-                <p className="mt-1 text-sm leading-6 text-muted">That is where the week now wants more work.</p>
+                <p className="mt-1 text-sm leading-6 text-muted">That is where the week wants more work now.</p>
               </div>
             </ScrollReveal>
           ) : null}

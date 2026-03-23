@@ -35,15 +35,8 @@ function formatRecentTrainingUpdate(update: {
   const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(update.timestamp).getTime()) / 60000));
   const freshness =
     minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
-  const actionLabel =
-    update.kind === "partial"
-      ? "Progress saved"
-      : update.kind === "edit"
-        ? "Session updated"
-        : "Workout landed";
 
   return {
-    label: actionLabel,
     detail: `${update.workoutName} refreshed your training view ${freshness}.`,
   };
 }
@@ -128,10 +121,10 @@ export function HomeScreen({
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
 
   return (
-    <div className="space-y-5 pb-28">
+    <div className="space-y-4 pb-28">
       <ScrollReveal delay={30}>
         <Card className="home-session-hero space-y-4 px-6 py-6">
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
                 {sessionPresentation.splitLabel}
@@ -140,7 +133,7 @@ export function HomeScreen({
                 {homeStateLabel}
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <h2 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-white">
                 {sessionPresentation.title}
               </h2>
@@ -150,7 +143,7 @@ export function HomeScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5">
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
               onClick={() =>
@@ -222,9 +215,7 @@ export function HomeScreen({
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
                 More
               </p>
-              <p className="text-sm leading-6 text-white/54">
-                Note, countdown, mobility, and extras.
-              </p>
+              <p className="text-sm leading-6 text-white/54">Note, mobility, and extras.</p>
             </div>
             <ChevronDown
               className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -257,7 +248,7 @@ export function HomeScreen({
               </div>
 
               {recentUpdateBadge ? (
-                <p className="text-sm leading-6 text-white/50">{recentUpdateBadge.detail}</p>
+                <p className="text-[13px] leading-6 text-white/48">{recentUpdateBadge.detail}</p>
               ) : null}
 
               {dailyMobilityPrompt ? (
