@@ -236,10 +236,6 @@ export function WorkoutScreen({
     }
 
     const focusTimer = window.setTimeout(() => {
-      if (focusSet?.weight && focusSet.weight > 0) {
-        repsInputRef.current?.focus();
-        return;
-      }
       weightInputRef.current?.focus();
     }, 120);
 
@@ -249,7 +245,6 @@ export function WorkoutScreen({
     activeWorkout?.userId,
     currentExerciseIndex,
     focusSet?.id,
-    focusSet?.weight,
     profile.id,
     showExercisePicker,
   ]);
