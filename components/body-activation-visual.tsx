@@ -21,22 +21,6 @@ type EllipseShape = {
 };
 
 type ShapeDef = PathShape | EllipseShape;
-type BodyBaseConfig = {
-  href: string;
-  sourceHeight: number;
-  crop: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  frame: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-};
 
 const FRONT_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "frontDelts", d: "M37 52C38 47 44 44 48 45C51 46 53 49 53 53L49 69C44 68 39 64 37 52Z" },
@@ -195,58 +179,103 @@ function Shape({
   return <path {...commonProps} d={shape.d} />;
 }
 
-const BODY_BASES: Record<BodyVariant, Record<BodyView, BodyBaseConfig>> = {
-  male: {
-    front: {
-      href: "/body-map/female-base.svg",
-      sourceHeight: 386,
-      crop: { x: 128, y: 18, width: 102, height: 322 },
-      frame: { x: 14, y: 14, width: 92, height: 224 },
-    },
-    back: {
-      href: "/body-map/female-base.svg",
-      sourceHeight: 386,
-      crop: { x: 370, y: 18, width: 102, height: 322 },
-      frame: { x: 14, y: 14, width: 92, height: 224 },
-    },
-  },
-  female: {
-    front: {
-      href: "/body-map/male-base.svg",
-      sourceHeight: 388,
-      crop: { x: 129, y: 20, width: 98, height: 314 },
-      frame: { x: 18, y: 14, width: 84, height: 224 },
-    },
-    back: {
-      href: "/body-map/male-base.svg",
-      sourceHeight: 388,
-      crop: { x: 371, y: 20, width: 102, height: 314 },
-      frame: { x: 18, y: 14, width: 84, height: 224 },
-    },
-  },
-};
-
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const base = BODY_BASES[variant][view];
+  const shellFill = "rgba(255,255,255,0.028)";
+  const shellStroke = "rgba(244,246,255,0.12)";
+  const lineStroke = "rgba(228,232,255,0.13)";
+  const accentStroke = "rgba(228,232,255,0.09)";
+  const frame = variant === "male" ? { x: 14, y: 12, width: 92, height: 228 } : { x: 16, y: 12, width: 88, height: 228 };
+
+  const FemaleFront = () => (
+    <>
+      <circle cx="60" cy="20" r="11" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M48 33C52 30 68 30 72 33L76 48C78 58 77 69 74 83L71 111C69 129 67 144 64 157C62 167 61 173 60 176C59 173 58 167 56 157C53 144 51 129 49 111L46 83C43 69 42 58 44 48Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M44 46C37 52 32 61 30 72C28 82 30 90 34 95L41 72L45 55Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M76 46C83 52 88 61 90 72C92 82 90 90 86 95L79 72L75 55Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M34 95C36 112 39 129 42 145C44 157 46 169 49 183L51 244L43 244L37 188C33 166 31 146 30 128C29 114 30 102 34 95Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M86 95C84 112 81 129 78 145C76 157 74 169 71 183L69 244L77 244L83 188C87 166 89 146 90 128C91 114 90 102 86 95Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M48 52C52 49 56 48 60 48C64 48 68 49 72 52" fill="none" stroke={lineStroke} strokeWidth="0.9" />
+      <path d="M48 67C52 64 56 63 60 63C64 63 68 64 72 67" fill="none" stroke={lineStroke} strokeWidth="0.85" />
+      <path d="M54 98L54 139" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M66 98L66 139" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M48 104C50 102 52 101 54 101" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M66 101C68 101 70 102 72 104" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M50 146C53 151 56 154 60 154C64 154 67 151 70 146" fill="none" stroke={lineStroke} strokeWidth="0.8" />
+      <path d="M50 177C52 190 53 203 54 217" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M70 177C68 190 67 203 66 217" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M27 80C28 95 29 111 30 125" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M93 80C92 95 91 111 90 125" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+    </>
+  );
+
+  const FemaleBack = () => (
+    <>
+      <circle cx="60" cy="20" r="11" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M48 33C52 30 68 30 72 33L76 49C78 61 76 75 73 89L70 114C68 132 66 146 64 159C62 169 61 175 60 178C59 175 58 169 56 159C54 146 52 132 50 114L47 89C44 75 42 61 44 49Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M44 47C37 53 32 62 30 73C28 83 30 90 34 95L40 73L45 56Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M76 47C83 53 88 62 90 73C92 83 90 90 86 95L80 73L75 56Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M34 95C36 112 39 129 42 144C44 156 47 169 49 183L51 244L43 244L37 189C33 167 31 147 30 129C29 115 30 102 34 95Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M86 95C84 112 81 129 78 144C76 156 73 169 71 183L69 244L77 244L83 189C87 167 89 147 90 129C91 115 90 102 86 95Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M50 51L60 68L70 51" fill="none" stroke={lineStroke} strokeWidth="0.9" />
+      <path d="M46 72C50 75 55 76 60 76C65 76 70 75 74 72" fill="none" stroke={lineStroke} strokeWidth="0.85" />
+      <path d="M55 77L55 142" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M65 77L65 142" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M49 145C53 150 56 153 60 153C64 153 67 150 71 145" fill="none" stroke={lineStroke} strokeWidth="0.8" />
+      <path d="M48 176C50 190 52 203 53 217" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M72 176C70 190 68 203 67 217" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M28 81C29 96 30 111 31 126" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+      <path d="M92 81C91 96 90 111 89 126" fill="none" stroke={accentStroke} strokeWidth="0.8" />
+    </>
+  );
+
+  const MaleFront = () => (
+    <>
+      <circle cx="60" cy="20" r="11" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M47 32C51 29 69 29 73 32L78 49C81 61 79 74 75 89L72 113C70 132 67 146 64 159C62 170 61 176 60 179C59 176 58 170 56 159C53 146 50 132 48 113L45 89C41 74 39 61 42 49Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M41 47C34 53 28 63 26 75C24 85 26 93 31 98L37 75L43 57Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M79 47C86 53 92 63 94 75C96 85 94 93 89 98L83 75L77 57Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M31 98C34 114 37 131 40 146C42 158 45 171 47 184L50 244L41 244L35 190C31 168 28 148 27 130C26 116 27 103 31 98Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M89 98C86 114 83 131 80 146C78 158 75 171 73 184L70 244L79 244L85 190C89 168 92 148 93 130C94 116 93 103 89 98Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M46 53C50 49 55 47 60 47C65 47 70 49 74 53" fill="none" stroke={lineStroke} strokeWidth="0.95" />
+      <path d="M46 67C50 64 55 63 60 63C65 63 70 64 74 67" fill="none" stroke={lineStroke} strokeWidth="0.88" />
+      <path d="M53 96L53 141" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M67 96L67 141" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M48 103C50 101 52 100 54 100" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M66 100C68 100 70 101 72 103" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M49 145C52 149 56 152 60 152C64 152 68 149 71 145" fill="none" stroke={lineStroke} strokeWidth="0.82" />
+      <path d="M48 177C50 191 52 205 53 219" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M72 177C70 191 68 205 67 219" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M24 82C25 97 26 113 27 128" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M96 82C95 97 94 113 93 128" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+    </>
+  );
+
+  const MaleBack = () => (
+    <>
+      <circle cx="60" cy="20" r="11" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M47 32C51 29 69 29 73 32L78 49C81 61 79 76 75 91L72 115C70 133 67 147 64 160C62 171 61 177 60 180C59 177 58 171 56 160C53 147 50 133 48 115L45 91C41 76 39 61 42 49Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M41 47C34 53 28 63 26 75C24 85 26 93 31 98L37 75L43 57Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M79 47C86 53 92 63 94 75C96 85 94 93 89 98L83 75L77 57Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M31 98C34 114 37 131 40 146C42 158 45 171 47 184L50 244L41 244L35 190C31 168 28 148 27 130C26 116 27 103 31 98Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M89 98C86 114 83 131 80 146C78 158 75 171 73 184L70 244L79 244L85 190C89 168 92 148 93 130C94 116 93 103 89 98Z" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d="M48 49L60 68L72 49" fill="none" stroke={lineStroke} strokeWidth="0.95" />
+      <path d="M45 73C49 76 54 78 60 78C66 78 71 76 75 73" fill="none" stroke={lineStroke} strokeWidth="0.88" />
+      <path d="M54 79L54 143" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M66 79L66 143" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M48 145C52 150 56 153 60 153C64 153 68 150 72 145" fill="none" stroke={lineStroke} strokeWidth="0.82" />
+      <path d="M48 177C50 191 52 205 53 219" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M72 177C70 191 68 205 67 219" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M24 82C25 97 26 113 27 128" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+      <path d="M96 82C95 97 94 113 93 128" fill="none" stroke={accentStroke} strokeWidth="0.82" />
+    </>
+  );
 
   return (
-    <svg
-      x={base.frame.x}
-      y={base.frame.y}
-      width={base.frame.width}
-      height={base.frame.height}
-      viewBox={`${base.crop.x} ${base.crop.y} ${base.crop.width} ${base.crop.height}`}
-    >
-      <image
-        href={base.href}
-        x="0"
-        y="0"
-        width="600"
-        height={base.sourceHeight}
-        preserveAspectRatio="none"
-        filter="url(#body-base-tone)"
-        opacity="0.72"
-      />
+    <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
+      {variant === "male" && view === "front" ? <MaleFront /> : null}
+      {variant === "male" && view === "back" ? <MaleBack /> : null}
+      {variant === "female" && view === "front" ? <FemaleFront /> : null}
+      {variant === "female" && view === "back" ? <FemaleBack /> : null}
     </svg>
   );
 }
@@ -281,17 +310,6 @@ export function BodyActivationVisual({
       <div className="relative flex items-center justify-center">
         <svg viewBox="0 0 120 260" className="h-[312px] w-[144px]" aria-hidden="true">
           <defs>
-            <filter id="body-base-tone" colorInterpolationFilters="sRGB">
-              <feColorMatrix
-                type="matrix"
-                values="
-                  0 0 0 0 0.92
-                  0 0 0 0 0.93
-                  0 0 0 0 1
-                  0 0 0 0.18 0
-                "
-              />
-            </filter>
             <linearGradient id="body-fade-left" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="rgba(14,15,22,0.96)" />
               <stop offset="100%" stopColor="rgba(14,15,22,0)" />
