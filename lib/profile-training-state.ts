@@ -14,7 +14,7 @@ import {
   type ProfileTrainingMetrics,
 } from "@/lib/training-metrics";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
-import type { ExerciseLibraryItem, Profile, WeeklySummary, WorkoutSession } from "@/lib/types";
+import type { ExerciseLibraryItem, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
 
 export type TrendPoint = {
   date: string;
@@ -193,6 +193,21 @@ function getExposureTotal(zoneExposure: Record<string, number>, zoneIds: string[
   return Math.round(zoneIds.reduce((sum, zoneId) => sum + (zoneExposure[zoneId] ?? 0), 0) * 10) / 10;
 }
 
+function getWeeklyStretchCount(
+  stretchCompletions: StretchCompletion[],
+  userId: Profile["id"],
+  referenceDate: Date,
+) {
+  const week = getCurrentWeekWindow(referenceDate);
+  return stretchCompletions.filter((completion) => {
+    if (completion.userId !== userId) {
+      return false;
+    }
+    const date = new Date(completion.date);
+    return date >= week.start && date <= week.end;
+  }).length;
+}
+
 function buildProgressSignals(
   profile: Profile,
   sessions: WorkoutSession[],
@@ -208,8 +223,56 @@ function buildProgressSignals(
   const shoulderExposure = getExposureTotal(zoneExposure, ["frontDelts", "sideDelts", "rearDelts"]);
   const recentVolume = trendData.slice(-2).reduce((sum, item) => sum + item.volume, 0);
   const previousVolume = trendData.slice(-4, -2).reduce((sum, item) => sum + item.volume, 0);
+  const totalRecentExposure = chestExposure + backExposure + gluteExposure + coreExposure + shoulderExposure;
+  const hasMeaningfulTrainingSignal = weeklySummary.workoutsCompleted > 0 || totalRecentExposure > 0.5;
   const strengthMomentumLabel =
     trendData.length < 3 ? "Starting" : recentVolume > previousVolume ? "Rising" : recentVolume < previousVolume ? "Steadying" : "Stable";
+
+  if (!hasMeaningfulTrainingSignal) {
+    if (profile.id === "natasha") {
+      return {
+        leadingIndicator: {
+          title: "Shape signal",
+          value: "Waiting on first session",
+          detail: "Log a workout and your glute, back, and waist trend will start reading clearly here.",
+        },
+        primarySignal: {
+          title: "Current focus",
+          value: "Fresh week",
+          detail: "No meaningful load yet. Start the first session and let the shape signals build from real work.",
+        },
+        supportSignal: {
+          title: "Support signal",
+          value: weeklyStretchCount > 0 ? "Mobility in motion" : "Mobility ready",
+          detail:
+            weeklyStretchCount > 0
+              ? `${weeklyStretchCount} mobility session${weeklyStretchCount === 1 ? "" : "s"} logged this week.`
+              : "Mobility is ready when you want a quick reset between sessions.",
+        },
+      };
+    }
+
+    return {
+      leadingIndicator: {
+        title: "Build signal",
+        value: "Waiting on first session",
+        detail: "Log a workout and your chest, back, and arm trend will start reading clearly here.",
+      },
+      primarySignal: {
+        title: "Current focus",
+        value: "Fresh week",
+        detail: "No meaningful load yet. Start the first session and let the upper-body signals build from real work.",
+      },
+      supportSignal: {
+        title: "Support signal",
+        value: weeklyStretchCount > 0 ? "Mobility in motion" : "Mobility ready",
+        detail:
+          weeklyStretchCount > 0
+            ? `${weeklyStretchCount} mobility session${weeklyStretchCount === 1 ? "" : "s"} logged this week.`
+            : "Mobility is ready when you want a quick reset between sessions.",
+      },
+    };
+  }
 
   if (profile.id === "natasha") {
     return {
@@ -475,12 +538,14 @@ export function getProfileTrainingState(
   allSessions: WorkoutSession[],
   exerciseLibrary: ExerciseLibraryItem[],
   referenceDate = new Date(),
+  stretchCompletions: StretchCompletion[] = [],
 ): ProfileTrainingState {
   const userSessions = sortSessionsDescending(allSessions.filter((session) => session.userId === profile.id));
   const trainingLoad = getWeeklyTrainingLoad(userSessions, profile.id, referenceDate);
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
   const trendData = getTrendData(userSessions);
+  const weeklyStretchCount = getWeeklyStretchCount(stretchCompletions, profile.id, referenceDate);
   const metrics = getProfileTrainingMetrics(profile, userSessions, exerciseLibrary, trainingLoad, referenceDate);
   const suggestedNextFocus = selectNextFocusFromMetrics(profile, trainingLoad, metrics);
   const derivedTrainingLoad = {
@@ -519,7 +584,7 @@ export function getProfileTrainingState(
     metrics,
     insights,
     goalDashboard: buildGoalDashboard(profile, derivedTrainingLoad, weeklySummary, streak),
-    progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, 0),
+    progressSignals: buildProgressSignals(profile, userSessions, trendData, weeklySummary, weeklyStretchCount),
   };
 }
 

@@ -433,8 +433,15 @@ export function WorkoutTrackerApp() {
   );
 
   const trainingState = useMemo(
-    () => getProfileTrainingState(selectedProfile, state.sessions, state.exerciseLibrary),
-    [selectedProfile, state.exerciseLibrary, state.sessions],
+    () =>
+      getProfileTrainingState(
+        selectedProfile,
+        state.sessions,
+        state.exerciseLibrary,
+        new Date(),
+        state.stretchCompletions[selectedProfile.id],
+      ),
+    [selectedProfile, state.exerciseLibrary, state.sessions, state.stretchCompletions],
   );
   const {
     nextFocusDestination,

@@ -858,6 +858,40 @@ function testTrainingInsightsStayCentralizedAndActionable() {
   assert.ok(trainingState.insights.progressSignal.length > 0);
 }
 
+function testProgressSignalsUseRealWeeklyStretchCountAndSafeEmptyFallback() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const stretchCompletions = [
+    {
+      id: "stretch-1",
+      userId: "natasha" as const,
+      date: "2026-03-23T08:00:00.000Z",
+      stretchTitle: "Couch stretch",
+    },
+    {
+      id: "stretch-2",
+      userId: "natasha" as const,
+      date: "2026-03-24T08:00:00.000Z",
+      stretchTitle: "Hamstring fold",
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(
+    natasha,
+    [],
+    seed.exerciseLibrary,
+    referenceDate,
+    stretchCompletions,
+  );
+
+  assert.equal(trainingState.progressSignals.leadingIndicator.value, "Waiting on first session");
+  assert.equal(trainingState.progressSignals.primarySignal.value, "Fresh week");
+  assert.ok(trainingState.progressSignals.supportSignal.detail.includes("2 mobility sessions logged this week"));
+}
+
 function testPhase1RirIntelligenceHandlesMissingRirAndBoundsRisk() {
   const seed = createSeedState();
   const joshua = seed.profiles.find((profile) => profile.id === "joshua");
@@ -1187,6 +1221,187 @@ function testPhase2RecoveryCurveSupportsSparseAndRecoveredCases() {
   assert.ok((upperChestCurve.avgRecoveryHours ?? 0) <= 36);
 }
 
+function testPhase3RepRangeBiasFindsBestRespondingBucket() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const buildSession = (
+    id: string,
+    performedAt: string,
+    exerciseName: string,
+    reps: number,
+    workoutDayId = "joshua-chest-triceps",
+  ) => ({
+    id,
+    userId: "joshua" as const,
+    workoutDayId,
+    workoutName: "Chest + Triceps A",
+    performedAt,
+    durationMinutes: 48,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: `${id}-1`,
+        exerciseName,
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: `${id}-a`, weight: 30, reps, completed: true, rir: 2 },
+          { id: `${id}-b`, weight: 30, reps, completed: true, rir: 2 },
+          { id: `${id}-c`, weight: 30, reps, completed: true, rir: 2 },
+        ],
+      },
+    ],
+  });
+
+  const sessions = [
+    buildSession("rr-recent-1", "2026-03-21T08:00:00.000Z", "Incline Dumbbell Press", 12),
+    buildSession("rr-recent-2", "2026-03-19T08:00:00.000Z", "Incline Dumbbell Press", 11),
+    buildSession("rr-recent-3", "2026-03-17T08:00:00.000Z", "Incline Dumbbell Press", 12),
+    buildSession("rr-recent-4", "2026-03-15T08:00:00.000Z", "Incline Dumbbell Press", 11),
+    buildSession("rr-base-1", "2026-02-20T08:00:00.000Z", "Incline Dumbbell Press", 8),
+    buildSession("rr-base-2", "2026-02-18T08:00:00.000Z", "Incline Dumbbell Press", 8),
+    buildSession("rr-high-1", "2026-03-22T08:00:00.000Z", "Cable Fly", 16),
+    buildSession("rr-high-2", "2026-03-14T08:00:00.000Z", "Cable Fly", 15),
+    buildSession("rr-high-base-1", "2026-02-19T08:00:00.000Z", "Cable Fly", 15),
+    buildSession("rr-high-base-2", "2026-02-17T08:00:00.000Z", "Cable Fly", 15),
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const upperChestBias = trainingState.metrics.repRangeBias.byRegion.upperChest;
+
+  assert.equal(upperChestBias.bestRespondingRepRange, "10-15");
+  assert.ok(upperChestBias.byBucket["10-15"].score > upperChestBias.byBucket["15-20"].score);
+  assert.ok(upperChestBias.confidenceScore > 0);
+}
+
+function testPhase3SpilloverAdjustsIndirectFatigue() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "spillover-1",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 58,
+      sessionRpe: 8.5,
+      feeling: "Tough" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: Array.from({ length: 6 }, (_, index) => ({
+            id: `spill-${index}`,
+            weight: 34,
+            reps: 8,
+            completed: true,
+            rir: 1,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+  const frontDelts = trainingState.metrics.spilloverAdjustedFatigue.byRegion.frontDelts;
+
+  assert.ok(frontDelts.spilloverFatigue > 0);
+  assert.ok(frontDelts.adjustedRegionFatigue > frontDelts.directRegionFatigue);
+  assert.equal(frontDelts.topSources[0]?.zoneId, "upperChest");
+}
+
+function testPhase3HandlesSparseAdaptiveHistorySafely() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const sparseState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
+  assert.equal(sparseState.metrics.repRangeBias.byRegion.gluteMax.bestRespondingRepRange, null);
+  assert.equal(sparseState.metrics.exerciseFatigueFingerprints.byExercise.length, 0);
+  assert.ok(Number.isFinite(sparseState.metrics.spilloverAdjustedFatigue.byRegion.gluteMax.adjustedRegionFatigue));
+
+  const sessions = [
+    {
+      id: "fingerprint-1",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-18T08:00:00.000Z",
+      durationMinutes: 50,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "fp-a", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "fp-b", weight: 60, reps: 9, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "fingerprint-2",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-quads",
+      workoutName: "Glutes + Quads",
+      performedAt: "2026-03-20T08:00:00.000Z",
+      durationMinutes: 50,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day3",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "fp-c", weight: 60, reps: 8, completed: true, rir: 2 },
+            { id: "fp-d", weight: 60, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "fingerprint-3",
+      userId: "natasha",
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T20:00:00.000Z",
+      durationMinutes: 50,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "fp-e", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "fp-f", weight: 60, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const recoveredState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, referenceDate);
+  const fingerprint = recoveredState.metrics.exerciseFatigueFingerprints.byExercise.find(
+    (entry) => entry.exerciseName === "Machine Hip Thrust",
+  );
+
+  assert.ok(fingerprint);
+  assert.ok(Number.isFinite(fingerprint.systemicFatigueScore));
+  assert.ok(Number.isFinite(fingerprint.localFatigueScore));
+  assert.ok(Number.isFinite(fingerprint.efficiencyScore));
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -1336,12 +1551,16 @@ const tests = [
   ["keep symmetry and consistency inside clean bounds", testSymmetryAndConsistencyRespectBoundaries],
   ["drop adaptation score under repeated exposure", testAdaptationScoreDropsWithRepeatedExposure],
   ["build centralized premium training insights", testTrainingInsightsStayCentralizedAndActionable],
+  ["use real weekly stretch count and safe empty-state progress signals", testProgressSignalsUseRealWeeklyStretchCountAndSafeEmptyFallback],
   ["build phase1 rir intelligence with safe fallback", testPhase1RirIntelligenceHandlesMissingRirAndBoundsRisk],
   ["track mev states by region", testPhase1MevTrackerReflectsBelowAtAndAboveStates],
   ["detect plateaus from flat covered adherent work", testPhase1PlateauDetectionFindsFlatCoveredAdherentRegion],
   ["estimate mrv pressure without blowing up on real data", testPhase2MrvEstimatorFlagsPressureNearCeiling],
   ["derive velocity loss and lower confidence when load rises across sets", testPhase2VelocityLossHandlesDropoffAndConfidence],
   ["support sparse and recovered inter-session recovery curves", testPhase2RecoveryCurveSupportsSparseAndRecoveredCases],
+  ["find the best responding rep-range bucket from mixed history", testPhase3RepRangeBiasFindsBestRespondingBucket],
+  ["propagate fatigue through the spillover matrix", testPhase3SpilloverAdjustsIndirectFatigue],
+  ["keep adaptive metrics stable with sparse history", testPhase3HandlesSparseAdaptiveHistorySafely],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],

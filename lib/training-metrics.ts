@@ -217,6 +217,70 @@ export type Phase2RecoveryInsights = {
   recoveryInsight: string | null;
 };
 
+export type RepRangeBucket = "5-8" | "8-12" | "10-15" | "15-20";
+
+export type RepRangeBucketMetric = {
+  bucket: RepRangeBucket;
+  sessionCount: number;
+  avgProgressVelocity: number;
+  avgEvsEfficiency: number;
+  adherence: number;
+  score: number;
+  consistencyScore: number;
+  recencyScore: number;
+  confidenceScore: number;
+};
+
+export type RepRangeBiasRegionMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  bestRespondingRepRange: RepRangeBucket | null;
+  confidenceScore: number;
+  byBucket: Record<RepRangeBucket, RepRangeBucketMetric>;
+};
+
+export type RepRangeBiasMetric = {
+  byRegion: Record<TrainingLoadZone, RepRangeBiasRegionMetric>;
+};
+
+export type ExerciseFatigueFingerprintEntry = {
+  exerciseName: string;
+  mainRegions: TrainingLoadZone[];
+  systemicFatigueScore: number;
+  localFatigueScore: number;
+  efficiencyScore: number;
+  recoveryCostHours: number | null;
+  confidenceScore: number;
+  sampleCount: number;
+};
+
+export type ExerciseFatigueFingerprintMetric = {
+  byExercise: ExerciseFatigueFingerprintEntry[];
+};
+
+export type SpilloverAdjustedRegionFatigueMetric = {
+  zoneId: TrainingLoadZone;
+  label: string;
+  directRegionFatigue: number;
+  spilloverFatigue: number;
+  adjustedRegionFatigue: number;
+  topSources: Array<{
+    zoneId: TrainingLoadZone;
+    label: string;
+    value: number;
+  }>;
+};
+
+export type SpilloverAdjustedFatigueMetric = {
+  byRegion: Record<TrainingLoadZone, SpilloverAdjustedRegionFatigueMetric>;
+};
+
+export type Phase3AdaptiveInsights = {
+  repRangeInsight: string | null;
+  exerciseInsight: string | null;
+  spilloverInsight: string | null;
+};
+
 export type RegionTrainingMetric = {
   zoneId: TrainingLoadZone;
   label: string;
@@ -248,6 +312,10 @@ export type ProfileTrainingMetrics = {
   velocityLoss: VelocityLossMetric;
   recoveryCurve: RecoveryCurveMetric;
   phase2Insights: Phase2RecoveryInsights;
+  repRangeBias: RepRangeBiasMetric;
+  exerciseFatigueFingerprints: ExerciseFatigueFingerprintMetric;
+  spilloverAdjustedFatigue: SpilloverAdjustedFatigueMetric;
+  phase3Insights: Phase3AdaptiveInsights;
   regionMetrics: RegionTrainingMetric[];
 };
 
@@ -289,6 +357,37 @@ const PROFILE_PRIORITY_MULTIPLIERS: Record<string, Partial<Record<TrainingLoadZo
 };
 
 const PHASE1_MEV_BASE_FACTOR = 0.72;
+const PHASE3_REP_RANGE_WINDOW_DAYS = 84;
+const REP_RANGE_BUCKET_MIDPOINTS: Record<RepRangeBucket, number> = {
+  "5-8": 6.5,
+  "8-12": 10,
+  "10-15": 12.5,
+  "15-20": 17.5,
+};
+const PHASE3_SPILLOVER_MATRIX: Partial<Record<TrainingLoadZone, Partial<Record<TrainingLoadZone, number>>>> = {
+  upperChest: { frontDelts: 0.35, triceps: 0.28, sideDelts: 0.08 },
+  midChest: { frontDelts: 0.3, triceps: 0.24, sideDelts: 0.06 },
+  lowerChest: { triceps: 0.18, frontDelts: 0.14 },
+  frontDelts: { triceps: 0.14, sideDelts: 0.16, upperChest: 0.08 },
+  sideDelts: { frontDelts: 0.16, rearDelts: 0.18, upperBack: 0.12 },
+  rearDelts: { sideDelts: 0.18, upperBack: 0.24, lats: 0.12 },
+  upperBack: { rearDelts: 0.2, lats: 0.18, midBack: 0.16, lowerBack: 0.08 },
+  lats: { upperBack: 0.2, midBack: 0.22, biceps: 0.28, rearDelts: 0.12 },
+  midBack: { lats: 0.2, upperBack: 0.16, lowerBack: 0.12, biceps: 0.08 },
+  lowerBack: { gluteMax: 0.18, hamstrings: 0.2, midBack: 0.12 },
+  upperAbs: { lowerAbs: 0.16, obliques: 0.14 },
+  lowerAbs: { upperAbs: 0.14, obliques: 0.12, upperGlutes: 0.08 },
+  obliques: { lowerAbs: 0.16, upperAbs: 0.12, sideGlutes: 0.08 },
+  upperGlutes: { gluteMax: 0.35, sideGlutes: 0.2, hamstrings: 0.18, lowerBack: 0.12 },
+  gluteMax: { upperGlutes: 0.25, sideGlutes: 0.18, hamstrings: 0.2, lowerBack: 0.15, quads: 0.08 },
+  sideGlutes: { gluteMax: 0.22, upperGlutes: 0.18, quads: 0.12, obliques: 0.08 },
+  biceps: { forearms: 0.2, lats: 0.08 },
+  triceps: { frontDelts: 0.12, upperChest: 0.08 },
+  forearms: { biceps: 0.08 },
+  quads: { gluteMax: 0.12, sideGlutes: 0.08, calves: 0.1 },
+  hamstrings: { gluteMax: 0.18, upperGlutes: 0.12, lowerBack: 0.12, calves: 0.08 },
+  calves: { hamstrings: 0.06, quads: 0.05 },
+};
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -315,6 +414,32 @@ function standardDeviation(values: number[]) {
   const mean = average(values);
   const variance = average(values.map((value) => (value - mean) ** 2));
   return Math.sqrt(variance);
+}
+
+function weightedAverage(entries: Array<{ value: number; weight: number }>) {
+  const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!totalWeight) {
+    return 0;
+  }
+
+  return entries.reduce((sum, entry) => sum + entry.value * entry.weight, 0) / totalWeight;
+}
+
+function getDaysAgo(performedAt: string, referenceDate: Date) {
+  return Math.max(0, (+referenceDate - +new Date(performedAt)) / 86400000);
+}
+
+function getRepRangeBucket(reps: number): RepRangeBucket {
+  const buckets = Object.entries(REP_RANGE_BUCKET_MIDPOINTS) as Array<[RepRangeBucket, number]>;
+  return buckets
+    .sort((a, b) => {
+      const aDistance = Math.abs(reps - a[1]);
+      const bDistance = Math.abs(reps - b[1]);
+      if (aDistance !== bDistance) {
+        return aDistance - bDistance;
+      }
+      return a[1] - b[1];
+    })[0]![0];
 }
 
 function getPriorityMultiplier(profile: Profile, zoneId: TrainingLoadZone) {
@@ -1403,7 +1528,390 @@ function buildPhase2RecoveryInsights(
         ? `${focusLabel} are recovering slowly between sessions.`
         : curve?.recoverySpeed === "fast"
           ? `${focusLabel} are bouncing back quickly.`
-          : null,
+      : null,
+  };
+}
+
+function buildExerciseProgressScores(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+) {
+  const recentExerciseMetrics = aggregateExerciseWindow(sessions, exerciseLibrary, getWindowRange(referenceDate, 28));
+  const baselineExerciseMetrics = aggregateExerciseWindow(sessions, exerciseLibrary, getWindowRange(referenceDate, 28, 28));
+  const scores = new Map<string, number>();
+
+  for (const [exerciseKey, recent] of recentExerciseMetrics) {
+    const baseline = baselineExerciseMetrics.get(exerciseKey);
+    if (!baseline) {
+      continue;
+    }
+
+    const progressScore =
+      0.5 * getPctChange(recent.bestEstimated1RM, baseline.bestEstimated1RM) +
+      0.3 * getBestRepsAtFixedLoadChange(recent, baseline) +
+      0.2 * getPctChange(recent.evsTotal, baseline.evsTotal);
+    scores.set(exerciseKey, progressScore);
+  }
+
+  return scores;
+}
+
+function buildRepRangeBiasMetric(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+): RepRangeBiasMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const range = getWindowRange(referenceDate, PHASE3_REP_RANGE_WINDOW_DAYS);
+  const progressScores = buildExerciseProgressScores(sessions, exerciseLibrary, referenceDate);
+  const bucketTotals = new Map<
+    TrainingLoadZone,
+    Record<RepRangeBucket, {
+      progress: number;
+      efficiency: number;
+      weight: number;
+      positiveWeight: number;
+      recency: number;
+      sessions: Set<string>;
+      regionSessions: Set<string>;
+    }>
+  >();
+
+  const emptyBucketState = (): Record<RepRangeBucket, {
+    progress: number;
+    efficiency: number;
+    weight: number;
+    positiveWeight: number;
+    recency: number;
+    sessions: Set<string>;
+    regionSessions: Set<string>;
+  }> => ({
+    "5-8": { progress: 0, efficiency: 0, weight: 0, positiveWeight: 0, recency: 0, sessions: new Set(), regionSessions: new Set() },
+    "8-12": { progress: 0, efficiency: 0, weight: 0, positiveWeight: 0, recency: 0, sessions: new Set(), regionSessions: new Set() },
+    "10-15": { progress: 0, efficiency: 0, weight: 0, positiveWeight: 0, recency: 0, sessions: new Set(), regionSessions: new Set() },
+    "15-20": { progress: 0, efficiency: 0, weight: 0, positiveWeight: 0, recency: 0, sessions: new Set(), regionSessions: new Set() },
+  });
+
+  for (const session of sessions) {
+    if (!isWithinRange(session.performedAt, range)) {
+      continue;
+    }
+
+    const densityPenalty = getDensityPenalty(session);
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const avgReps = average(completedSets.map((set) => set.reps));
+      const bucket = getRepRangeBucket(avgReps);
+      const libraryItem = resolveLibraryItem(exercise, lookup);
+      const classification = getExerciseClassification(exercise.exerciseName, libraryItem?.equipment);
+      const avgRir = average(completedSets.map((set) => getSetRIR(set)));
+      const failurePenalty = getFailurePenalty(avgRir);
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+      const progressScore = progressScores.get(normalizeExerciseName(exercise.exerciseName)) ?? 0;
+      const exerciseEvs = completedSets.reduce(
+        (sum, set) => sum + getEffectiveRepsFactor(getSetRIR(set)) * getLoadFactor(set.reps) * classification.stabilityFactor,
+        0,
+      );
+      const fatigueScore = completedSets.length * classification.fatigueFactor * failurePenalty * densityPenalty;
+      const evsEfficiency = exerciseEvs / Math.max(fatigueScore, 0.1);
+      const recencyScore = clamp(1 - getDaysAgo(session.performedAt, referenceDate) / PHASE3_REP_RANGE_WINDOW_DAYS, 0.2, 1);
+
+      for (const [zoneId, allocation] of contribution) {
+        const zoneBuckets = bucketTotals.get(zoneId) ?? emptyBucketState();
+        const bucketState = zoneBuckets[bucket];
+        const weighted = allocation * completedSets.length;
+        bucketState.progress += progressScore * weighted;
+        bucketState.efficiency += evsEfficiency * weighted;
+        bucketState.weight += weighted;
+        bucketState.positiveWeight += (progressScore > 0 ? 1 : 0) * weighted;
+        bucketState.recency += recencyScore * weighted;
+        bucketState.sessions.add(session.id);
+        for (const candidateBucket of Object.keys(zoneBuckets) as RepRangeBucket[]) {
+          zoneBuckets[candidateBucket].regionSessions.add(session.id);
+        }
+        bucketTotals.set(zoneId, zoneBuckets);
+      }
+    }
+  }
+
+  return {
+    byRegion: (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, RepRangeBiasRegionMetric>>(
+      (accumulator, zoneId) => {
+        const zoneBuckets = bucketTotals.get(zoneId) ?? emptyBucketState();
+        const byBucket = (Object.keys(zoneBuckets) as RepRangeBucket[]).reduce<Record<RepRangeBucket, RepRangeBucketMetric>>(
+          (bucketAccumulator, bucket) => {
+            const data = zoneBuckets[bucket];
+            const avgProgressVelocity = data.weight ? data.progress / data.weight : 0;
+            const avgEvsEfficiency = data.weight ? data.efficiency / data.weight : 0;
+            const adherence = data.regionSessions.size ? data.sessions.size / data.regionSessions.size : 0;
+            const consistencyScore = data.weight ? data.positiveWeight / data.weight : 0;
+            const recencyScore = data.weight ? data.recency / data.weight : 0;
+            const normalizedProgress = clamp((avgProgressVelocity + 15) / 30, 0, 1.15);
+            const normalizedEfficiency = clamp(avgEvsEfficiency / 1.4, 0, 1.15);
+            const score = 0.5 * normalizedProgress + 0.3 * normalizedEfficiency + 0.2 * adherence;
+            const confidenceScore =
+              average([
+                clamp(data.sessions.size / 5, 0, 1),
+                consistencyScore,
+                recencyScore,
+              ]) * 100;
+
+            bucketAccumulator[bucket] = {
+              bucket,
+              sessionCount: data.sessions.size,
+              avgProgressVelocity: round(avgProgressVelocity, 2),
+              avgEvsEfficiency: round(avgEvsEfficiency, 2),
+              adherence: round(adherence, 3),
+              score: round(score, 3),
+              consistencyScore: round(consistencyScore, 3),
+              recencyScore: round(recencyScore, 3),
+              confidenceScore: round(confidenceScore, 1),
+            };
+            return bucketAccumulator;
+          },
+          {} as Record<RepRangeBucket, RepRangeBucketMetric>,
+        );
+
+        const bestBucket = (Object.values(byBucket) as RepRangeBucketMetric[])
+          .filter((bucket) => bucket.sessionCount > 0)
+          .sort((a, b) => {
+            if (b.score !== a.score) {
+              return b.score - a.score;
+            }
+            return b.confidenceScore - a.confidenceScore;
+          })[0] ?? null;
+
+        accumulator[zoneId] = {
+          zoneId,
+          label: TRAINING_LOAD_ZONE_META[zoneId].label,
+          bestRespondingRepRange: bestBucket?.bucket ?? null,
+          confidenceScore: round(bestBucket?.confidenceScore ?? 0, 1),
+          byBucket,
+        };
+        return accumulator;
+      },
+      {} as Record<TrainingLoadZone, RepRangeBiasRegionMetric>,
+    ),
+  };
+}
+
+function buildExerciseFatigueFingerprints(
+  profile: Profile,
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+): ExerciseFatigueFingerprintMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const range = getWindowRange(referenceDate, 70);
+  const sessionsInRange = sessions
+    .filter((session) => isWithinRange(session.performedAt, range))
+    .sort((a, b) => +new Date(a.performedAt) - +new Date(b.performedAt));
+  const byExercise = new Map<
+    string,
+    {
+      exerciseName: string;
+      mainRegions: TrainingLoadZone[];
+      systemicSamples: Array<{ value: number; weight: number }>;
+      localSamples: Array<{ value: number; weight: number }>;
+      efficiencySamples: Array<{ value: number; weight: number }>;
+      recoveryHours: number[];
+      sampleCount: number;
+    }
+  >();
+  const baselineByExercise = new Map<string, number>();
+  const pendingRecoveryByExercise = new Map<string, Array<{ baseline: number; loadedAt: string }>>();
+
+  for (const session of sessionsInRange) {
+    const densityPenalty = getDensityPenalty(session);
+    const beforeSessions = sessions.filter((candidate) => +new Date(candidate.performedAt) < +new Date(session.performedAt));
+    const beforeRecovery = buildRecoveryIndex(profile, beforeSessions, new Date(session.performedAt)).score;
+    const afterReference = new Date(new Date(session.performedAt).getTime() + 24 * 3600000);
+    const afterSessions = sessions.filter((candidate) => +new Date(candidate.performedAt) <= +afterReference);
+    const afterRecovery = buildRecoveryIndex(profile, afterSessions, afterReference).score;
+    const recoveryDrop = clamp((beforeRecovery - afterRecovery) / 100, 0, 1);
+
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const libraryItem = resolveLibraryItem(exercise, lookup);
+      const classification = getExerciseClassification(exercise.exerciseName, libraryItem?.equipment);
+      const avgRir = average(completedSets.map((set) => getSetRIR(set)));
+      const failurePenalty = getFailurePenalty(avgRir);
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+      if (!contribution.length) {
+        continue;
+      }
+
+      const exerciseKey = normalizeExerciseName(exercise.exerciseName);
+      const bestEstimated1RM = Math.max(...completedSets.map((set) => getEstimatedOneRepMax(set.weight, set.reps)));
+      const exerciseEvs = completedSets.reduce(
+        (sum, set) => sum + getEffectiveRepsFactor(getSetRIR(set)) * getLoadFactor(set.reps) * classification.stabilityFactor,
+        0,
+      );
+      const fatigueScore = completedSets.length * classification.fatigueFactor * failurePenalty * densityPenalty;
+      const bestSetReps = Math.max(...completedSets.map((set) => set.reps));
+      const lastSetReps = completedSets[completedSets.length - 1]!.reps;
+      const velocityLoss = clamp((bestSetReps - lastSetReps) / Math.max(bestSetReps, 1), 0, 1);
+      const previousBaseline = baselineByExercise.get(exerciseKey) ?? bestEstimated1RM;
+      const currentSuppression = previousBaseline > 0 ? clamp((previousBaseline - bestEstimated1RM) / previousBaseline, 0, 1) : 0;
+      baselineByExercise.set(exerciseKey, Math.max(previousBaseline, bestEstimated1RM));
+
+      const pending = pendingRecoveryByExercise.get(exerciseKey) ?? [];
+      const remainingPending: Array<{ baseline: number; loadedAt: string }> = [];
+      for (const event of pending) {
+        if (bestEstimated1RM >= event.baseline) {
+          const record = byExercise.get(exerciseKey);
+          if (record) {
+            record.recoveryHours.push(Math.max(0, (+new Date(session.performedAt) - +new Date(event.loadedAt)) / 3600000));
+          }
+        } else {
+          remainingPending.push(event);
+        }
+      }
+      remainingPending.push({ baseline: Math.max(previousBaseline, bestEstimated1RM), loadedAt: session.performedAt });
+      pendingRecoveryByExercise.set(exerciseKey, remainingPending);
+
+      const localVolumeConcentration = clamp(exerciseEvs / Math.max(session.durationMinutes / 8, 1), 0, 2);
+      const mainRegions = contribution
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([zoneId]) => zoneId);
+      const record = byExercise.get(exerciseKey) ?? {
+        exerciseName: exercise.exerciseName,
+        mainRegions,
+        systemicSamples: [],
+        localSamples: [],
+        efficiencySamples: [],
+        recoveryHours: [],
+        sampleCount: 0,
+      };
+      record.mainRegions = mainRegions;
+      record.systemicSamples.push({
+        value: weightedAverage([
+          { value: recoveryDrop, weight: 0.4 },
+          { value: velocityLoss, weight: 0.35 },
+          { value: currentSuppression, weight: 0.25 },
+        ]),
+        weight: exerciseEvs,
+      });
+      record.localSamples.push({
+        value: weightedAverage([
+          { value: currentSuppression, weight: 0.55 },
+          { value: clamp(localVolumeConcentration / 2, 0, 1), weight: 0.45 },
+        ]),
+        weight: exerciseEvs,
+      });
+      record.efficiencySamples.push({
+        value: exerciseEvs / Math.max(fatigueScore + currentSuppression + recoveryDrop, 0.1),
+        weight: exerciseEvs,
+      });
+      record.sampleCount += 1;
+      byExercise.set(exerciseKey, record);
+    }
+  }
+
+  return {
+    byExercise: [...byExercise.values()]
+      .map((record) => {
+        const systemicFatigueScore = weightedAverage(record.systemicSamples);
+        const localFatigueScore = weightedAverage(record.localSamples);
+        const efficiencyScore = weightedAverage(record.efficiencySamples);
+        const recoveryCostHours = record.recoveryHours.length ? round(average(record.recoveryHours), 1) : null;
+        const confidenceScore = average([
+          clamp(record.sampleCount / 4, 0, 1),
+          recoveryCostHours === null ? 0.45 : 1,
+          clamp(record.efficiencySamples.length / 4, 0, 1),
+        ]) * 100;
+
+        return {
+          exerciseName: record.exerciseName,
+          mainRegions: record.mainRegions,
+          systemicFatigueScore: round(systemicFatigueScore, 3),
+          localFatigueScore: round(localFatigueScore, 3),
+          efficiencyScore: round(efficiencyScore, 3),
+          recoveryCostHours,
+          confidenceScore: round(confidenceScore, 1),
+          sampleCount: record.sampleCount,
+        };
+      })
+      .sort((a, b) => b.efficiencyScore - a.efficiencyScore)
+      .slice(0, 16),
+  };
+}
+
+function buildSpilloverAdjustedFatigueMetric(
+  regionMetrics: RegionTrainingMetric[],
+  directFatigueByRegion: Record<TrainingLoadZone, number>,
+): SpilloverAdjustedFatigueMetric {
+  const byRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, SpilloverAdjustedRegionFatigueMetric>>(
+    (accumulator, zoneId) => {
+      const spilloverSources = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[])
+        .map((sourceZoneId) => ({
+          zoneId: sourceZoneId,
+          value: round((directFatigueByRegion[sourceZoneId] ?? 0) * (PHASE3_SPILLOVER_MATRIX[sourceZoneId]?.[zoneId] ?? 0), 3),
+        }))
+        .filter((entry) => entry.value > 0)
+        .sort((a, b) => b.value - a.value);
+      const spilloverFatigue = round(spilloverSources.reduce((sum, source) => sum + source.value, 0), 3);
+      const directRegionFatigue = round(directFatigueByRegion[zoneId] ?? 0, 3);
+
+      accumulator[zoneId] = {
+        zoneId,
+        label: TRAINING_LOAD_ZONE_META[zoneId].label,
+        directRegionFatigue,
+        spilloverFatigue,
+        adjustedRegionFatigue: round(directRegionFatigue + spilloverFatigue, 3),
+        topSources: spilloverSources.slice(0, 3).map((source) => ({
+          zoneId: source.zoneId,
+          label: TRAINING_LOAD_ZONE_META[source.zoneId].label,
+          value: source.value,
+        })),
+      };
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, SpilloverAdjustedRegionFatigueMetric>,
+  );
+
+  return { byRegion };
+}
+
+function buildPhase3AdaptiveInsights(
+  trainingLoad: WeeklyTrainingLoad,
+  repRangeBias: RepRangeBiasMetric,
+  exerciseFatigueFingerprints: ExerciseFatigueFingerprintMetric,
+  spilloverAdjustedFatigue: SpilloverAdjustedFatigueMetric,
+): Phase3AdaptiveInsights {
+  const focusZoneId = trainingLoad.summary.suggestedNextFocus.zoneIds[0];
+  const focusLabel = trainingLoad.summary.suggestedNextFocus.labels[0] ?? trainingLoad.summary.suggestedNextFocus.text;
+  const repRange = focusZoneId ? repRangeBias.byRegion[focusZoneId] : null;
+  const spillover = focusZoneId ? spilloverAdjustedFatigue.byRegion[focusZoneId] : null;
+  const efficientExercise = exerciseFatigueFingerprints.byExercise
+    .filter((entry) => entry.confidenceScore >= 55)
+    .sort((a, b) => b.efficiencyScore - a.efficiencyScore)[0] ?? null;
+
+  return {
+    repRangeInsight:
+      repRange?.bestRespondingRepRange && repRange.confidenceScore >= 55
+        ? `${focusLabel} seem to respond best in ${repRange.bestRespondingRepRange}.`
+        : null,
+    exerciseInsight:
+      efficientExercise
+        ? `${efficientExercise.exerciseName} gives clean stimulus for ${efficientExercise.mainRegions
+            .map((zoneId) => TRAINING_LOAD_ZONE_META[zoneId].label.toLowerCase())
+            .join(" + ")}.`
+        : null,
+    spilloverInsight:
+      spillover && spillover.topSources[0] && spillover.spilloverFatigue > spillover.directRegionFatigue * 0.25
+        ? `${spillover.label} are carrying spillover from ${spillover.topSources[0].label.toLowerCase()}.`
+        : null,
   };
 }
 
@@ -1437,6 +1945,22 @@ export function selectRecoveryCurveByRegion(metrics: ProfileTrainingMetrics) {
 
 export function selectPhase2RecoveryInsights(metrics: ProfileTrainingMetrics) {
   return metrics.phase2Insights;
+}
+
+export function selectRepRangeBiasByRegion(metrics: ProfileTrainingMetrics) {
+  return metrics.repRangeBias.byRegion;
+}
+
+export function selectExerciseFatigueFingerprints(metrics: ProfileTrainingMetrics) {
+  return metrics.exerciseFatigueFingerprints.byExercise;
+}
+
+export function selectSpilloverAdjustedRegionFatigue(metrics: ProfileTrainingMetrics) {
+  return metrics.spilloverAdjustedFatigue.byRegion;
+}
+
+export function selectPhase3AdaptiveInsights(metrics: ProfileTrainingMetrics) {
+  return metrics.phase3Insights;
 }
 
 export function selectNextFocusFromMetrics(
@@ -1718,6 +2242,28 @@ export function getProfileTrainingMetrics(
     velocityLoss,
     recoveryCurve,
   );
+  const repRangeBias = buildRepRangeBiasMetric(sessions, exerciseLibrary, referenceDate);
+  const exerciseFatigueFingerprints = buildExerciseFatigueFingerprints(
+    profile,
+    sessions,
+    exerciseLibrary,
+    referenceDate,
+  );
+  const directFatigueByRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, number>>(
+    (accumulator, zoneId) => {
+      const metric = regionMetrics.find((candidate) => candidate.zoneId === zoneId);
+      accumulator[zoneId] = round(zoneFatigue[zoneId] / Math.max(metric?.targetEVS ?? 1, 1), 3);
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, number>,
+  );
+  const spilloverAdjustedFatigue = buildSpilloverAdjustedFatigueMetric(regionMetrics, directFatigueByRegion);
+  const phase3Insights = buildPhase3AdaptiveInsights(
+    trainingLoad,
+    repRangeBias,
+    exerciseFatigueFingerprints,
+    spilloverAdjustedFatigue,
+  );
 
   return {
     effectiveVolumeScore: {
@@ -1782,6 +2328,10 @@ export function getProfileTrainingMetrics(
     velocityLoss,
     recoveryCurve,
     phase2Insights,
+    repRangeBias,
+    exerciseFatigueFingerprints,
+    spilloverAdjustedFatigue,
+    phase3Insights,
     regionMetrics,
   };
 }
