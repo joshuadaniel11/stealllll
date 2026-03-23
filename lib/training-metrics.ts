@@ -74,6 +74,44 @@ export type StimulusToFatigueMetric = {
   }>;
 };
 
+export type DensityScoreMetric = {
+  average: number;
+  bySession: Array<{
+    sessionId: string;
+    workoutName: string;
+    density: number;
+    evs: number;
+    durationMinutes: number;
+  }>;
+};
+
+export type AdaptationScoreMetric = {
+  average: number;
+  byRegion: Record<TrainingLoadZone, number>;
+  exposuresByExercise: Array<{
+    exerciseName: string;
+    sessionsUsedLast42d: number;
+    noveltyFactor: number;
+  }>;
+};
+
+export type ConsistencyScoreMetric = {
+  score: number;
+  scheduledSessionsCompleted28d: number;
+  streakFactor: number;
+  onTimeCompletionFactor: number;
+};
+
+export type SymmetryScoreMetric = {
+  score: number;
+  comparedRegions: Array<{
+    zoneId: TrainingLoadZone;
+    label: string;
+    coveragePct: number;
+    weight: number;
+  }>;
+};
+
 export type RegionTrainingMetric = {
   zoneId: TrainingLoadZone;
   label: string;
@@ -93,6 +131,10 @@ export type ProfileTrainingMetrics = {
   recoveryIndex: RecoveryIndexMetric;
   progressVelocity: ProgressVelocityMetric;
   stimulusToFatigueRatio: StimulusToFatigueMetric;
+  densityScore: DensityScoreMetric;
+  adaptationScore: AdaptationScoreMetric;
+  consistencyScore: ConsistencyScoreMetric;
+  symmetryScore: SymmetryScoreMetric;
   regionMetrics: RegionTrainingMetric[];
 };
 
@@ -188,6 +230,13 @@ function getLoadFactor(reps: number) {
   if (reps <= 15) return 0.96;
   if (reps <= 20) return 0.9;
   return 0.82;
+}
+
+function getNoveltyFactor(exposureScore: number) {
+  if (exposureScore <= 4) return 1;
+  if (exposureScore <= 8) return 0.95;
+  if (exposureScore <= 12) return 0.9;
+  return 0.85;
 }
 
 function getRoundedWeight(weight: number) {
@@ -386,6 +435,35 @@ function toLocalDayKey(value: Date | string) {
   return `${year}-${month}-${day}`;
 }
 
+function getWorkoutStreak(sessions: WorkoutSession[], referenceDate = new Date()) {
+  const uniqueDays = Array.from(new Set(sessions.map((session) => new Date(session.performedAt).toDateString())));
+  if (!uniqueDays.length) {
+    return 0;
+  }
+
+  let streak = 0;
+  const cursor = new Date(referenceDate);
+  while (true) {
+    if (uniqueDays.includes(cursor.toDateString())) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+      continue;
+    }
+
+    if (streak === 0) {
+      cursor.setDate(cursor.getDate() - 1);
+      if (uniqueDays.includes(cursor.toDateString())) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+        continue;
+      }
+    }
+    break;
+  }
+
+  return streak;
+}
+
 function getCompletionPctLast7Days(profile: Profile, sessions: WorkoutSession[], referenceDate: Date) {
   const range = getWindowRange(referenceDate, 7);
   const targetSessions = Math.max(1, Math.min(profile.workoutPlan.length, 4));
@@ -459,6 +537,210 @@ function buildRecoveryIndex(profile: Profile, sessions: WorkoutSession[], refere
     completionPct7d: round(completionPct7d, 2),
     hadRestDayInLast3Days,
     hadRestDayInLast4Days,
+  };
+}
+
+function buildDensityScore(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+): DensityScoreMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const range = getWindowRange(referenceDate, 28);
+  const bySession = sessions
+    .filter((session) => isWithinRange(session.performedAt, range))
+    .map((session) => {
+      let totalSessionEvs = 0;
+
+      for (const exercise of session.exercises) {
+        const completedSets = exercise.sets.filter((set) => set.completed);
+        if (!completedSets.length) {
+          continue;
+        }
+
+        const libraryItem = resolveLibraryItem(exercise, lookup);
+        const classification = getExerciseClassification(exercise.exerciseName, libraryItem?.equipment);
+
+        for (const set of completedSets) {
+          totalSessionEvs += getEffectiveRepsFactor(getSetRIR(set)) * getLoadFactor(set.reps) * classification.stabilityFactor;
+        }
+      }
+
+      return {
+        sessionId: session.id,
+        workoutName: session.workoutName,
+        density: round(totalSessionEvs / Math.max(session.durationMinutes, 1), 3),
+        evs: round(totalSessionEvs, 2),
+        durationMinutes: session.durationMinutes,
+      };
+    })
+    .filter((entry) => entry.evs > 0)
+    .sort((a, b) => +new Date(sessions.find((session) => session.id === b.sessionId)?.performedAt ?? 0) - +new Date(sessions.find((session) => session.id === a.sessionId)?.performedAt ?? 0));
+
+  return {
+    average: round(average(bySession.map((entry) => entry.density)), 3),
+    bySession,
+  };
+}
+
+function buildAdaptationScore(
+  sessions: WorkoutSession[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  referenceDate: Date,
+): AdaptationScoreMetric {
+  const lookup = getLibraryLookups(exerciseLibrary);
+  const range = getWindowRange(referenceDate, 42);
+  const exposureCounts = new Map<string, { exerciseName: string; count: number }>();
+  const regionNoveltyWeights = buildZoneNumberRecord();
+  const regionNoveltyTotals = buildZoneNumberRecord();
+
+  for (const session of sessions) {
+    if (!isWithinRange(session.performedAt, range)) {
+      continue;
+    }
+
+    const seenExercises = new Set<string>();
+    for (const exercise of session.exercises) {
+      const key = normalizeExerciseName(exercise.exerciseName);
+      if (seenExercises.has(key)) {
+        continue;
+      }
+      seenExercises.add(key);
+      const record = exposureCounts.get(key) ?? { exerciseName: exercise.exerciseName, count: 0 };
+      record.count += 1;
+      exposureCounts.set(key, record);
+    }
+  }
+
+  for (const session of sessions) {
+    if (!isWithinRange(session.performedAt, range)) {
+      continue;
+    }
+
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed);
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const key = normalizeExerciseName(exercise.exerciseName);
+      const exposureScore = exposureCounts.get(key)?.count ?? 0;
+      const noveltyFactor = getNoveltyFactor(exposureScore);
+      const libraryItem = resolveLibraryItem(exercise, lookup);
+      const classification = getExerciseClassification(exercise.exerciseName, libraryItem?.equipment);
+      const contribution = normalizeZoneContribution(getExerciseMuscleContribution(exercise));
+
+      let exerciseEvs = 0;
+      for (const set of completedSets) {
+        exerciseEvs += getEffectiveRepsFactor(getSetRIR(set)) * getLoadFactor(set.reps) * classification.stabilityFactor;
+      }
+
+      for (const [zoneId, allocation] of contribution) {
+        const weightedEvs = exerciseEvs * allocation;
+        regionNoveltyTotals[zoneId] += noveltyFactor * weightedEvs;
+        regionNoveltyWeights[zoneId] += weightedEvs;
+      }
+    }
+  }
+
+  const byRegion = (Object.keys(TRAINING_LOAD_ZONE_META) as TrainingLoadZone[]).reduce<Record<TrainingLoadZone, number>>(
+    (accumulator, zoneId) => {
+      accumulator[zoneId] = regionNoveltyWeights[zoneId]
+        ? round(regionNoveltyTotals[zoneId] / regionNoveltyWeights[zoneId], 3)
+        : 1;
+      return accumulator;
+    },
+    {} as Record<TrainingLoadZone, number>,
+  );
+
+  return {
+    average: round(average(Object.values(byRegion)), 3),
+    byRegion,
+    exposuresByExercise: [...exposureCounts.values()]
+      .map((entry) => ({
+        exerciseName: entry.exerciseName,
+        sessionsUsedLast42d: entry.count,
+        noveltyFactor: getNoveltyFactor(entry.count),
+      }))
+      .sort((a, b) => b.sessionsUsedLast42d - a.sessionsUsedLast42d)
+      .slice(0, 12),
+  };
+}
+
+function buildConsistencyScore(profile: Profile, sessions: WorkoutSession[], referenceDate: Date): ConsistencyScoreMetric {
+  const range = getWindowRange(referenceDate, 28);
+  const targetSessions28d = Math.max(1, Math.min(profile.workoutPlan.length, 4) * 4);
+  const sessions28d = sessions.filter((session) => isWithinRange(session.performedAt, range));
+  const completedEquivalents = sessions28d.reduce((sum, session) => sum + (session.partial ? 0.5 : 1), 0);
+  const scheduledSessionsCompleted28d = clamp(completedEquivalents / targetSessions28d, 0, 1);
+
+  const streakFactor = clamp(getWorkoutStreak(sessions, referenceDate) / 7, 0, 1);
+
+  const expectedPerWeek = Math.max(1, Math.min(profile.workoutPlan.length, 4));
+  const idealIntervalDays = 7 / expectedPerWeek;
+  const sortedDates = sessions28d
+    .map((session) => new Date(session.performedAt))
+    .sort((a, b) => +a - +b);
+  let onTimeCompletionFactor = scheduledSessionsCompleted28d;
+  if (sortedDates.length >= 2) {
+    const diffs = sortedDates.slice(1).map((date, index) => Math.max(1, (+date - +sortedDates[index]!) / 86400000));
+    const meanDeviation = average(diffs.map((gap) => Math.abs(gap - idealIntervalDays)));
+    onTimeCompletionFactor = clamp(1 - meanDeviation / Math.max(idealIntervalDays, 1), 0, 1);
+  }
+
+  return {
+    score: round((0.55 * scheduledSessionsCompleted28d + 0.25 * streakFactor + 0.2 * onTimeCompletionFactor) * 100, 1),
+    scheduledSessionsCompleted28d: round(scheduledSessionsCompleted28d, 3),
+    streakFactor: round(streakFactor, 3),
+    onTimeCompletionFactor: round(onTimeCompletionFactor, 3),
+  };
+}
+
+function getProfileSymmetryZones(profile: Profile) {
+  if (profile.id === "joshua") {
+    return ["upperChest", "sideDelts", "rearDelts", "lats", "biceps", "triceps", "upperAbs", "lowerAbs"] as const;
+  }
+
+  return ["upperGlutes", "gluteMax", "sideGlutes", "lats", "upperBack", "lowerAbs", "obliques", "sideDelts"] as const;
+}
+
+function buildSymmetryScore(profile: Profile, coverageByRegion: Record<TrainingLoadZone, number>): SymmetryScoreMetric {
+  const zoneIds = getProfileSymmetryZones(profile);
+  const comparedRegions = (profile.id === "joshua"
+    ? [
+        { zoneId: "upperChest" as const, coveragePct: coverageByRegion.upperChest, weight: getPriorityMultiplier(profile, "upperChest") },
+        { zoneId: "sideDelts" as const, coveragePct: coverageByRegion.sideDelts, weight: getPriorityMultiplier(profile, "sideDelts") },
+        { zoneId: "rearDelts" as const, coveragePct: coverageByRegion.rearDelts, weight: getPriorityMultiplier(profile, "rearDelts") },
+        { zoneId: "lats" as const, coveragePct: coverageByRegion.lats, weight: getPriorityMultiplier(profile, "lats") },
+        { zoneId: "biceps" as const, coveragePct: coverageByRegion.biceps, weight: getPriorityMultiplier(profile, "biceps") },
+        { zoneId: "triceps" as const, coveragePct: coverageByRegion.triceps, weight: getPriorityMultiplier(profile, "triceps") },
+        {
+          zoneId: "upperAbs" as const,
+          coveragePct: round((coverageByRegion.upperAbs + coverageByRegion.lowerAbs) / 2, 1),
+          weight: round((getPriorityMultiplier(profile, "upperAbs") + getPriorityMultiplier(profile, "lowerAbs")) / 2, 2),
+        },
+      ]
+    : zoneIds.map((zoneId) => ({
+        zoneId,
+        coveragePct: coverageByRegion[zoneId],
+        weight: getPriorityMultiplier(profile, zoneId),
+      })))
+    .map((entry) => ({
+      ...entry,
+      label: TRAINING_LOAD_ZONE_META[entry.zoneId].label,
+    }));
+
+  const totalWeight = comparedRegions.reduce((sum, region) => sum + region.weight, 0);
+  const weightedMean =
+    comparedRegions.reduce((sum, region) => sum + region.coveragePct * region.weight, 0) / Math.max(totalWeight, 1);
+  const weightedVariance =
+    comparedRegions.reduce((sum, region) => sum + region.weight * (region.coveragePct - weightedMean) ** 2, 0) /
+    Math.max(totalWeight, 1);
+  const weightedStdDev = Math.sqrt(weightedVariance);
+
+  return {
+    score: clamp(round(100 - weightedStdDev, 1), 0, 100),
+    comparedRegions,
   };
 }
 
@@ -718,6 +1000,10 @@ export function getProfileTrainingMetrics(
   const priorityCoverageValues = priorityZones.map((zoneId) => coverageByRegion[zoneId]);
   const priorityProgressValues = priorityZones.map((zoneId) => progressByRegion[zoneId]).filter((value) => value !== 0);
   const prioritySfrValues = priorityZones.map((zoneId) => sfrByRegion[zoneId]).filter((value) => Number.isFinite(value));
+  const densityScore = buildDensityScore(sessions, exerciseLibrary, referenceDate);
+  const adaptationScore = buildAdaptationScore(sessions, exerciseLibrary, referenceDate);
+  const consistencyScore = buildConsistencyScore(profile, sessions, referenceDate);
+  const symmetryScore = buildSymmetryScore(profile, coverageByRegion);
 
   return {
     effectiveVolumeScore: {
@@ -770,6 +1056,10 @@ export function getProfileTrainingMetrics(
         .sort((a, b) => b.sfr - a.sfr)
         .slice(0, 8),
     },
+    densityScore,
+    adaptationScore,
+    consistencyScore,
+    symmetryScore,
     regionMetrics,
   };
 }

@@ -459,6 +459,97 @@ function testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops() {
   assert.ok(loadedGlute.targetEVS < emptyGlute.targetEVS);
 }
 
+function testHiddenMetricsLayerBuildsDensityAdaptationConsistencyAndSymmetry() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "hidden-metrics-1",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-23T09:00:00.000Z",
+      durationMinutes: 48,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "a", weight: 32, reps: 8, completed: true, rir: 1 },
+            { id: "b", weight: 32, reps: 8, completed: true, rir: 1 },
+            { id: "c", weight: 32, reps: 8, completed: true, rir: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "hidden-metrics-2",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-20T09:00:00.000Z",
+      durationMinutes: 52,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "a", weight: 65, reps: 8, completed: true, rir: 2 },
+            { id: "b", weight: 65, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, referenceDate);
+
+  assert.ok(trainingState.metrics.densityScore.average > 0);
+  assert.ok(trainingState.metrics.densityScore.bySession.length >= 1);
+  assert.ok(trainingState.metrics.adaptationScore.byRegion.upperChest > 0);
+  assert.ok(trainingState.metrics.consistencyScore.score >= 0 && trainingState.metrics.consistencyScore.score <= 100);
+  assert.ok(trainingState.metrics.symmetryScore.score >= 0 && trainingState.metrics.symmetryScore.score <= 100);
+}
+
+function testAdaptationScoreDropsWithRepeatedExposure() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const repeatedSessions = Array.from({ length: 10 }, (_, index) => ({
+    id: `adapt-${index}`,
+    userId: "natasha" as const,
+    workoutDayId: "natasha-glutes-hams",
+    workoutName: "Glutes + Hamstrings",
+    performedAt: `2026-03-${String(Math.max(1, 23 - index)).padStart(2, "0")}T09:00:00.000Z`,
+    durationMinutes: 45,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: "machine-hip-thrust-day1",
+        exerciseName: "Machine Hip Thrust",
+        muscleGroup: "Glutes" as const,
+        sets: [{ id: `a-${index}`, weight: 50, reps: 8, completed: true }],
+      },
+    ],
+  }));
+
+  const trainingState = getProfileTrainingState(natasha, repeatedSessions, seed.exerciseLibrary, referenceDate);
+  const topExposure = trainingState.metrics.adaptationScore.exposuresByExercise[0];
+
+  assert.ok(topExposure);
+  assert.ok(topExposure.sessionsUsedLast42d >= 9);
+  assert.ok(topExposure.noveltyFactor < 1);
+}
+
 function testExerciseLibraryCanonicalization() {
   const seed = createSeedState();
   const dedupedMachineHipThrusts = seed.exerciseLibrary.filter((exercise) => exercise.name === "Machine Hip Thrust");
@@ -598,6 +689,8 @@ const tests = [
   ["rank next focus from metrics-aware deficits", testNextFocusUsesMetricsAwareCoverageRanking],
   ["apply profile-specific target multipliers", testProfileTargetMultipliersDivergeByPriorityModel],
   ["soften target evs when recovery drops", testRecoveryModifierSoftensTargetEVSWhenRecoveryDrops],
+  ["build hidden density adaptation consistency and symmetry metrics", testHiddenMetricsLayerBuildsDensityAdaptationConsistencyAndSymmetry],
+  ["drop adaptation score under repeated exposure", testAdaptationScoreDropsWithRepeatedExposure],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],
