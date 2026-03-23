@@ -205,6 +205,7 @@ export function TrainingLoadCard({
 }) {
   const [view, setView] = useState<"front" | "back">("front");
   const [selectedZone, setSelectedZone] = useState<TrainingLoadZone | null>(null);
+  const [showCoverageDetails, setShowCoverageDetails] = useState(false);
 
   const orderedGroups = useMemo(
     () => [...groups].sort((a, b) => b.percentage - a.percentage || b.effectiveSets - a.effectiveSets),
@@ -297,25 +298,47 @@ export function TrainingLoadCard({
         <ZoneContributorPanel metric={inspectedMetric} />
 
         <div className="space-y-2">
-          <DetailLabel label="Coverage" />
-          <div className="grid grid-cols-2 gap-2">
-            {orderedGroups.map((group) => (
-              <GroupMetricCard key={group.id} metric={group} />
-            ))}
+          <div className="flex items-center justify-between gap-3">
+            <DetailLabel label="Coverage" />
+            <button
+              type="button"
+              onClick={() => setShowCoverageDetails((value) => !value)}
+              className="text-sm font-medium text-white/52 transition hover:text-white/78"
+            >
+              {showCoverageDetails ? "Hide details" : "Show details"}
+            </button>
           </div>
-        </div>
+          {showCoverageDetails ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {orderedGroups.map((group) => (
+                  <GroupMetricCard key={group.id} metric={group} />
+                ))}
+              </div>
 
-        <div className="space-y-2">
-          <DetailLabel label="Loaded zones" />
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-white/82">Most loaded visible zones</p>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{view} side</p>
-          </div>
-          <TopZoneList
-            zones={visibleTopZones}
-            selectedZone={selectedZone}
-            onSelectZone={setSelectedZone}
-          />
+              <div className="space-y-2 pt-2">
+                <DetailLabel label="Loaded zones" />
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white/82">Most loaded visible zones</p>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/34">{view} side</p>
+                </div>
+                <TopZoneList
+                  zones={visibleTopZones}
+                  selectedZone={selectedZone}
+                  onSelectZone={setSelectedZone}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="progress-subcard rounded-[18px] border px-4 py-3">
+              <p className="text-[12px] font-medium text-white/48">Coverage summary</p>
+              <p className="mt-1 text-[14px] font-medium text-white/84">
+                {summary.needsWork.length
+                  ? `${summary.needsWork.slice(0, 2).map((metric) => metric.label).join(" + ")} need more attention.`
+                  : "Coverage is in a steady spot this week."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </Card>

@@ -205,6 +205,7 @@ export function WorkoutScreen({
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
+  const [showPreviewExercises, setShowPreviewExercises] = useState(false);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
@@ -227,6 +228,7 @@ export function WorkoutScreen({
   useEffect(() => {
     if (!activeWorkout || activeWorkout.userId !== profile.id) {
       setLocalPreviewWorkoutId(previewWorkoutId ?? null);
+      setShowPreviewExercises(false);
     }
   }, [activeWorkout, previewWorkoutId, profile.id]);
 
@@ -302,7 +304,10 @@ export function WorkoutScreen({
               </button>
               <button
                 className="rounded-full px-2 py-1 text-sm text-white/54 transition hover:text-white/78"
-                onClick={() => setLocalPreviewWorkoutId(todaysWorkout.id)}
+                onClick={() => {
+                  setLocalPreviewWorkoutId(todaysWorkout.id);
+                  setShowPreviewExercises(false);
+                }}
               >
                 Preview
               </button>
@@ -352,7 +357,10 @@ export function WorkoutScreen({
                   <div className="flex items-center gap-3">
                     <button
                       className="rounded-full px-2 py-1 text-sm text-white/46 transition hover:text-white/76"
-                      onClick={() => setLocalPreviewWorkoutId(workout.id)}
+                      onClick={() => {
+                        setLocalPreviewWorkoutId(workout.id);
+                        setShowPreviewExercises(false);
+                      }}
                     >
                       Open
                     </button>
@@ -410,16 +418,6 @@ export function WorkoutScreen({
                       <div>
                         <p className="text-sm font-medium text-text">Suggested session</p>
                         <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.focusText}</p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {suggestedFocusSession.targetLabels.map((label) => (
-                            <span
-                              key={label}
-                              className="rounded-full border border-white/8 bg-black/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted"
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                       <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
                         Guided
@@ -429,27 +427,47 @@ export function WorkoutScreen({
                       <p>
                         {suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min
                       </p>
-                      <p>{suggestedFocusSession.totalSets || "Flexible"} sets</p>
+                      <p>{suggestedFocusSession.targetLabels.slice(0, 2).join(" + ")}</p>
                     </div>
                   </div>
                 ) : null}
 
-                <div className="mt-5 space-y-3">
-                  {previewWorkout.exercises.map((exercise, index) => (
-                    <ScrollReveal key={exercise.id} delay={index * 45} y={22} scale={0.992}>
-                    <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-text">
-                          {index + 1}. {exercise.name}
-                        </p>
-                        <p className="caption-text text-muted">
-                          {exercise.sets} x {exercise.repRange}
-                        </p>
-                      </div>
-                      <p className="medium-label mt-2 text-muted">Targets: {exercise.muscleGroup}</p>
+                <div className="mt-5 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-text">Session plan</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">
+                        {previewWorkout.exercises.length} exercises with {previewWorkout.exercises[0]?.name}
+                        {previewWorkout.exercises.length > 1 ? ` first.` : "."}
+                      </p>
                     </div>
-                    </ScrollReveal>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowPreviewExercises((value) => !value)}
+                      className="text-sm font-medium text-white/56 transition hover:text-white/82"
+                    >
+                      {showPreviewExercises ? "Hide list" : "Show list"}
+                    </button>
+                  </div>
+                  {showPreviewExercises ? (
+                    <div className="mt-4 space-y-3">
+                      {previewWorkout.exercises.map((exercise, index) => (
+                        <ScrollReveal key={exercise.id} delay={index * 35} y={18} scale={0.992}>
+                          <div className="rounded-[24px] bg-black/10 px-4 py-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium text-text">
+                                {index + 1}. {exercise.name}
+                              </p>
+                              <p className="caption-text text-muted">
+                                {exercise.sets} x {exercise.repRange}
+                              </p>
+                            </div>
+                            <p className="medium-label mt-2 text-muted">Targets: {exercise.muscleGroup}</p>
+                          </div>
+                        </ScrollReveal>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-3">

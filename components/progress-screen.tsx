@@ -1,5 +1,6 @@
 ﻿import type { ReactNode } from "react";
 import { MeasurementCard } from "@/components/measurement-card";
+import { useState } from "react";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { TrainingLoadCard } from "@/components/training-load-card";
 import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
@@ -137,6 +138,8 @@ export function ProgressScreen({
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
+  const [showAllGoalCards, setShowAllGoalCards] = useState(false);
+  const [showSecondarySignals, setShowSecondarySignals] = useState(false);
   const {
     calendarRows,
     nextFocusDestination,
@@ -149,6 +152,7 @@ export function ProgressScreen({
     weeklySummary,
   } = trainingState;
   const goalDashboard = trainingState.goalDashboard;
+  const visibleGoalCards = showAllGoalCards ? goalDashboard.cards : goalDashboard.cards.slice(0, 3);
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -245,10 +249,19 @@ export function ProgressScreen({
             }
           />
           <div className="mt-4 grid grid-cols-1 gap-2.5">
-            {goalDashboard.cards.map((card) => (
+            {visibleGoalCards.map((card) => (
               <DashboardMetricCard key={card.label} card={card} />
             ))}
           </div>
+          {goalDashboard.cards.length > 3 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllGoalCards((value) => !value)}
+              className="mt-4 text-sm font-medium text-white/56 transition hover:text-white/82"
+            >
+              {showAllGoalCards ? "Show less" : "Show more"}
+            </button>
+          ) : null}
         </Card>
       </ScrollReveal>
 
@@ -272,48 +285,59 @@ export function ProgressScreen({
 
       <ScrollReveal delay={86}>
         <Card className="progress-panel">
-          <SectionHeader
-            eyebrow="Secondary signals"
-            title={`${profile.name}'s supporting read`}
-          />
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <MiniMetric label="Focus" value={progressSignals.primarySignal.value} />
-            <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
-          </div>
-          <div className="mt-4 grid gap-3">
-            <div className="progress-highlight-card rounded-[24px] p-4">
-              <p className="text-[12px] font-medium text-white/52">Best current signal</p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-[15px] font-semibold text-white/90">{progressSignals.leadingIndicator.title}</p>
-                <p className="text-[13px] font-medium text-white/72">{progressSignals.leadingIndicator.value}</p>
-              </div>
-              <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.leadingIndicator.detail}</p>
+          <button
+            type="button"
+            onClick={() => setShowSecondarySignals((value) => !value)}
+            className="flex w-full items-start justify-between gap-3 text-left"
+          >
+            <div>
+              <p className="text-[13px] font-medium text-white/54">More insights</p>
+              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
+                {progressSignals.leadingIndicator.title}
+              </h3>
+              <p className="mt-2 text-[14px] leading-6 text-white/58">{progressSignals.leadingIndicator.value}</p>
             </div>
-            <div className="progress-summary-card rounded-[24px] border px-4 py-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[12px] font-medium text-white/52">{progressSignals.primarySignal.title}</p>
-                  <p className="mt-1 text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.value}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <MiniMetric label="Focus" value={progressSignals.primarySignal.value} />
+              <MiniMetric label="Stretches" value={`${weeklyStretchCount}`} />
+            </div>
+          </button>
+          {showSecondarySignals ? (
+            <div className="mt-4 grid gap-3">
+              <div className="progress-highlight-card rounded-[24px] p-4">
+                <p className="text-[12px] font-medium text-white/52">Best current signal</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-semibold text-white/90">{progressSignals.leadingIndicator.title}</p>
+                  <p className="text-[13px] font-medium text-white/72">{progressSignals.leadingIndicator.value}</p>
                 </div>
-                <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
-                  Direction
-                </span>
+                <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.leadingIndicator.detail}</p>
               </div>
-              <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.primarySignal.detail}</p>
-            </div>
-            <div className="progress-summary-card rounded-[24px] border px-4 py-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[12px] font-medium text-white/52">{aestheticSignal.title}</p>
-                  <p className="mt-1 text-[15px] font-semibold text-white/90">{aestheticSignal.value}</p>
+              <div className="progress-summary-card rounded-[24px] border px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-medium text-white/52">{progressSignals.primarySignal.title}</p>
+                    <p className="mt-1 text-[15px] font-semibold text-white/90">{progressSignals.primarySignal.value}</p>
+                  </div>
+                  <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
+                    Direction
+                  </span>
                 </div>
-                <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
-                  Adaptive
-                </span>
+                <p className="mt-2 text-[13px] leading-6 text-white/56">{progressSignals.primarySignal.detail}</p>
               </div>
-              <p className="mt-2 text-[13px] leading-6 text-white/56">{aestheticSignal.detail}</p>
+              <div className="progress-summary-card rounded-[24px] border px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-medium text-white/52">{aestheticSignal.title}</p>
+                    <p className="mt-1 text-[15px] font-semibold text-white/90">{aestheticSignal.value}</p>
+                  </div>
+                  <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium text-white/68">
+                    Adaptive
+                  </span>
+                </div>
+                <p className="mt-2 text-[13px] leading-6 text-white/56">{aestheticSignal.detail}</p>
+              </div>
             </div>
-          </div>
+          ) : null}
         </Card>
       </ScrollReveal>
 
@@ -382,24 +406,26 @@ export function ProgressScreen({
         </Card>
       </ScrollReveal>
 
-      <ScrollReveal delay={170}>
-        <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
-      </ScrollReveal>
+      {(showingBodyMetrics || measurements.length > 0) ? (
+        <ScrollReveal delay={170}>
+          <MeasurementCard measurements={measurements} onSave={onSaveMeasurement} />
+        </ScrollReveal>
+      ) : null}
 
-      <ScrollReveal delay={200}>
-        <Card className="progress-panel">
-          <SectionHeader
-            eyebrow="Recent sessions"
-            title="Saved workouts"
-            aside={
-              <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-                {recentSessions.length} tracked
-              </div>
-            }
-          />
-          <div className="mt-4 space-y-3">
-            {recentSessions.length ? (
-              recentSessions.map((session) => (
+      {recentSessions.length ? (
+        <ScrollReveal delay={200}>
+          <Card className="progress-panel">
+            <SectionHeader
+              eyebrow="Recent sessions"
+              title="Saved workouts"
+              aside={
+                <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                  {recentSessions.length} tracked
+                </div>
+              }
+            />
+            <div className="mt-4 space-y-3">
+              {recentSessions.map((session) => (
                 <div key={session.id} className="progress-session-row rounded-[24px] border px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -429,13 +455,11 @@ export function ProgressScreen({
                     </button>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state">Complete a workout and your saved sessions will show up here.</div>
-            )}
-          </div>
-        </Card>
-      </ScrollReveal>
+              ))}
+            </div>
+          </Card>
+        </ScrollReveal>
+      ) : null}
     </>
   );
 }

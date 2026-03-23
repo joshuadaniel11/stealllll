@@ -97,6 +97,7 @@ export function HomeScreen({
   onOpenRecentWorkout,
 }: HomeScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
   const sessionPresentation = getSessionPresentation(profile, todaysWorkout);
@@ -226,26 +227,11 @@ export function HomeScreen({
 
           {showDetails ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="home-quiet-card space-y-2 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
-                  <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
-                  <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
-                </Card>
-                <Card className="home-quiet-card space-y-2 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
-                  <p className="text-xl font-semibold tracking-[-0.04em] text-white">
-                    {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
-                  </p>
-                  <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <MiniMetric label="Sessions" value={String(weeklyCount)} />
-                <MiniMetric label="Streak" value={`${streak}d`} />
-                <MiniMetric label="PRs" value={String(pbCount)} />
-              </div>
+              <Card className="home-quiet-card space-y-2 px-4 py-4">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
+                <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
+                <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
+              </Card>
 
               {recentUpdateBadge ? (
                 <p className="text-[13px] leading-6 text-white/48">{recentUpdateBadge.detail}</p>
@@ -258,6 +244,39 @@ export function HomeScreen({
                   onToggle={onToggleStretch}
                 />
               ) : null}
+
+              <button
+                type="button"
+                onClick={() => setShowExtras((value) => !value)}
+                className="flex w-full items-center justify-between rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.04]"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, recent, and shared.</p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
+                    showExtras ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showExtras ? (
+              <>
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="home-quiet-card space-y-2 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
+                  <p className="text-xl font-semibold tracking-[-0.04em] text-white">
+                    {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
+                  </p>
+                  <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
+                </Card>
+                <div className="grid grid-cols-1 gap-3">
+                  <MiniMetric label="Sessions" value={String(weeklyCount)} />
+                  <MiniMetric label="Streak" value={`${streak}d`} />
+                  <MiniMetric label="PRs" value={String(pbCount)} />
+                </div>
+              </div>
 
               <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
                 <div className="flex items-center justify-between gap-3">
@@ -327,6 +346,8 @@ export function HomeScreen({
                   <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
                 </div>
               </Card>
+              </>
+              ) : null}
             </div>
           ) : null}
         </Card>
