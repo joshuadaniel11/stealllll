@@ -185,74 +185,19 @@ function Shape({
 }
 
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const shellFill = "rgba(255,255,255,0.018)";
-  const shellStroke = "rgba(244,246,255,0.14)";
-  const innerStroke = "rgba(228,232,255,0.08)";
-  const detailStroke = "rgba(228,232,255,0.055)";
-  const frame = variant === "male" ? { x: 16, y: 12, width: 88, height: 228 } : { x: 18, y: 12, width: 84, height: 228 };
-
-  const torsoWidth = variant === "male" ? 17 : 15;
-  const hipWidth = variant === "male" ? 12 : 14;
-  const shoulderWidth = variant === "male" ? 23 : 20;
-  const armOuter = variant === "male" ? 27 : 24;
-  const legOuter = variant === "male" ? 15 : 16;
-
-  const FrontFigure = () => (
-    <>
-      <circle cx="60" cy="20" r={variant === "male" ? "10.5" : "10"} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path
-        d={`M${60 - torsoWidth} 39C${60 - shoulderWidth} 45 ${60 - armOuter} 56 ${60 - armOuter} 71C${60 - armOuter} 85 ${60 - torsoWidth - 5} 97 ${60 - torsoWidth - 4} 111C${60 - torsoWidth - 2} 132 ${60 - hipWidth} 150 ${60 - hipWidth + 1} 165C${60 - legOuter} 181 ${60 - legOuter + 1} 205 ${60 - 11} 241
-           L${60 - 6} 241C${60 - 5} 206 ${60 - 4} 184 ${60 - 3} 168C${60 - 2} 156 ${60 - 1} 146 ${60} 136
-           C${60 + 1} 146 ${60 + 2} 156 ${60 + 3} 168C${60 + 4} 184 ${60 + 5} 206 ${60 + 6} 241
-           L${60 + 11} 241C${60 + legOuter - 1} 205 ${60 + legOuter} 181 ${60 + hipWidth - 1} 165C${60 + hipWidth} 150 ${60 + torsoWidth + 2} 132 ${60 + torsoWidth + 4} 111C${60 + torsoWidth + 5} 97 ${60 + armOuter} 85 ${60 + armOuter} 71C${60 + armOuter} 56 ${60 + shoulderWidth} 45 ${60 + torsoWidth} 39
-           C${60 + 11} 33 ${60 - 11} 33 ${60 - torsoWidth} 39Z`}
-        fill={shellFill}
-        stroke={shellStroke}
-        strokeWidth="1"
-      />
-      <path d={`M${60 - shoulderWidth + 1} 49C${60 - 18} 61 ${60 - 16} 76 ${60 - 15} 90C${60 - 14} 109 ${60 - 13} 126 ${60 - 10} 150`} fill="none" stroke={shellStroke} strokeWidth="0.95" strokeLinecap="round" />
-      <path d={`M${60 + shoulderWidth - 1} 49C${60 + 18} 61 ${60 + 16} 76 ${60 + 15} 90C${60 + 14} 109 ${60 + 13} 126 ${60 + 10} 150`} fill="none" stroke={shellStroke} strokeWidth="0.95" strokeLinecap="round" />
-      <path d={`M${60 - 9} 48C${60 - 5} 46 ${60 - 2} 45 ${60} 45C${60 + 2} 45 ${60 + 5} 46 ${60 + 9} 48`} fill="none" stroke={innerStroke} strokeWidth="0.9" strokeLinecap="round" />
-      <path d={`M${60 - 10} 66C${60 - 6} 63 ${60 - 2} 62 ${60} 62C${60 + 2} 62 ${60 + 6} 63 ${60 + 10} 66`} fill="none" stroke={innerStroke} strokeWidth="0.85" strokeLinecap="round" />
-      <path d={`M${60 - 6} 93C${60 - 3} 91 ${60 - 1} 90 ${60} 90C${60 + 1} 90 ${60 + 3} 91 ${60 + 6} 93`} fill="none" stroke={detailStroke} strokeWidth="0.8" strokeLinecap="round" />
-      <path d={`M${60} 45L${60} 139`} fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
-      <path d={`M${60 - 5} 101L${60 - 5} 138`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 + 5} 101L${60 + 5} 138`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 - 10} 150C${60 - 7} 154 ${60 - 4} 156 ${60} 156C${60 + 4} 156 ${60 + 7} 154 ${60 + 10} 150`} fill="none" stroke={innerStroke} strokeWidth="0.8" strokeLinecap="round" />
-      <path d={`M${60 - 7} 169C${60 - 7} 188 ${60 - 8} 208 ${60 - 7} 228`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 + 7} 169C${60 + 7} 188 ${60 + 8} 208 ${60 + 7} 228`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-    </>
-  );
-
-  const BackFigure = () => (
-    <>
-      <circle cx="60" cy="20" r={variant === "male" ? "10.5" : "10"} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path
-        d={`M${60 - torsoWidth} 39C${60 - shoulderWidth} 45 ${60 - armOuter} 56 ${60 - armOuter} 71C${60 - armOuter} 85 ${60 - torsoWidth - 5} 97 ${60 - torsoWidth - 4} 111C${60 - torsoWidth - 2} 132 ${60 - hipWidth} 149 ${60 - hipWidth + 1} 165C${60 - legOuter} 181 ${60 - legOuter + 1} 205 ${60 - 11} 241
-           L${60 - 6} 241C${60 - 5} 206 ${60 - 4} 184 ${60 - 3} 168C${60 - 2} 156 ${60 - 1} 145 ${60} 136
-           C${60 + 1} 145 ${60 + 2} 156 ${60 + 3} 168C${60 + 4} 184 ${60 + 5} 206 ${60 + 6} 241
-           L${60 + 11} 241C${60 + legOuter - 1} 205 ${60 + legOuter} 181 ${60 + hipWidth - 1} 165C${60 + hipWidth} 149 ${60 + torsoWidth + 2} 132 ${60 + torsoWidth + 4} 111C${60 + torsoWidth + 5} 97 ${60 + armOuter} 85 ${60 + armOuter} 71C${60 + armOuter} 56 ${60 + shoulderWidth} 45 ${60 + torsoWidth} 39
-           C${60 + 11} 33 ${60 - 11} 33 ${60 - torsoWidth} 39Z`}
-        fill={shellFill}
-        stroke={shellStroke}
-        strokeWidth="1"
-      />
-      <path d={`M${60 - 11} 47L${60} 66L${60 + 11} 47`} fill="none" stroke={innerStroke} strokeWidth="0.9" strokeLinecap="round" />
-      <path d={`M${60 - 15} 71C${60 - 10} 75 ${60 - 5} 77 ${60} 77C${60 + 5} 77 ${60 + 10} 75 ${60 + 15} 71`} fill="none" stroke={innerStroke} strokeWidth="0.84" strokeLinecap="round" />
-      <path d={`M${60} 67L${60} 144`} fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
-      <path d={`M${60 - 5} 80L${60 - 5} 142`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 + 5} 80L${60 + 5} 142`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 - 10} 145C${60 - 7} 149 ${60 - 4} 151 ${60} 151C${60 + 4} 151 ${60 + 7} 149 ${60 + 10} 145`} fill="none" stroke={innerStroke} strokeWidth="0.8" strokeLinecap="round" />
-      <path d={`M${60 - shoulderWidth + 2} 50C${60 - 18} 62 ${60 - 16} 78 ${60 - 14} 96C${60 - 13} 112 ${60 - 12} 128 ${60 - 10} 150`} fill="none" stroke={shellStroke} strokeWidth="0.94" strokeLinecap="round" />
-      <path d={`M${60 + shoulderWidth - 2} 50C${60 + 18} 62 ${60 + 16} 78 ${60 + 14} 96C${60 + 13} 112 ${60 + 12} 128 ${60 + 10} 150`} fill="none" stroke={shellStroke} strokeWidth="0.94" strokeLinecap="round" />
-      <path d={`M${60 - 7} 169C${60 - 7} 188 ${60 - 8} 208 ${60 - 7} 228`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-      <path d={`M${60 + 7} 169C${60 + 7} 188 ${60 + 8} 208 ${60 + 7} 228`} fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-    </>
-  );
+  const frame = variant === "male" ? { x: 13, y: 10, width: 94, height: 232 } : { x: 14, y: 10, width: 92, height: 232 };
+  const href =
+    variant === "male"
+      ? view === "front"
+        ? "https://commons.wikimedia.org/wiki/Special:Redirect/file/Male_front_3d-shaded_human_illustration.svg"
+        : "https://commons.wikimedia.org/wiki/Special:Redirect/file/Male_back_3d-shaded_human_illustration.svg"
+      : view === "front"
+        ? "https://commons.wikimedia.org/wiki/Special:Redirect/file/Female_front_3d-shaded_human_illustration.svg"
+        : "https://commons.wikimedia.org/wiki/Special:Redirect/file/Female_back_3d-shaded_human_illustration.svg";
 
   return (
     <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
-      {view === "front" ? <FrontFigure /> : <BackFigure />}
+      <image href={href} x="0" y="0" width="120" height="260" preserveAspectRatio="xMidYMid meet" opacity="0.22" />
     </svg>
   );
 }
