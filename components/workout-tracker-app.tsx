@@ -147,7 +147,6 @@ function isSameLocalDay(a: string, b: Date) {
   return new Date(a).toDateString() === b.toDateString();
 }
 
-
 function buildEmptySets(exercise: ExerciseTemplate, previousSets: SetLog[] = []): SetLog[] {
   return Array.from({ length: exercise.sets }, (_, index) => ({
     id: `${exercise.id}-${index}-${Date.now()}`,
@@ -1300,4 +1299,3 @@ export function WorkoutTrackerApp() {
     </main>
   );
 }
-

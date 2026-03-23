@@ -67,8 +67,18 @@ export function ProgressScreen({
   onSaveMeasurement: (entry: Omit<MeasurementEntry, "id" | "date">) => void;
   onEditSession: (sessionId: string) => void;
 }) {
-  const { calendarRows, nextFocusDestination, progressSignals, recentSessions, suggestedFocusSession, totalWorkouts, trainingLoad, trendData, userSessions, weeklySummary } =
-    trainingState;
+  const {
+    calendarRows,
+    nextFocusDestination,
+    progressSignals,
+    recentSessions,
+    suggestedFocusSession,
+    totalWorkouts,
+    trainingLoad,
+    trendData,
+    userSessions,
+    weeklySummary,
+  } = trainingState;
   const goalDashboard = trainingState.goalDashboard;
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
@@ -329,7 +339,7 @@ export function ProgressScreen({
                           formatDate(session.performedAt),
                           `${session.durationMinutes} min`,
                           `${session.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets`,
-                        ].join(" • ")}
+                        ].join(" ï¿½ ")}
                       </p>
                     </div>
                     <button

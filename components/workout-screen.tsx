@@ -408,7 +408,9 @@ export function WorkoutScreen({
   const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
   const currentExerciseComplete = isExerciseComplete(currentExercise);
   const workoutComplete = activeWorkout.exercises.every(isExerciseComplete);
-  const canCompleteSet = Boolean(currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed);
+  const canCompleteSet = Boolean(
+    currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed,
+  );
   const canCopyPreviousSet = Boolean(
     previousSet &&
       !currentSet?.completed &&
@@ -467,7 +469,7 @@ export function WorkoutScreen({
                 <p className="text-sm font-medium text-text">Smart short version</p>
                 <p className="mt-1 text-sm text-muted">{compressionInsight.note}</p>
                 <p className="mt-2 text-sm text-text">
-                  {compressionInsight.suggestedExerciseNames.join(" • ")}
+                  {compressionInsight.suggestedExerciseNames.join(" ï¿½ ")}
                 </p>
               </div>
             ) : null}

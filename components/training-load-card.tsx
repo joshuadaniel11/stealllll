@@ -404,7 +404,10 @@ export function TrainingLoadCard({
           onOpen={onOpenNextFocus}
         />
 
-        <SuggestedSessionCard session={suggestedSession} onOpen={onOpenSuggestedSession} />
+        <SuggestedSessionCard
+          session={suggestedSession}
+          onOpen={onOpenSuggestedSession}
+        />
 
         <div className="rounded-[24px] border border-white/6 bg-[var(--card-strong)]/64 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">

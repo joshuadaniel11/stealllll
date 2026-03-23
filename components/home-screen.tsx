@@ -139,7 +139,10 @@ export function HomeScreen({
   const [showDetails, setShowDetails] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
-  const dailyMotivation = getWorkoutMotivation(profile.id, todaysWorkout.id);
+  const dailyMotivation = getWorkoutMotivation(
+    profile.id,
+    todaysWorkout.id,
+  );
   const latestSession = recentWorkouts[0] ?? null;
   const pendingPartial =
     latestSession?.partial && latestSession.workoutDayId === todaysWorkout.id ? latestSession : null;

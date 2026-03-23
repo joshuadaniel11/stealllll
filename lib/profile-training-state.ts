@@ -143,7 +143,9 @@ function getTrendData(sessions: WorkoutSession[]) {
 }
 
 function average(values: number[]) {
-  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+  return values.length
+    ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+    : 0;
 }
 
 function getRecentZoneExposure(sessions: WorkoutSession[], limit = 8) {
