@@ -97,6 +97,15 @@ export function addStretchCompletion(
   userId: UserId,
   stretchTitle: string,
 ): AppState {
+  const today = new Date().toDateString();
+  const alreadyCompletedToday = state.stretchCompletions[userId].some(
+    (entry) => new Date(entry.date).toDateString() === today,
+  );
+
+  if (alreadyCompletedToday) {
+    return state;
+  }
+
   const newEntry: StretchCompletion = {
     id: `stretch-${Date.now()}`,
     userId,
