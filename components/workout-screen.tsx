@@ -481,6 +481,11 @@ export function WorkoutScreen({
   const nextExerciseName = hasNextExercise ? activeWorkout.exercises[currentExerciseIndex + 1].exerciseName : null;
   const currentExerciseComplete = isExerciseComplete(currentExercise);
   const workoutComplete = activeWorkout.exercises.every(isExerciseComplete);
+  const loggedSetCount = activeWorkout.exercises.reduce(
+    (sum, exercise) => sum + exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0)).length,
+    0,
+  );
+  const canFinishWorkout = loggedSetCount > 0;
   const canCompleteSet = Boolean(
     currentSet && (currentSet.weight > 0 || currentSet.reps > 0) && !currentSet.completed,
   );
@@ -723,6 +728,8 @@ export function WorkoutScreen({
                 <p className="mt-1 text-[11px] font-medium text-white/50">
                   {workoutComplete
                     ? "Everything is logged. Finish when ready."
+                    : canFinishWorkout
+                      ? "You can finish early if you need to."
                     : currentExerciseComplete
                       ? "This exercise is done. Pick the next one."
                       : "Keep it moving."}
@@ -964,12 +971,12 @@ export function WorkoutScreen({
         </button>
         <button
           className={`rounded-[22px] px-3 py-2.5 text-sm font-semibold ${
-            workoutComplete ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
+            canFinishWorkout ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
           }`}
-          disabled={!workoutComplete}
+          disabled={!canFinishWorkout}
           onClick={onCompleteWorkout}
         >
-          Finish
+          {workoutComplete ? "Finish" : "Finish now"}
         </button>
       </div>
       </ScrollReveal>

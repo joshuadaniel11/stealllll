@@ -18,10 +18,13 @@ export function WorkoutFeelingModal({
           <ScrollReveal delay={0} y={18} scale={0.994}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm text-muted">Workout complete</p>
+                <p className="text-sm text-muted">End workout</p>
                 <h3 className="large-title mt-1 font-semibold">
                   How did today feel?
                 </h3>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  Finish the workout as done, even if you trimmed the session.
+                </p>
               </div>
               <button
                 className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"
