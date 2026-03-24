@@ -631,6 +631,7 @@ export function createSeedState(): AppState {
       joshua: 0,
     },
     rivalryArchive: [],
+    sessionSignalLog: [],
     personalBests: {
       natasha: [],
       joshua: [],

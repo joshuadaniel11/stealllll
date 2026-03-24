@@ -160,6 +160,7 @@ export function resetProfileProgressState(state: AppState, userId: UserId, seed:
   return {
     ...state,
     sessions: state.sessions.filter((session) => session.userId !== userId),
+    sessionSignalLog: state.sessionSignalLog.filter((entry) => entry.userId !== userId),
     personalBests: {
       ...state.personalBests,
       [userId]: seed.personalBests[userId],

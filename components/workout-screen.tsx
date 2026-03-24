@@ -12,7 +12,7 @@ import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-pre
 import { getExerciseTargetSummary } from "@/lib/training-load";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { SuggestedFocusSession } from "@/lib/training-load";
-import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type { ActiveWorkout, ExerciseLibraryItem, LiveSessionSignal, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
   const index = sets.findIndex((set) => !set.completed);
@@ -140,6 +140,7 @@ export function WorkoutScreen({
   suggestedSessionPreview,
   activeWorkout,
   activeWorkoutTemplate,
+  liveSignal,
   userSessions,
   exerciseLibrary,
     onStartWorkout,
@@ -149,6 +150,7 @@ export function WorkoutScreen({
   onSwapExercise,
   onCompleteWorkout,
   onSaveAndExitWorkout,
+  onDismissLiveSignal,
   onCancelWorkout,
 }: {
   profile: Profile;
@@ -158,6 +160,7 @@ export function WorkoutScreen({
   suggestedSessionPreview: boolean;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
+  liveSignal: LiveSessionSignal | null;
   userSessions: WorkoutSession[];
   exerciseLibrary: ExerciseLibraryItem[];
   onStartWorkout: (workout: WorkoutPlanDay) => void;
@@ -172,6 +175,7 @@ export function WorkoutScreen({
   onSwapExercise: (exerciseIndex: number, exerciseId: string) => void;
   onCompleteWorkout: () => void;
   onSaveAndExitWorkout: () => void;
+  onDismissLiveSignal: () => void;
   onCancelWorkout: () => void;
 }) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -181,6 +185,7 @@ export function WorkoutScreen({
   const [showPreviewExercises, setShowPreviewExercises] = useState(false);
   const [showSwapOptions, setShowSwapOptions] = useState(false);
   const [showCompletedExercises, setShowCompletedExercises] = useState(false);
+  const [showLiveSignalBanner, setShowLiveSignalBanner] = useState(false);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
@@ -231,6 +236,21 @@ export function WorkoutScreen({
   useEffect(() => {
     setShowSwapOptions(false);
   }, [currentExerciseIndex, activeWorkout?.id]);
+
+  useEffect(() => {
+    if (!liveSignal || liveSignal.dismissedAt) {
+      setShowLiveSignalBanner(false);
+      return;
+    }
+
+    setShowLiveSignalBanner(true);
+    const timeout = window.setTimeout(() => {
+      setShowLiveSignalBanner(false);
+      onDismissLiveSignal();
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [liveSignal?.firedAt, liveSignal?.dismissedAt, onDismissLiveSignal]);
 
   if (!activeWorkout || activeWorkout.userId !== profile.id) {
     const previewWorkout = profile.workoutPlan.find((workout) => workout.id === localPreviewWorkoutId) ?? null;
@@ -717,6 +737,16 @@ export function WorkoutScreen({
         ) : (
           <p className="caption-text mt-2 text-muted">Final exercise.</p>
         )}
+
+        {liveSignal && !liveSignal.dismissedAt ? (
+          <div
+            className={`mt-3 rounded-[20px] bg-white/[0.06] px-4 py-3 text-[13px] leading-6 text-white/62 transition-all duration-500 ${
+              showLiveSignalBanner ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+            }`}
+          >
+            {liveSignal.message}
+          </div>
+        ) : null}
 
         <div className="surface-quiet mt-3 rounded-[24px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">

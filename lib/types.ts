@@ -49,6 +49,17 @@ export type WorkoutSessionExercise = {
   note?: string;
 };
 
+export type LiveSessionSignalType = "push" | "hold" | "bank" | "pr_close";
+
+export type LiveSessionSignal = {
+  signalType: LiveSessionSignalType;
+  targetExercise: string;
+  message: string;
+  firedAt: string;
+  copyIndex: number;
+  dismissedAt?: string | null;
+};
+
 export type WorkoutSession = {
   id: string;
   userId: UserId;
@@ -58,6 +69,7 @@ export type WorkoutSession = {
   durationMinutes: number;
   sessionRpe?: number;
   partial?: boolean;
+  liveSignal?: LiveSessionSignal | null;
   exercises: WorkoutSessionExercise[];
   feeling: "Strong" | "Solid" | "Tough";
 };
@@ -171,6 +183,7 @@ export type ActiveWorkout = {
   startedAt: string;
   workoutDayId: string;
   workoutName: string;
+  liveSignal?: LiveSessionSignal | null;
   exercises: WorkoutSessionExercise[];
   templateExercises?: ExerciseTemplate[];
 };
@@ -194,12 +207,22 @@ export type WeeklyRivalryArchiveEntry = {
   natashaSessions: number;
 };
 
+export type SessionSignalLogEntry = {
+  sessionId: string;
+  userId: UserId;
+  exercise: string;
+  signalType: LiveSessionSignalType;
+  firedAt: string;
+  copyIndex: number;
+};
+
 export type AppState = {
   selectedUserId: UserId;
   profiles: Profile[];
   sessions: WorkoutSession[];
   longestStreaks: Record<UserId, number>;
   rivalryArchive: WeeklyRivalryArchiveEntry[];
+  sessionSignalLog: SessionSignalLogEntry[];
   personalBests: Record<UserId, PersonalBest[]>;
   weeklySummaries: Record<UserId, WeeklySummary>;
   sharedSummary: SharedSummary;

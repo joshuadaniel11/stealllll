@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import clsx from "clsx";
 import { Activity, ChartColumn, Dumbbell, Settings } from "lucide-react";
 
@@ -43,6 +43,7 @@ import {
   syncWeeklyRivalryArchive,
 } from "@/lib/profile-training-state";
 import { getCurrentWeekWindow } from "@/lib/training-load";
+import { buildActiveLiveSignal, buildSessionSignalLogEntry, getLiveSessionSignal } from "@/lib/live-session-signal";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -63,18 +64,7 @@ import {
 } from "@/lib/workout-session";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
-import type {
-  ActiveWorkout,
-  AppState,
-  ExerciseLibraryItem,
-  RecentTrainingUpdate,
-  ExerciseTemplate,
-  Profile,
-  SetLog,
-  UserId,
-  WorkoutPlanDay,
-  WorkoutSession,
-} from "@/lib/types";
+import type { ActiveWorkout, AppState, ExerciseLibraryItem, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 type TabId = "home" | "workout" | "progress";
 
@@ -160,6 +150,7 @@ function toActiveWorkout(
     startedAt: new Date().toISOString(),
     workoutDayId: workout.id,
     workoutName: workout.name,
+    liveSignal: null,
     exercises: workout.exercises.map((exercise) => {
       const rememberedSwapId = exerciseSwapMemory[exercise.id];
       const rememberedSwap = rememberedSwapId
@@ -206,6 +197,7 @@ function toSuggestedFocusActiveWorkout(
     startedAt: new Date().toISOString(),
     workoutDayId: session.sourceWorkoutId ?? `focus-session-${userId}`,
     workoutName: `${session.focusText} Focus Session`,
+    liveSignal: null,
     templateExercises,
     exercises: templateExercises.map((exercise) => ({
       exerciseId: exercise.id,
@@ -232,6 +224,19 @@ function getUpdatedLongestStreaks(
     ...currentState.longestStreaks,
     [userId]: Math.max(currentState.longestStreaks[userId], nextLongest),
   };
+}
+
+function appendSessionSignalLog(currentState: AppState, session: WorkoutSession) {
+  const signalLogEntry = buildSessionSignalLogEntry(session);
+  if (!signalLogEntry) {
+    return currentState.sessionSignalLog;
+  }
+
+  if (currentState.sessionSignalLog.some((entry) => entry.sessionId === signalLogEntry.sessionId)) {
+    return currentState.sessionSignalLog;
+  }
+
+  return [signalLogEntry, ...currentState.sessionSignalLog];
 }
 
 function getInstallCopy(
@@ -572,6 +577,31 @@ export function WorkoutTrackerApp() {
     () => getRivalryCardCopy(selectedProfile.id, rivalryState),
     [selectedProfile.id, rivalryState],
   );
+  const liveSessionSignal = useMemo(() => {
+    if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
+      return null;
+    }
+
+    const currentSessionLike: WorkoutSession = {
+      id: state.activeWorkout.id,
+      userId: state.activeWorkout.userId,
+      workoutDayId: state.activeWorkout.workoutDayId,
+      workoutName: state.activeWorkout.workoutName,
+      performedAt: state.activeWorkout.startedAt,
+      durationMinutes: 0,
+      liveSignal: state.activeWorkout.liveSignal ?? null,
+      exercises: state.activeWorkout.exercises,
+      feeling: "Solid",
+    };
+
+    return getLiveSessionSignal(
+      selectedProfile,
+      currentSessionLike,
+      userSessions,
+      state.sessionSignalLog.filter((entry) => entry.userId === selectedProfile.id),
+      new Date(),
+    );
+  }, [selectedProfile, state.activeWorkout, state.sessionSignalLog, userSessions]);
   const restDayRead = getRestDayRead(selectedProfile.id, trainingState.restDayState.restReason);
   const restRecoveryLabel = getRestRecoveryLabel(trainingState.restDayState.recoveryScore);
 
@@ -579,6 +609,25 @@ export function WorkoutTrackerApp() {
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
     [editingSessionId, state.sessions],
   );
+
+  useEffect(() => {
+    if (!liveSessionSignal?.shouldFire || !state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
+      return;
+    }
+
+    setState((current) => {
+      if (!current.activeWorkout || current.activeWorkout.userId !== selectedProfile.id || current.activeWorkout.liveSignal?.signalType) {
+        return current;
+      }
+
+      const next = structuredClone(current);
+      if (!next.activeWorkout) {
+        return current;
+      }
+      next.activeWorkout.liveSignal = buildActiveLiveSignal(liveSessionSignal);
+      return next;
+    });
+  }, [liveSessionSignal, selectedProfile.id, state.activeWorkout]);
 
 
   const dailyVerse = useMemo(() => {
@@ -715,7 +764,17 @@ export function WorkoutTrackerApp() {
     }
 
     const durationMinutes = Math.max(10, Math.round((Date.now() - +new Date(state.activeWorkout.startedAt)) / 60000));
-    const completedSession = buildCompletedSession(state.activeWorkout, {
+    const activeWorkoutForSave =
+      state.activeWorkout.liveSignal && !state.activeWorkout.liveSignal.dismissedAt
+        ? {
+            ...state.activeWorkout,
+            liveSignal: {
+              ...state.activeWorkout.liveSignal,
+              dismissedAt: new Date().toISOString(),
+            },
+          }
+        : state.activeWorkout;
+    const completedSession = buildCompletedSession(activeWorkoutForSave, {
       durationMinutes,
       feeling: "Solid",
       partial: true,
@@ -737,6 +796,21 @@ export function WorkoutTrackerApp() {
     startTransition(() => setActiveTab("home"));
   };
 
+  const dismissLiveSessionSignal = useCallback(() => {
+    setState((current) => {
+      if (!current.activeWorkout?.liveSignal || current.activeWorkout.liveSignal.dismissedAt) {
+        return current;
+      }
+
+      const next = structuredClone(current);
+      if (!next.activeWorkout?.liveSignal) {
+        return current;
+      }
+      next.activeWorkout.liveSignal.dismissedAt = new Date().toISOString();
+      return next;
+    });
+  }, []);
+
   const completeWorkout = (feeling: WorkoutSession["feeling"]) => {
     if (!state.activeWorkout) {
       return;
@@ -755,6 +829,7 @@ export function WorkoutTrackerApp() {
           updateSharedSummary: true,
           sharedSummaryName: selectedProfile.name,
         }),
+        sessionSignalLog: appendSessionSignalLog(current, completedSession),
         longestStreaks: getUpdatedLongestStreaks(
           current,
           selectedProfile.id,
@@ -1071,6 +1146,7 @@ export function WorkoutTrackerApp() {
       }
       return {
         ...replaced,
+        sessionSignalLog: appendSessionSignalLog(current, updatedSession),
         longestStreaks: getUpdatedLongestStreaks(
           current,
           updatedSession.userId,
@@ -1116,6 +1192,7 @@ export function WorkoutTrackerApp() {
       const replaced = replaceSession(current, updatedSession, { advanceWorkoutCycle: true });
       return {
         ...replaced,
+        sessionSignalLog: appendSessionSignalLog(current, updatedSession),
         longestStreaks: getUpdatedLongestStreaks(
           current,
           updatedSession.userId,
@@ -1306,6 +1383,7 @@ export function WorkoutTrackerApp() {
               suggestedSessionPreview={suggestedSessionPreview}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
+              liveSignal={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.liveSignal ?? null : null}
               userSessions={userSessions}
                 exerciseLibrary={state.exerciseLibrary}
                 onStartWorkout={startWorkout}
@@ -1315,6 +1393,7 @@ export function WorkoutTrackerApp() {
                 onSwapExercise={swapExercise}
                 onCompleteWorkout={openWorkoutCompletionPrompt}
                 onSaveAndExitWorkout={savePartialWorkout}
+              onDismissLiveSignal={dismissLiveSessionSignal}
               onCancelWorkout={cancelWorkout}
             />
           )}

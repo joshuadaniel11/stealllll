@@ -25,6 +25,7 @@ export function buildCompletedSession(
     durationMinutes: options.durationMinutes,
     feeling: options.feeling,
     partial: options.partial ? true : undefined,
+    liveSignal: activeWorkout.liveSignal ?? null,
     exercises: activeWorkout.exercises
       .map((exercise) => ({
         ...exercise,
@@ -68,6 +69,7 @@ export function buildResumedActiveWorkout(
     startedAt: new Date().toISOString(),
     workoutDayId: workout.id,
     workoutName: workout.name,
+    liveSignal: partialSession.liveSignal ?? null,
     templateExercises: workout.exercises,
     exercises: workout.exercises.map((exercise, exerciseIndex) => {
       const partialExercise =

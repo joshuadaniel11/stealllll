@@ -1,7 +1,9 @@
 import type {
   ActiveWorkout,
   AppState,
+  LiveSessionSignal,
   MeasurementEntry,
+  SessionSignalLogEntry,
   SetLog,
   StretchCompletion,
   WeeklyRivalryArchiveEntry,
@@ -43,6 +45,18 @@ function isValidWorkoutSessionExercise(value: unknown): value is WorkoutSessionE
   );
 }
 
+function isValidLiveSessionSignal(value: unknown): value is LiveSessionSignal {
+  return (
+    isRecord(value) &&
+    (value.signalType === "push" || value.signalType === "hold" || value.signalType === "bank" || value.signalType === "pr_close") &&
+    typeof value.targetExercise === "string" &&
+    typeof value.message === "string" &&
+    typeof value.firedAt === "string" &&
+    typeof value.copyIndex === "number" &&
+    (typeof value.dismissedAt === "undefined" || value.dismissedAt === null || typeof value.dismissedAt === "string")
+  );
+}
+
 function isValidWorkoutSession(value: unknown): value is WorkoutSession {
   return (
     isRecord(value) &&
@@ -54,6 +68,7 @@ function isValidWorkoutSession(value: unknown): value is WorkoutSession {
     typeof value.durationMinutes === "number" &&
     (typeof value.sessionRpe === "undefined" || typeof value.sessionRpe === "number") &&
     (!("partial" in value) || typeof value.partial === "boolean") &&
+    (typeof value.liveSignal === "undefined" || value.liveSignal === null || isValidLiveSessionSignal(value.liveSignal)) &&
     (value.feeling === "Strong" || value.feeling === "Solid" || value.feeling === "Tough") &&
     Array.isArray(value.exercises) &&
     value.exercises.every(isValidWorkoutSessionExercise)
@@ -110,6 +125,18 @@ function isValidWeeklyRivalryArchiveEntry(value: unknown): value is WeeklyRivalr
   );
 }
 
+function isValidSessionSignalLogEntry(value: unknown): value is SessionSignalLogEntry {
+  return (
+    isRecord(value) &&
+    typeof value.sessionId === "string" &&
+    (value.userId === "joshua" || value.userId === "natasha") &&
+    typeof value.exercise === "string" &&
+    (value.signalType === "push" || value.signalType === "hold" || value.signalType === "bank" || value.signalType === "pr_close") &&
+    typeof value.firedAt === "string" &&
+    typeof value.copyIndex === "number"
+  );
+}
+
 export function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
   return (
     isRecord(value) &&
@@ -118,6 +145,7 @@ export function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
     typeof value.startedAt === "string" &&
     typeof value.workoutDayId === "string" &&
     typeof value.workoutName === "string" &&
+    (typeof value.liveSignal === "undefined" || value.liveSignal === null || isValidLiveSessionSignal(value.liveSignal)) &&
     Array.isArray(value.exercises) &&
     value.exercises.every(isValidWorkoutSessionExercise)
   );
@@ -143,6 +171,13 @@ export function isValidImportedState(value: Partial<AppState>): boolean {
   if (
     typeof value.rivalryArchive !== "undefined" &&
     (!Array.isArray(value.rivalryArchive) || !value.rivalryArchive.every(isValidWeeklyRivalryArchiveEntry))
+  ) {
+    return false;
+  }
+
+  if (
+    typeof value.sessionSignalLog !== "undefined" &&
+    (!Array.isArray(value.sessionSignalLog) || !value.sessionSignalLog.every(isValidSessionSignalLogEntry))
   ) {
     return false;
   }
@@ -226,6 +261,9 @@ export function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>):
     rivalryArchive: Array.isArray(incoming.rivalryArchive)
       ? incoming.rivalryArchive.filter(isValidWeeklyRivalryArchiveEntry)
       : seed.rivalryArchive,
+    sessionSignalLog: Array.isArray(incoming.sessionSignalLog)
+      ? incoming.sessionSignalLog.filter(isValidSessionSignalLogEntry)
+      : seed.sessionSignalLog,
     measurements: sanitizeUserScopedList(seed.measurements, incoming.measurements, isValidMeasurementEntry),
     stretchCompletions: sanitizeUserScopedList(seed.stretchCompletions, incoming.stretchCompletions, isValidStretchCompletion),
     workoutOverrides: sanitizeWorkoutOverrides(seed.workoutOverrides, incoming.workoutOverrides),

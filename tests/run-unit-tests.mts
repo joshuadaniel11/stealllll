@@ -4,6 +4,7 @@ import { addStretchCompletion, appendSession, replaceSession } from "@/lib/app-a
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import { buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
+import { buildSessionSignalLogEntry, getLiveSessionSignal } from "@/lib/live-session-signal";
 import {
   getMomentumPillCopy,
   getProfileTrainingState,
@@ -143,6 +144,238 @@ function testMomentumPillHidesWithoutCompletedHistory() {
 
   assert.equal(momentum.momentumState, "cold");
   assert.equal(getMomentumPillCopy("natasha", momentum, false), null);
+}
+
+function testLiveSessionSignalPrefersPrCloseAndRotatesCopy() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const exerciseHistory = [
+    {
+      id: "live-hist-1",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-20T08:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "lh-a", weight: 30, reps: 8, completed: true, rir: 2 },
+            { id: "lh-b", weight: 30, reps: 8, completed: true, rir: 2 },
+            { id: "lh-c", weight: 30, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "live-hist-2",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-17T08:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "lh-d", weight: 32, reps: 8, completed: true, rir: 1 },
+            { id: "lh-e", weight: 32, reps: 8, completed: true, rir: 1 },
+            { id: "lh-f", weight: 32, reps: 8, completed: true, rir: 1 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const currentSession = {
+    id: "active-live-1",
+    userId: "joshua" as const,
+    workoutDayId: "joshua-chest-triceps",
+    workoutName: "Chest + Triceps A",
+    performedAt: "2026-03-25T08:00:00+13:00",
+    durationMinutes: 0,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: "incline-dumbbell-press-day1",
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: "cl-a", weight: 31, reps: 8, completed: true, rir: 2 },
+          { id: "cl-b", weight: 31, reps: 8, completed: true, rir: 2 },
+          { id: "cl-c", weight: 31, reps: 9, completed: true, rir: 2 },
+          { id: "cl-d", weight: 0, reps: 0, completed: false },
+        ],
+      },
+    ],
+  };
+
+  const signal = getLiveSessionSignal(
+    joshua,
+    currentSession,
+    exerciseHistory,
+    [
+      {
+        sessionId: "prior-signal",
+        userId: "joshua",
+        exercise: "Incline Dumbbell Press",
+        signalType: "pr_close",
+        firedAt: "2026-03-20T08:30:00+13:00",
+        copyIndex: 0,
+      },
+    ],
+    new Date("2026-03-25T10:00:00+13:00"),
+  );
+
+  assert.equal(signal.shouldFire, true);
+  assert.equal(signal.signalType, "pr_close");
+  assert.equal(signal.copyIndex, 1);
+  assert.ok(signal.message.includes("PR range") || signal.message.includes("Close to your best"));
+}
+
+function testLiveSessionSignalBanksOnlyAfterFirstSessionOfWeek() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const exerciseHistory = [
+    {
+      id: "bank-week-1",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-24T08:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "bw-a", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "bw-b", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "bw-c", weight: 60, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "bank-hist-2",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-17T08:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "bw-d", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "bw-e", weight: 60, reps: 10, completed: true, rir: 2 },
+            { id: "bw-f", weight: 60, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const currentSession = {
+    id: "active-bank-1",
+    userId: "natasha" as const,
+    workoutDayId: "natasha-glutes-hams",
+    workoutName: "Glutes + Hamstrings",
+    performedAt: "2026-03-25T08:00:00+13:00",
+    durationMinutes: 0,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: "machine-hip-thrust-day1",
+        exerciseName: "Machine Hip Thrust",
+        muscleGroup: "Glutes" as const,
+        sets: [
+          { id: "cb-a", weight: 45, reps: 8, completed: true, rir: 2 },
+          { id: "cb-b", weight: 45, reps: 8, completed: true, rir: 2 },
+          { id: "cb-c", weight: 45, reps: 8, completed: true, rir: 2 },
+        ],
+      },
+    ],
+  };
+
+  const signal = getLiveSessionSignal(
+    natasha,
+    currentSession,
+    exerciseHistory,
+    [],
+    new Date("2026-03-25T10:00:00+13:00"),
+  );
+
+  assert.equal(signal.shouldFire, true);
+  assert.equal(signal.signalType, "bank");
+  assert.ok(signal.message.includes("Hold the shape") || signal.message.includes("Harder day"));
+}
+
+function testLiveSessionSignalStaysQuietWhenAlreadyFiredAndBuildsLogEntry() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const currentSession = {
+    id: "active-live-fired",
+    userId: "joshua" as const,
+    workoutDayId: "joshua-chest-triceps",
+    workoutName: "Chest + Triceps A",
+    performedAt: "2026-03-25T08:00:00+13:00",
+    durationMinutes: 0,
+    feeling: "Solid" as const,
+    liveSignal: {
+      signalType: "hold" as const,
+      targetExercise: "Incline Dumbbell Press",
+      message: "Steady session. Lock it in.",
+      firedAt: "2026-03-25T08:20:00+13:00",
+      copyIndex: 0,
+      dismissedAt: null,
+    },
+    exercises: [
+      {
+        exerciseId: "incline-dumbbell-press-day1",
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: "cf-a", weight: 30, reps: 8, completed: true, rir: 2 },
+          { id: "cf-b", weight: 30, reps: 8, completed: true, rir: 2 },
+          { id: "cf-c", weight: 30, reps: 8, completed: true, rir: 2 },
+        ],
+      },
+    ],
+  };
+
+  const signal = getLiveSessionSignal(joshua, currentSession, [], [], new Date("2026-03-25T10:00:00+13:00"));
+  const logEntry = buildSessionSignalLogEntry({
+    ...currentSession,
+    id: "session-live-fired",
+    durationMinutes: 46,
+  });
+
+  assert.equal(signal.shouldFire, false);
+  assert.ok(logEntry);
+  assert.equal(logEntry?.signalType, "hold");
+  assert.equal(logEntry?.exercise, "Incline Dumbbell Press");
 }
 
 function testWeeklyRivalryStatePrefersSessionsThenVolume() {
@@ -1899,6 +2132,9 @@ const tests = [
   ["merge imported state safely", testSafeStateMerge],
   ["build streak and momentum state centrally", testStreakAndMomentumSelector],
   ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
+  ["fire live signals from mid-session reads", testLiveSessionSignalPrefersPrCloseAndRotatesCopy],
+  ["only bank live signals after fatigue has context", testLiveSessionSignalBanksOnlyAfterFirstSessionOfWeek],
+  ["suppress repeat live signals and log them cleanly", testLiveSessionSignalStaysQuietWhenAlreadyFiredAndBuildsLogEntry],
   ["rank weekly rivalry by sessions before volume", testWeeklyRivalryStatePrefersSessionsThenVolume],
   ["build rivalry copy for ties and settled weeks", testWeeklyRivalryCardCopyHandlesTiesAndWeekComplete],
   ["archive the previous rivalry week once", testWeeklyRivalryArchiveStoresPreviousWeekOnce],
