@@ -5,17 +5,17 @@
 :root {
   color-scheme: dark;
   --surface: #020204;
-  --card: rgba(13, 11, 16, 0.72);
-  --card-strong: rgba(20, 17, 24, 0.86);
-  --stroke: rgba(255, 255, 255, 0.07);
+  --card: rgba(13, 11, 16, 0.68);
+  --card-strong: rgba(20, 17, 24, 0.8);
+  --stroke: rgba(255, 255, 255, 0.055);
   --text: #f8f5f7;
   --muted: #b8afb8;
   --accent: #df7d9f;
   --accent-soft: rgba(223, 125, 159, 0.1);
   --success: #5f9b82;
   --warning: #b88a59;
-  --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.28);
-  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 16px 38px rgba(0, 0, 0, 0.24);
+  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.16);
   --shadow-glow: 0 10px 22px rgba(223, 125, 159, 0.06);
   --page-glow-top: radial-gradient(circle at top, rgba(223, 125, 159, 0.09), transparent 18%);
   --page-glow-corner: radial-gradient(circle at 100% 0%, rgba(223, 125, 159, 0.06), transparent 14%);
@@ -67,7 +67,7 @@ body.app-standalone {
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 24%),
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 24%),
     var(--card);
-  backdrop-filter: blur(30px) saturate(135%);
+  backdrop-filter: blur(26px) saturate(128%);
   position: relative;
   overflow: hidden;
   transition:
@@ -127,20 +127,20 @@ body.app-standalone {
 
 .progress-panel {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
-    rgba(16, 18, 22, 0.78);
-  border-color: rgba(255, 255, 255, 0.045);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.014)),
+    rgba(16, 18, 22, 0.74);
+  border-color: rgba(255, 255, 255, 0.04);
   box-shadow:
-    0 14px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 12px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.032);
 }
 
 .progress-subcard {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
     rgba(255, 255, 255, 0.028);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.042);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.028);
 }
 
 .progress-summary-card {
@@ -174,22 +174,25 @@ body.app-standalone {
 
 .progress-focus-card {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 10px 24px rgba(0, 0, 0, 0.14);
+    inset 0 1px 0 rgba(255, 255, 255, 0.032),
+    0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .home-session-hero {
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.045), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012)),
-    rgba(10, 12, 16, 0.72);
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.04), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012)),
+    rgba(10, 12, 16, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 14px 30px rgba(0, 0, 0, 0.18);
 }
 
 .home-quiet-card {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012)),
     rgba(255, 255, 255, 0.018);
-  border-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.035);
 }
 
 .content-stack > * {
@@ -505,14 +508,14 @@ h3 {
 }
 
 .settings-hero-card {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
-    rgba(255, 255, 255, 0.02);
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.04), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.016)),
+    rgba(255, 255, 255, 0.018);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 16px 34px rgba(0, 0, 0, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.036),
+    0 14px 30px rgba(0, 0, 0, 0.14);
 }
 
 .library-summary-card {
@@ -861,16 +864,16 @@ h3 {
 
 .tabbar-shell {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
-    rgba(18, 20, 27, 0.68);
-  backdrop-filter: blur(30px) saturate(138%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(18, 20, 27, 0.62);
+  backdrop-filter: blur(24px) saturate(132%);
   transition:
     background-color 320ms ease,
     backdrop-filter 320ms ease,
     box-shadow 360ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: calc(0.85rem + var(--safe-bottom));
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow:
     0 14px 28px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -878,8 +881,8 @@ h3 {
 
 .tabbar-button {
   min-width: 82px;
-  border-radius: 20px;
-  padding: 0.72rem 0.9rem;
+  border-radius: 18px;
+  padding: 0.68rem 0.88rem;
   letter-spacing: -0.01em;
 }
 
@@ -894,10 +897,10 @@ h3 {
 }
 
 .tabbar-button-active {
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.03);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 8px 18px rgba(0, 0, 0, 0.1);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 6px 14px rgba(0, 0, 0, 0.08);
 }
 
 input,

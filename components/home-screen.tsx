@@ -249,7 +249,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, recent, and shared.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, recent, and shared momentum.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -284,11 +284,11 @@ export function HomeScreen({
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
                     Recent
                   </p>
-                  <span className="text-xs text-white/40">Sessions + shared</span>
+                  <span className="text-xs text-white/40">Quiet detail</span>
                 </div>
                 {recentWorkouts.length ? (
                   <div className="space-y-2">
-                    {recentWorkouts.slice(0, 2).map((workout) => (
+                    {recentWorkouts.slice(0, 1).map((workout) => (
                       <button
                         key={workout.id}
                         type="button"

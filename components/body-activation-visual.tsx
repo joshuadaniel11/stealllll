@@ -136,8 +136,8 @@ function getMetricMap(metrics: TrainingLoadMetric[]) {
 function getZoneStyle(metric?: TrainingLoadMetric) {
   if (!metric || metric.percentage <= 0) {
     return {
-      fill: "rgba(132,136,150,0.02)",
-      stroke: "rgba(255,255,255,0.022)",
+      fill: "rgba(132,136,150,0.015)",
+      stroke: "rgba(255,255,255,0.018)",
       filter: "none",
     };
   }
@@ -167,12 +167,12 @@ function Shape({
   onClick?: () => void;
 }) {
   const commonProps = {
-    fill: selected ? style.fill : subdued ? "rgba(110,118,130,0.012)" : style.fill,
-    stroke: selected ? "rgba(255,255,255,0.94)" : subdued ? "rgba(255,255,255,0.018)" : style.stroke,
-    strokeWidth: selected ? 1.9 : 1.05,
+    fill: selected ? style.fill : subdued ? "rgba(110,118,130,0.01)" : style.fill,
+    stroke: selected ? "rgba(255,255,255,0.9)" : subdued ? "rgba(255,255,255,0.015)" : style.stroke,
+    strokeWidth: selected ? 1.6 : 0.92,
     style: {
-      filter: selected ? `${style.filter} drop-shadow(0 0 12px rgba(255,255,255,0.18))` : style.filter,
-      opacity: subdued ? 0.34 : 1,
+      filter: selected ? `${style.filter} drop-shadow(0 0 9px rgba(255,255,255,0.14))` : style.filter,
+      opacity: subdued ? 0.28 : 1,
     },
     className: onClick ? "cursor-pointer transition" : undefined,
     onClick,
@@ -187,10 +187,9 @@ function Shape({
 }
 
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const shellFill = "rgba(255,255,255,0.02)";
-  const shellStroke = "rgba(244,246,255,0.12)";
-  const contourStroke = "rgba(228,232,255,0.075)";
-  const detailStroke = "rgba(228,232,255,0.048)";
+  const shellFill = "rgba(255,255,255,0.03)";
+  const shellStroke = "rgba(244,246,255,0.16)";
+  const contourStroke = "rgba(255,255,255,0.045)";
   const frame = variant === "male" ? { x: 14, y: 12, width: 92, height: 228 } : { x: 16, y: 12, width: 88, height: 228 };
   const frontShell =
     variant === "male"
@@ -209,21 +208,11 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
       <path d={variant === "male" ? "M77 48C82 60 84 74 84 90" : "M76 49C80 60 82 74 82 90"} fill="none" stroke={contourStroke} strokeWidth="0.9" strokeLinecap="round" />
       {view === "front" ? (
         <>
-          <path d="M48 54C51 51 55 50 60 50C65 50 69 51 72 54" fill="none" stroke={contourStroke} strokeWidth="0.85" strokeLinecap="round" />
-          <path d="M48 68C51 66 55 65 60 65C65 65 69 66 72 68" fill="none" stroke={contourStroke} strokeWidth="0.78" strokeLinecap="round" />
-          <path d="M60 50L60 142" fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
-          <path d="M54 100L54 140" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-          <path d="M66 100L66 140" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-          <path d="M49 151C52 155 56 157 60 157C64 157 68 155 71 151" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M48 54C51 51 55 50 60 50C65 50 69 51 72 54" fill="none" stroke={contourStroke} strokeWidth="0.68" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <path d="M48 50L60 68L72 50" fill="none" stroke={contourStroke} strokeWidth="0.88" strokeLinecap="round" />
-          <path d="M46 73C50 76 55 77 60 77C65 77 70 76 74 73" fill="none" stroke={contourStroke} strokeWidth="0.78" strokeLinecap="round" />
-          <path d="M60 68L60 145" fill="none" stroke={detailStroke} strokeWidth="0.78" strokeLinecap="round" />
-          <path d="M55 80L55 142" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-          <path d="M65 80L65 142" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
-          <path d="M49 146C53 151 56 153 60 153C64 153 67 151 71 146" fill="none" stroke={detailStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M48 50L60 68L72 50" fill="none" stroke={contourStroke} strokeWidth="0.72" strokeLinecap="round" />
         </>
       )}
     </svg>
@@ -285,7 +274,7 @@ export function BodyActivationVisual({
               <stop offset="100%" stopColor="rgba(18,19,28,0)" />
             </linearGradient>
           </defs>
-          <path d="M60 31L60 246" stroke="rgba(255,255,255,0.035)" strokeWidth="0.8" strokeDasharray="3 5" />
+          <ellipse cx="60" cy="132" rx="34" ry="108" fill="rgba(255,255,255,0.014)" />
           <BodyBaseArt variant={variant} view={view} />
           <rect x="0" y="0" width="20" height="260" fill="url(#body-fade-left)" />
           <rect x="100" y="0" width="20" height="260" fill="url(#body-fade-right)" />
