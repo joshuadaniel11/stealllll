@@ -14,7 +14,17 @@ import {
   type ProfileTrainingMetrics,
 } from "@/lib/training-metrics";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
-import type { ExerciseLibraryItem, Profile, StretchCompletion, WeeklySummary, WorkoutOverride, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type {
+  AppState,
+  ExerciseLibraryItem,
+  Profile,
+  StretchCompletion,
+  WeeklyRivalryArchiveEntry,
+  WeeklySummary,
+  WorkoutOverride,
+  WorkoutPlanDay,
+  WorkoutSession,
+} from "@/lib/types";
 
 export type TrendPoint = {
   date: string;
@@ -40,6 +50,26 @@ export type ProfileTrainingState = {
   insights: TrainingInsights;
   goalDashboard: GoalDashboard;
   progressSignals: ProgressSignals;
+};
+
+export type WeeklyRivalryState = {
+  joshuaSessions: number;
+  natashaSessions: number;
+  joshuaVolume: number;
+  natashaVolume: number;
+  joshuaConsistency: number;
+  natashaConsistency: number;
+  leader: "joshua" | "natasha" | "tied";
+  leaderBy: "sessions" | "volume" | "consistency" | null;
+  margin: "close" | "clear" | "dominant";
+  weekComplete: boolean;
+};
+
+export type RivalryCardCopy = {
+  headline: string;
+  highlightName: "Joshua" | "Natasha" | null;
+  leaderColorClass: string | null;
+  detail: string;
 };
 
 export type TrainingInsights = {
@@ -182,6 +212,10 @@ function average(values: number[]) {
     : 0;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function toLocalDayKey(value: string | Date) {
   const date = new Date(value);
   const year = date.getFullYear();
@@ -207,6 +241,26 @@ function getDaysUntilNextPlannedTrainingDay(profile: Profile, referenceDate = ne
     return 0;
   }
   return Math.max(1, 7 - weekdayIndex);
+}
+
+function getCompletedSetCountForSession(session: WorkoutSession) {
+  return session.exercises.reduce(
+    (sessionTotal, exercise) => sessionTotal + exercise.sets.filter((set) => set.completed).length,
+    0,
+  );
+}
+
+function getSessionsWithinWeek(workoutHistory: WorkoutSession[], weekStart: Date) {
+  const start = new Date(weekStart);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return workoutHistory.filter((session) => {
+    const performedAt = new Date(session.performedAt);
+    return performedAt >= start && performedAt <= end;
+  });
 }
 
 function hasPlannedSplitSessionOnDate(profile: Profile, referenceDate = new Date()) {
@@ -331,6 +385,186 @@ export function getQueuedWorkoutForProfile(
   }
 
   return getNextWorkoutFromSessions(profile, workoutHistory);
+}
+
+export function getWeeklyRivalryState(
+  joshuaHistory: WorkoutSession[],
+  natashaHistory: WorkoutSession[],
+  weekStart: Date,
+  referenceDate = new Date(),
+): WeeklyRivalryState {
+  const joshuaWeekSessions = getSessionsWithinWeek(joshuaHistory, weekStart);
+  const natashaWeekSessions = getSessionsWithinWeek(natashaHistory, weekStart);
+  const joshuaCompletedSessions = joshuaWeekSessions.filter((session) => !session.partial);
+  const natashaCompletedSessions = natashaWeekSessions.filter((session) => !session.partial);
+  const joshuaSessions = joshuaCompletedSessions.length;
+  const natashaSessions = natashaCompletedSessions.length;
+  const joshuaVolume = joshuaWeekSessions.reduce((sum, session) => sum + getCompletedSetCountForSession(session), 0);
+  const natashaVolume = natashaWeekSessions.reduce((sum, session) => sum + getCompletedSetCountForSession(session), 0);
+  const weekDaysElapsed = clamp(
+    Math.floor((new Date(referenceDate).setHours(0, 0, 0, 0) - new Date(weekStart).setHours(0, 0, 0, 0)) / 86400000) + 1,
+    1,
+    7,
+  );
+  const plannedSessionsSoFar = Math.max(1, Math.min(5, weekDaysElapsed));
+  const joshuaConsistency = clamp(joshuaSessions / plannedSessionsSoFar, 0, 1);
+  const natashaConsistency = clamp(natashaSessions / plannedSessionsSoFar, 0, 1);
+
+  let leader: WeeklyRivalryState["leader"] = "tied";
+  let leaderBy: WeeklyRivalryState["leaderBy"] = null;
+
+  if (joshuaSessions !== natashaSessions) {
+    leader = joshuaSessions > natashaSessions ? "joshua" : "natasha";
+    leaderBy = "sessions";
+  } else if (joshuaVolume !== natashaVolume) {
+    leader = joshuaVolume > natashaVolume ? "joshua" : "natasha";
+    leaderBy = "volume";
+  } else if (joshuaConsistency !== natashaConsistency) {
+    leader = joshuaConsistency > natashaConsistency ? "joshua" : "natasha";
+    leaderBy = "consistency";
+  }
+
+  let margin: WeeklyRivalryState["margin"] = "close";
+  if (leaderBy === "sessions") {
+    const sessionGap = Math.abs(joshuaSessions - natashaSessions);
+    margin = sessionGap >= 3 ? "dominant" : sessionGap >= 2 ? "clear" : "close";
+  } else if (leaderBy === "volume") {
+    const trailingVolume = Math.max(1, Math.min(joshuaVolume, natashaVolume));
+    const volumeLift = Math.abs(joshuaVolume - natashaVolume) / trailingVolume;
+    margin = volumeLift >= 0.3 ? "dominant" : volumeLift >= 0.1 ? "clear" : "close";
+  } else if (leaderBy === "consistency") {
+    const consistencyGap = Math.abs(joshuaConsistency - natashaConsistency);
+    margin = consistencyGap >= 0.3 ? "dominant" : consistencyGap >= 0.1 ? "clear" : "close";
+  }
+
+  const distinctLoggedDays = new Set(
+    [...joshuaWeekSessions, ...natashaWeekSessions].map((session) => toLocalDayKey(session.performedAt)),
+  ).size;
+  const weekComplete = referenceDate.getDay() === 0 || distinctLoggedDays >= 7;
+
+  return {
+    joshuaSessions,
+    natashaSessions,
+    joshuaVolume,
+    natashaVolume,
+    joshuaConsistency,
+    natashaConsistency,
+    leader,
+    leaderBy,
+    margin,
+    weekComplete,
+  };
+}
+
+export function getRivalryCardCopy(viewingProfileId: Profile["id"], rivalryState: WeeklyRivalryState): RivalryCardCopy {
+  if (rivalryState.weekComplete) {
+    if (rivalryState.leader === "tied") {
+      return {
+        headline: "This week was a draw.",
+        highlightName: null,
+        leaderColorClass: null,
+        detail: `${rivalryState.joshuaSessions + rivalryState.natashaSessions} sessions between you this week`,
+      };
+    }
+
+    const winnerName = rivalryState.leader === "joshua" ? "Joshua" : "Natasha";
+    return {
+      headline: `${winnerName} took this week.`,
+      highlightName: winnerName,
+      leaderColorClass: rivalryState.leader === "joshua" ? "text-emerald-300/90" : "text-sky-300/90",
+      detail:
+        rivalryState.leaderBy === "sessions"
+          ? `${winnerName} finished more sessions`
+          : rivalryState.leaderBy === "volume"
+            ? `${winnerName} got more total sets in`
+            : `${winnerName} stayed more consistent`,
+    };
+  }
+
+  if (rivalryState.leader === "tied") {
+    return {
+      headline: "Dead even. Someone's got to move.",
+      highlightName: null,
+      leaderColorClass: null,
+      detail: `${rivalryState.joshuaSessions + rivalryState.natashaSessions} sessions between you this week`,
+    };
+  }
+
+  const copyMap = {
+    joshua: {
+      joshua: {
+        close: "Ahead. Don't let up.",
+        clear: "Joshua's week. Keep the gap.",
+        dominant: "No contest this week.",
+      },
+      natasha: {
+        close: "Natasha's got it. Take it back.",
+        clear: "She's pulling away. Your move.",
+        dominant: "Natasha owns this week. Reset Monday.",
+      },
+    },
+    natasha: {
+      natasha: {
+        close: "Ahead. Hold the shape.",
+        clear: "Natasha's week. Stay on it.",
+        dominant: "Not even close this week.",
+      },
+      joshua: {
+        close: "Joshua's got it. Take it back.",
+        clear: "He's pulling away. Your move.",
+        dominant: "Joshua owns this week. Reset Monday.",
+      },
+    },
+  } as const;
+
+  const leaderName = rivalryState.leader === "joshua" ? "Joshua" : "Natasha";
+  const detail =
+    rivalryState.leaderBy === "sessions"
+      ? `${leaderName} ahead on sessions`
+      : rivalryState.leaderBy === "volume"
+        ? rivalryState.joshuaSessions === rivalryState.natashaSessions
+          ? `Identical sessions — ${leaderName} has more sets`
+          : `${leaderName} ahead on volume`
+        : `${leaderName} ahead on consistency`;
+
+  return {
+    headline: copyMap[viewingProfileId][rivalryState.leader][rivalryState.margin],
+    highlightName: rivalryState.leader === "joshua" ? "Joshua" : "Natasha",
+    leaderColorClass: rivalryState.leader === "joshua" ? "text-emerald-300/90" : "text-sky-300/90",
+    detail,
+  };
+}
+
+export function syncWeeklyRivalryArchive(state: AppState, referenceDate = new Date()): AppState {
+  const currentWeek = getCurrentWeekWindow(referenceDate);
+  const previousWeekStart = new Date(currentWeek.start);
+  previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+  previousWeekStart.setHours(0, 0, 0, 0);
+  const previousWeekKey = toLocalDayKey(previousWeekStart);
+
+  if (state.rivalryArchive.some((entry) => entry.weekStart === previousWeekKey)) {
+    return state;
+  }
+
+  const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
+  const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
+  const previousWeekState = getWeeklyRivalryState(joshuaHistory, natashaHistory, previousWeekStart, currentWeek.start);
+
+  if (previousWeekState.joshuaSessions === 0 && previousWeekState.natashaSessions === 0) {
+    return state;
+  }
+
+  const archiveEntry: WeeklyRivalryArchiveEntry = {
+    weekStart: previousWeekKey,
+    winner: previousWeekState.leader,
+    joshuaSessions: previousWeekState.joshuaSessions,
+    natashaSessions: previousWeekState.natashaSessions,
+  };
+
+  return {
+    ...state,
+    rivalryArchive: [archiveEntry, ...state.rivalryArchive],
+  };
 }
 
 export function getNextWorkoutFromSessions(profile: Profile, workoutHistory: WorkoutSession[]) {

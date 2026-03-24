@@ -4,6 +4,7 @@ import type {
   MeasurementEntry,
   SetLog,
   StretchCompletion,
+  WeeklyRivalryArchiveEntry,
   WorkoutOverride,
   WorkoutSession,
   WorkoutSessionExercise,
@@ -99,6 +100,16 @@ function isNumberRecord(value: unknown): value is Record<AppState["selectedUserI
   );
 }
 
+function isValidWeeklyRivalryArchiveEntry(value: unknown): value is WeeklyRivalryArchiveEntry {
+  return (
+    isRecord(value) &&
+    typeof value.weekStart === "string" &&
+    (value.winner === "joshua" || value.winner === "natasha" || value.winner === "tied") &&
+    typeof value.joshuaSessions === "number" &&
+    typeof value.natashaSessions === "number"
+  );
+}
+
 export function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
   return (
     isRecord(value) &&
@@ -126,6 +137,13 @@ export function isValidImportedState(value: Partial<AppState>): boolean {
   }
 
   if (typeof value.longestStreaks !== "undefined" && !isNumberRecord(value.longestStreaks)) {
+    return false;
+  }
+
+  if (
+    typeof value.rivalryArchive !== "undefined" &&
+    (!Array.isArray(value.rivalryArchive) || !value.rivalryArchive.every(isValidWeeklyRivalryArchiveEntry))
+  ) {
     return false;
   }
 
@@ -205,6 +223,9 @@ export function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>):
     weeklySummaries: seed.weeklySummaries,
     sessions: Array.isArray(incoming.sessions) ? incoming.sessions.filter(isValidWorkoutSession) : seed.sessions,
     longestStreaks: isNumberRecord(incoming.longestStreaks) ? incoming.longestStreaks : seed.longestStreaks,
+    rivalryArchive: Array.isArray(incoming.rivalryArchive)
+      ? incoming.rivalryArchive.filter(isValidWeeklyRivalryArchiveEntry)
+      : seed.rivalryArchive,
     measurements: sanitizeUserScopedList(seed.measurements, incoming.measurements, isValidMeasurementEntry),
     stretchCompletions: sanitizeUserScopedList(seed.stretchCompletions, incoming.stretchCompletions, isValidStretchCompletion),
     workoutOverrides: sanitizeWorkoutOverrides(seed.workoutOverrides, incoming.workoutOverrides),

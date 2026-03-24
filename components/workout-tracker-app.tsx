@@ -31,6 +31,7 @@ import {
 } from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import {
+  getRivalryCardCopy,
   getMomentumPillCopy,
   getProfileSessions,
   getProfileTrainingState,
@@ -38,7 +39,10 @@ import {
   getRestDayRead,
   getRestRecoveryLabel,
   getStreakAndMomentum,
+  getWeeklyRivalryState,
+  syncWeeklyRivalryArchive,
 } from "@/lib/profile-training-state";
+import { getCurrentWeekWindow } from "@/lib/training-load";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -419,6 +423,14 @@ export function WorkoutTrackerApp() {
   }, [state, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    setState((current) => syncWeeklyRivalryArchive(current, new Date()));
+  }, [hydrated, state.sessions]);
+
+  useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -549,6 +561,16 @@ export function WorkoutTrackerApp() {
     selectedProfile.id,
     trainingState.streakAndMomentum,
     trainingState.userSessions.some((session) => !session.partial),
+  );
+  const rivalryState = useMemo(() => {
+    const week = getCurrentWeekWindow(new Date());
+    const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
+    const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
+    return getWeeklyRivalryState(joshuaHistory, natashaHistory, week.start, new Date());
+  }, [state.sessions]);
+  const rivalryCopy = useMemo(
+    () => getRivalryCardCopy(selectedProfile.id, rivalryState),
+    [selectedProfile.id, rivalryState],
   );
   const restDayRead = getRestDayRead(selectedProfile.id, trainingState.restDayState.restReason);
   const restRecoveryLabel = getRestRecoveryLabel(trainingState.restDayState.recoveryScore);
@@ -1246,6 +1268,8 @@ export function WorkoutTrackerApp() {
                 recentTrainingUpdate={profileRecentTrainingUpdate}
                 calendarRows={trainingState.calendarRows}
                 momentumPillText={trainingState.restDayState.isRest ? null : momentumPillText}
+                rivalryState={rivalryState}
+                rivalryCopy={rivalryCopy}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}

@@ -9,7 +9,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
 import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
-import type { RestDayState } from "@/lib/profile-training-state";
+import type { RestDayState, RivalryCardCopy, WeeklyRivalryState } from "@/lib/profile-training-state";
 import { getSessionPresentation } from "@/lib/session-presentation";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
@@ -53,6 +53,23 @@ function formatNextSessionDaysOut(daysOut: number) {
   return `in ${daysOut} days`;
 }
 
+function renderRivalryHeadline(copy: RivalryCardCopy) {
+  if (!copy.highlightName || !copy.leaderColorClass || !copy.headline.includes(copy.highlightName)) {
+    return copy.headline;
+  }
+
+  const [prefix, ...rest] = copy.headline.split(copy.highlightName);
+  const suffix = rest.join(copy.highlightName);
+
+  return (
+    <>
+      {prefix}
+      <span className={copy.leaderColorClass}>{copy.highlightName}</span>
+      {suffix}
+    </>
+  );
+}
+
 type HomeScreenProps = {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
@@ -77,6 +94,8 @@ type HomeScreenProps = {
   };
   recentTrainingUpdate: RecentTrainingUpdate | null;
   momentumPillText: string | null;
+  rivalryState: WeeklyRivalryState;
+  rivalryCopy: RivalryCardCopy;
   calendarRows: Array<{
     label: string;
     isCurrentWeek: boolean;
@@ -120,6 +139,8 @@ export function HomeScreen({
   weddingCountdown,
   recentTrainingUpdate,
   momentumPillText,
+  rivalryState,
+  rivalryCopy,
   calendarRows,
   onOpenDailyVerse,
   onToggleStretch,
@@ -155,17 +176,6 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
-  const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
-  const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
-  const competitionSummary =
-    joshuaWeekCount === natashaWeekCount
-      ? joshuaWeekCount === 0
-        ? "Fresh week. First session sets the tone."
-        : `Tied this week at ${joshuaWeekCount} each.`
-      : joshuaWeekCount > natashaWeekCount
-        ? `Joshua leads ${joshuaWeekCount} to ${natashaWeekCount}.`
-        : `Natasha leads ${natashaWeekCount} to ${joshuaWeekCount}.`;
   const showRestDayHero = restDayState.isRest && restDayRead;
   const moreSummary = showRestDayHero
     ? "Note first. One quiet utility layer."
@@ -296,22 +306,23 @@ export function HomeScreen({
 
       <ScrollReveal delay={44}>
         <Card className="space-y-4 px-4 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
-              <h3 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.05em] text-white/92">Head to head</h3>
-              <p className="mt-1 text-sm leading-6 text-white/56">{competitionSummary}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-right">
-              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-emerald-300/80">Joshua</p>
-                <p className="mt-1 text-base font-semibold text-white">{joshuaWeekCount}</p>
+          <div className="space-y-3">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3">
+                <p className="text-sm font-medium text-white/78">
+                  <span className="text-emerald-300/80">Joshua</span> {"\u00b7"} {rivalryState.joshuaSessions} sessions
+                </p>
               </div>
-              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-sky-300/80">Natasha</p>
-                <p className="mt-1 text-base font-semibold text-white">{natashaWeekCount}</p>
+              <p className="pt-4 text-[11px] uppercase tracking-[0.2em] text-white/28">vs</p>
+              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-right">
+                <p className="text-sm font-medium text-white/78">
+                  <span className="text-sky-300/80">Natasha</span> {"\u00b7"} {rivalryState.natashaSessions} sessions
+                </p>
               </div>
             </div>
+            <p className="text-[1.12rem] font-semibold tracking-[-0.04em] text-white/92">{renderRivalryHeadline(rivalryCopy)}</p>
+            <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
           </div>
           <WeeklyTrainingCalendar rows={calendarRows} />
         </Card>

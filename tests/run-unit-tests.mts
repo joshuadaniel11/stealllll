@@ -4,7 +4,14 @@ import { addStretchCompletion, appendSession, replaceSession } from "@/lib/app-a
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import { buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
-import { getMomentumPillCopy, getProfileTrainingState, getStreakAndMomentum } from "@/lib/profile-training-state";
+import {
+  getMomentumPillCopy,
+  getProfileTrainingState,
+  getRivalryCardCopy,
+  getStreakAndMomentum,
+  getWeeklyRivalryState,
+  syncWeeklyRivalryArchive,
+} from "@/lib/profile-training-state";
 import { createSeedState } from "@/lib/seed-data";
 
 const referenceDate = new Date("2026-03-23T12:00:00.000Z");
@@ -136,6 +143,184 @@ function testMomentumPillHidesWithoutCompletedHistory() {
 
   assert.equal(momentum.momentumState, "cold");
   assert.equal(getMomentumPillCopy("natasha", momentum, false), null);
+}
+
+function testWeeklyRivalryStatePrefersSessionsThenVolume() {
+  const weekStart = new Date("2026-03-23T00:00:00+13:00");
+  const reference = new Date("2026-03-25T12:00:00+13:00");
+  const joshuaHistory = [
+    {
+      id: "rivalry-j-1",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-24T08:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "j-a", weight: 32, reps: 8, completed: true, rir: 2 },
+            { id: "j-b", weight: 32, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "rivalry-j-2",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-25T08:00:00+13:00",
+      durationMinutes: 44,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "j-c", weight: 60, reps: 8, completed: true, rir: 2 },
+            { id: "j-d", weight: 60, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+  const natashaHistory = [
+    {
+      id: "rivalry-n-1",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-24T09:00:00+13:00",
+      durationMinutes: 46,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "n-a", weight: 55, reps: 10, completed: true, rir: 2 },
+            { id: "n-b", weight: 55, reps: 10, completed: true, rir: 2 },
+            { id: "n-c", weight: 55, reps: 10, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const state = getWeeklyRivalryState(joshuaHistory, natashaHistory, weekStart, reference);
+
+  assert.equal(state.leader, "joshua");
+  assert.equal(state.leaderBy, "sessions");
+  assert.equal(state.margin, "close");
+  assert.ok(state.joshuaConsistency > state.natashaConsistency);
+}
+
+function testWeeklyRivalryCardCopyHandlesTiesAndWeekComplete() {
+  const tiedCopy = getRivalryCardCopy("joshua", {
+    joshuaSessions: 2,
+    natashaSessions: 2,
+    joshuaVolume: 12,
+    natashaVolume: 12,
+    joshuaConsistency: 0.5,
+    natashaConsistency: 0.5,
+    leader: "tied",
+    leaderBy: null,
+    margin: "close",
+    weekComplete: false,
+  });
+  const settledCopy = getRivalryCardCopy("natasha", {
+    joshuaSessions: 3,
+    natashaSessions: 5,
+    joshuaVolume: 18,
+    natashaVolume: 28,
+    joshuaConsistency: 0.6,
+    natashaConsistency: 1,
+    leader: "natasha",
+    leaderBy: "sessions",
+    margin: "clear",
+    weekComplete: true,
+  });
+
+  assert.equal(tiedCopy.headline, "Dead even. Someone's got to move.");
+  assert.ok(tiedCopy.detail.includes("4 sessions"));
+  assert.equal(settledCopy.headline, "Natasha took this week.");
+  assert.ok(settledCopy.detail.includes("Natasha"));
+}
+
+function testWeeklyRivalryArchiveStoresPreviousWeekOnce() {
+  const seed = createSeedState();
+  const monday = new Date("2026-03-30T09:00:00+13:00");
+  const stateWithHistory = {
+    ...seed,
+    sessions: [
+      {
+        id: "archive-j-1",
+        userId: "joshua" as const,
+        workoutDayId: "joshua-chest-triceps",
+        workoutName: "Chest + Triceps A",
+        performedAt: "2026-03-24T08:00:00+13:00",
+        durationMinutes: 45,
+        feeling: "Solid" as const,
+        exercises: [
+          {
+            exerciseId: "incline-dumbbell-press-day1",
+            exerciseName: "Incline Dumbbell Press",
+            muscleGroup: "Chest" as const,
+            sets: [{ id: "archive-a", weight: 30, reps: 8, completed: true, rir: 2 }],
+          },
+        ],
+      },
+      {
+        id: "archive-n-1",
+        userId: "natasha" as const,
+        workoutDayId: "natasha-glutes-hams",
+        workoutName: "Glutes + Hamstrings",
+        performedAt: "2026-03-26T08:00:00+13:00",
+        durationMinutes: 45,
+        feeling: "Solid" as const,
+        exercises: [
+          {
+            exerciseId: "machine-hip-thrust-day1",
+            exerciseName: "Machine Hip Thrust",
+            muscleGroup: "Glutes" as const,
+            sets: [{ id: "archive-b", weight: 50, reps: 10, completed: true, rir: 2 }],
+          },
+        ],
+      },
+      {
+        id: "archive-n-2",
+        userId: "natasha" as const,
+        workoutDayId: "natasha-back-arms",
+        workoutName: "Back + Biceps",
+        performedAt: "2026-03-28T08:00:00+13:00",
+        durationMinutes: 42,
+        feeling: "Solid" as const,
+        exercises: [
+          {
+            exerciseId: "lat-pulldown-day2-nat",
+            exerciseName: "Lat Pulldown",
+            muscleGroup: "Back" as const,
+            sets: [{ id: "archive-c", weight: 40, reps: 10, completed: true, rir: 2 }],
+          },
+        ],
+      },
+    ],
+  };
+
+  const archived = syncWeeklyRivalryArchive(stateWithHistory, monday);
+  const archivedAgain = syncWeeklyRivalryArchive(archived, monday);
+
+  assert.equal(archived.rivalryArchive.length, 1);
+  assert.equal(archived.rivalryArchive[0].winner, "natasha");
+  assert.equal(archived.rivalryArchive[0].weekStart, "2026-03-23");
+  assert.equal(archivedAgain.rivalryArchive.length, 1);
 }
 
 function testScheduledRestDayBuildsRestState() {
@@ -1714,6 +1899,9 @@ const tests = [
   ["merge imported state safely", testSafeStateMerge],
   ["build streak and momentum state centrally", testStreakAndMomentumSelector],
   ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
+  ["rank weekly rivalry by sessions before volume", testWeeklyRivalryStatePrefersSessionsThenVolume],
+  ["build rivalry copy for ties and settled weeks", testWeeklyRivalryCardCopyHandlesTiesAndWeekComplete],
+  ["archive the previous rivalry week once", testWeeklyRivalryArchiveStoresPreviousWeekOnce],
   ["mark scheduled rest days centrally", testScheduledRestDayBuildsRestState],
   ["rest when recovery is low on a planned day", testRecoveryNeededRestDayUsesRecoveryIndex],
   ["treat missed planned day as reset rest", testSkippedPlannedDayTurnsIntoRestReset],
