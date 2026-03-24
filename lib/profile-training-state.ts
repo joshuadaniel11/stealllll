@@ -14,7 +14,7 @@ import {
   type ProfileTrainingMetrics,
 } from "@/lib/training-metrics";
 import type { SuggestedFocusSession, SuggestedWorkoutDestination, WeeklyTrainingLoad } from "@/lib/training-load";
-import type { ExerciseLibraryItem, Profile, StretchCompletion, WeeklySummary, WorkoutSession } from "@/lib/types";
+import type { ExerciseLibraryItem, Profile, StretchCompletion, WeeklySummary, WorkoutOverride, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 export type TrendPoint = {
   date: string;
@@ -27,6 +27,7 @@ export type ProfileTrainingState = {
   weeklyCount: number;
   streak: number;
   streakAndMomentum: StreakAndMomentum;
+  restDayState: RestDayState;
   recentWorkouts: WorkoutSession[];
   recentSessions: WorkoutSession[];
   trendData: TrendPoint[];
@@ -83,6 +84,14 @@ export type StreakAndMomentum = {
   weeklyConsistency: number;
   momentumState: "building" | "steady" | "cooling" | "cold";
   lastSessionDaysAgo: number;
+};
+
+export type RestDayState = {
+  isRest: boolean;
+  restReason: "scheduled" | "recovery_needed" | "user_skipped" | null;
+  recoveryScore: number;
+  nextBestSession: string;
+  nextBestSessionDaysOut: number;
 };
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
@@ -183,6 +192,25 @@ function toLocalDayKey(value: string | Date) {
 
 function fromDayKey(dayKey: string) {
   return new Date(`${dayKey}T00:00:00`);
+}
+
+function getSplitWeekdayIndex(value: Date) {
+  return (value.getDay() + 6) % 7;
+}
+
+function getDaysUntilNextPlannedTrainingDay(profile: Profile, referenceDate = new Date()) {
+  const weekdayIndex = getSplitWeekdayIndex(referenceDate);
+  if (profile.workoutPlan.length >= 7) {
+    return 0;
+  }
+  if (weekdayIndex < profile.workoutPlan.length) {
+    return 0;
+  }
+  return Math.max(1, 7 - weekdayIndex);
+}
+
+function hasPlannedSplitSessionOnDate(profile: Profile, referenceDate = new Date()) {
+  return getSplitWeekdayIndex(referenceDate) < profile.workoutPlan.length;
 }
 
 function getDayKeysFromCompletedSessions(sessions: WorkoutSession[]) {
@@ -288,6 +316,120 @@ export function getStreakAndMomentum(
     momentumState,
     lastSessionDaysAgo: Number.isFinite(lastSessionDaysAgo) ? lastSessionDaysAgo : 999,
   };
+}
+
+export function getQueuedWorkoutForProfile(
+  profile: Profile,
+  workoutHistory: WorkoutSession[],
+  overrideWorkoutId: string | null,
+): WorkoutPlanDay {
+  if (overrideWorkoutId) {
+    return (
+      profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ??
+      getNextWorkoutFromSessions(profile, workoutHistory)
+    );
+  }
+
+  return getNextWorkoutFromSessions(profile, workoutHistory);
+}
+
+export function getNextWorkoutFromSessions(profile: Profile, workoutHistory: WorkoutSession[]) {
+  if (!workoutHistory.length) {
+    return profile.workoutPlan[0];
+  }
+
+  const lastSession = workoutHistory[0];
+  const currentIndex = profile.workoutPlan.findIndex((workout) => workout.id === lastSession.workoutDayId);
+
+  if (currentIndex === -1) {
+    return profile.workoutPlan[0];
+  }
+
+  return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
+}
+
+export function isRestDay(
+  profile: Profile,
+  workoutHistory: WorkoutSession[],
+  trainingState: {
+    metrics: Pick<ProfileTrainingMetrics, "recoveryIndex">;
+    nextFocusDestination: SuggestedWorkoutDestination | null;
+    suggestedFocusSession: SuggestedFocusSession | null;
+  },
+  referenceDate = new Date(),
+  workoutOverride: WorkoutOverride | null = null,
+): RestDayState {
+  const recoveryScore = Math.max(0, Math.min(1, trainingState.metrics.recoveryIndex.score / 100));
+  const queuedWorkout = getQueuedWorkoutForProfile(profile, workoutHistory, workoutOverride?.nextWorkoutId ?? null);
+  const nextBestSession =
+    trainingState.nextFocusDestination?.workoutName ??
+    trainingState.suggestedFocusSession?.sourceWorkoutName ??
+    queuedWorkout.name;
+  const scheduledRestToday = !hasPlannedSplitSessionOnDate(profile, referenceDate);
+  const hasAnyStartedSession = workoutHistory.length > 0;
+  const yesterday = new Date(referenceDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const plannedYesterday = hasPlannedSplitSessionOnDate(profile, yesterday);
+  const hadSessionYesterday = workoutHistory.some((session) => toLocalDayKey(session.performedAt) === toLocalDayKey(yesterday));
+  const skippedYesterday = scheduledRestToday && hasAnyStartedSession && plannedYesterday && !hadSessionYesterday;
+  const recoveryNeeded = !scheduledRestToday && trainingState.metrics.recoveryIndex.score < 55;
+  const restReason = skippedYesterday
+    ? "user_skipped"
+    : scheduledRestToday
+      ? "scheduled"
+      : recoveryNeeded
+        ? "recovery_needed"
+        : null;
+  const nextBestSessionDaysOut =
+    restReason === "scheduled"
+      ? getDaysUntilNextPlannedTrainingDay(profile, referenceDate)
+      : restReason === "recovery_needed"
+        ? 1
+        : restReason === "user_skipped"
+          ? 0
+          : 0;
+
+  return {
+    isRest: restReason !== null,
+    restReason,
+    recoveryScore,
+    nextBestSession,
+    nextBestSessionDaysOut,
+  };
+}
+
+export function getRestDayRead(profileId: Profile["id"], restReason: RestDayState["restReason"]) {
+  if (!restReason) {
+    return null;
+  }
+
+  const copyMap = {
+    joshua: {
+      scheduled: "Rest day. Let it land.",
+      recovery_needed: "Body needs this. Don't fight it.",
+      user_skipped: "Missed yesterday. Reset today.",
+    },
+    natasha: {
+      scheduled: "Rest day. Let your body settle.",
+      recovery_needed: "Recovery is part of the shape.",
+      user_skipped: "Yesterday's gone. Start clean.",
+    },
+  } as const;
+
+  return copyMap[profileId][restReason];
+}
+
+export function getRestRecoveryLabel(recoveryScore: number) {
+  if (recoveryScore >= 0.8) {
+    return "Feeling fresh";
+  }
+  if (recoveryScore >= 0.5) {
+    return "Recovering well";
+  }
+  if (recoveryScore >= 0.3) {
+    return "Still building back";
+  }
+  return "Take it easy today";
 }
 
 export function getMomentumPillCopy(profileId: Profile["id"], streakAndMomentum: StreakAndMomentum, hasCompletedWorkout: boolean) {
@@ -704,6 +846,7 @@ export function getProfileTrainingState(
   referenceDate = new Date(),
   stretchCompletions: StretchCompletion[] = [],
   persistedLongestStreak = 0,
+  workoutOverride: WorkoutOverride | null = null,
 ): ProfileTrainingState {
   const userSessions = sortSessionsDescending(allSessions.filter((session) => session.userId === profile.id));
   const trainingLoad = getWeeklyTrainingLoad(userSessions, profile.id, referenceDate);
@@ -722,6 +865,30 @@ export function getProfileTrainingState(
     },
   };
   const insights = buildTrainingInsights(profile, weeklySummary, derivedTrainingLoad, metrics);
+  const nextFocusDestination = getSuggestedWorkoutDestination(
+    profile.id,
+    profile.workoutPlan,
+    suggestedNextFocus,
+    derivedTrainingLoad.recentLoad,
+  );
+  const suggestedFocusSession = getSuggestedFocusSession(
+    profile.id,
+    profile.workoutPlan,
+    suggestedNextFocus,
+    exerciseLibrary,
+    derivedTrainingLoad.recentLoad,
+  );
+  const restDayState = isRestDay(
+    profile,
+    userSessions,
+    {
+      metrics,
+      nextFocusDestination,
+      suggestedFocusSession,
+    },
+    referenceDate,
+    workoutOverride,
+  );
 
   return {
     userSessions,
@@ -729,25 +896,15 @@ export function getProfileTrainingState(
     weeklyCount: trainingLoad.activeDays.size,
     streak,
     streakAndMomentum,
+    restDayState,
     recentWorkouts: userSessions.slice(0, 3),
     recentSessions: userSessions.slice(0, 4),
     trendData,
     weeklySummary,
     trainingLoad: derivedTrainingLoad,
     calendarRows: getWeeklyCalendarRows(allSessions, 6, referenceDate),
-    nextFocusDestination: getSuggestedWorkoutDestination(
-      profile.id,
-      profile.workoutPlan,
-      suggestedNextFocus,
-      derivedTrainingLoad.recentLoad,
-    ),
-    suggestedFocusSession: getSuggestedFocusSession(
-      profile.id,
-      profile.workoutPlan,
-      suggestedNextFocus,
-      exerciseLibrary,
-      derivedTrainingLoad.recentLoad,
-    ),
+    nextFocusDestination,
+    suggestedFocusSession,
     metrics,
     insights,
     goalDashboard: buildGoalDashboard(profile, derivedTrainingLoad, weeklySummary, streak),

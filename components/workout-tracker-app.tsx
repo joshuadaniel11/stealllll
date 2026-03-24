@@ -30,7 +30,15 @@ import {
   setWorkoutOverride,
 } from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
-import { getProfileSessions, getProfileTrainingState, getStreakAndMomentum, getMomentumPillCopy } from "@/lib/profile-training-state";
+import {
+  getMomentumPillCopy,
+  getProfileSessions,
+  getProfileTrainingState,
+  getQueuedWorkoutForProfile,
+  getRestDayRead,
+  getRestRecoveryLabel,
+  getStreakAndMomentum,
+} from "@/lib/profile-training-state";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -78,28 +86,6 @@ const navItems = [
 ];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
-function getNextWorkoutFromSessions(profile: Profile, sessions: WorkoutSession[]) {
-  if (!sessions.length) {
-    return profile.workoutPlan[0];
-  }
-
-  const lastSession = sessions[0];
-  const currentIndex = profile.workoutPlan.findIndex((workout) => workout.id === lastSession.workoutDayId);
-
-  if (currentIndex === -1) {
-    return profile.workoutPlan[0];
-  }
-
-  return profile.workoutPlan[(currentIndex + 1) % profile.workoutPlan.length];
-}
-
-function getTodayWorkout(profile: Profile, sessions: WorkoutSession[], overrideWorkoutId: string | null) {
-  if (overrideWorkoutId) {
-    return profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ?? getNextWorkoutFromSessions(profile, sessions);
-  }
-
-  return getNextWorkoutFromSessions(profile, sessions);
-}
 
 function getWeddingCountdown() {
   const today = new Date();
@@ -467,8 +453,16 @@ export function WorkoutTrackerApp() {
         new Date(),
         state.stretchCompletions[selectedProfile.id],
         state.longestStreaks[selectedProfile.id],
+        state.workoutOverrides[selectedProfile.id] ?? null,
       ),
-    [selectedProfile, state.exerciseLibrary, state.longestStreaks, state.sessions, state.stretchCompletions],
+    [
+      selectedProfile,
+      state.exerciseLibrary,
+      state.longestStreaks,
+      state.sessions,
+      state.stretchCompletions,
+      state.workoutOverrides,
+    ],
   );
   const {
     nextFocusDestination,
@@ -484,7 +478,7 @@ export function WorkoutTrackerApp() {
   } = trainingState;
   const workoutOverride = state.workoutOverrides[selectedProfile.id]?.nextWorkoutId ?? null;
   const todaysWorkout = useMemo(
-    () => getTodayWorkout(selectedProfile, userSessions, workoutOverride),
+    () => getQueuedWorkoutForProfile(selectedProfile, userSessions, workoutOverride),
     [selectedProfile, userSessions, workoutOverride],
   );
   const todaysMobilityPrompt = useMemo(
@@ -556,6 +550,8 @@ export function WorkoutTrackerApp() {
     trainingState.streakAndMomentum,
     trainingState.userSessions.some((session) => !session.partial),
   );
+  const restDayRead = getRestDayRead(selectedProfile.id, trainingState.restDayState.restReason);
+  const restRecoveryLabel = getRestRecoveryLabel(trainingState.restDayState.recoveryScore);
 
   const editingSession = useMemo(
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
@@ -1234,6 +1230,9 @@ export function WorkoutTrackerApp() {
                 todaysWorkout={todaysWorkout}
                 activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
                 trainingInsight={trainingState.insights.homeAction}
+                restDayState={trainingState.restDayState}
+                restDayRead={restDayRead}
+                restRecoveryLabel={restRecoveryLabel}
                 weeklyCount={weeklyCount}
                 streak={streak}
                 pbCount={state.personalBests[selectedProfile.id].length}
@@ -1246,7 +1245,7 @@ export function WorkoutTrackerApp() {
                 weddingCountdown={weddingCountdown}
                 recentTrainingUpdate={profileRecentTrainingUpdate}
                 calendarRows={trainingState.calendarRows}
-                momentumPillText={momentumPillText}
+                momentumPillText={trainingState.restDayState.isRest ? null : momentumPillText}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}

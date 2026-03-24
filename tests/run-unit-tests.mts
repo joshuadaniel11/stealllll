@@ -138,6 +138,124 @@ function testMomentumPillHidesWithoutCompletedHistory() {
   assert.equal(getMomentumPillCopy("natasha", momentum, false), null);
 }
 
+function testScheduledRestDayBuildsRestState() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const saturday = new Date("2026-03-28T10:00:00+13:00");
+  const trainingState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, saturday);
+
+  assert.equal(trainingState.restDayState.isRest, true);
+  assert.equal(trainingState.restDayState.restReason, "scheduled");
+  assert.equal(trainingState.restDayState.nextBestSessionDaysOut, 2);
+  assert.ok(trainingState.restDayState.nextBestSession.length > 0);
+}
+
+function testRecoveryNeededRestDayUsesRecoveryIndex() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const wednesday = new Date("2026-03-25T10:00:00+13:00");
+  const sessions = [
+    {
+      id: "rest-low-recovery-1",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-23T18:30:00+13:00",
+      durationMinutes: 85,
+      sessionRpe: 9.5,
+      feeling: "Tough" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust-day1",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: Array.from({ length: 6 }, (_, index) => ({
+            id: `low-rec-a-${index}`,
+            weight: 70,
+            reps: 8,
+            completed: true,
+            rir: 0,
+          })),
+        },
+      ],
+    },
+    {
+      id: "rest-low-recovery-2",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-back-biceps",
+      workoutName: "Back + Biceps",
+      performedAt: "2026-03-24T18:30:00+13:00",
+      durationMinutes: 82,
+      sessionRpe: 9.3,
+      feeling: "Tough" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2-nat",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: Array.from({ length: 6 }, (_, index) => ({
+            id: `low-rec-b-${index}`,
+            weight: 45,
+            reps: 8,
+            completed: true,
+            rir: 0,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(natasha, sessions, seed.exerciseLibrary, wednesday);
+
+  assert.ok(trainingState.metrics.recoveryIndex.score < 55);
+  assert.equal(trainingState.restDayState.isRest, true);
+  assert.equal(trainingState.restDayState.restReason, "recovery_needed");
+  assert.equal(trainingState.restDayState.nextBestSessionDaysOut, 1);
+}
+
+function testSkippedPlannedDayTurnsIntoRestReset() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const saturday = new Date("2026-03-28T10:00:00+13:00");
+  const sessions = [
+    {
+      id: "skip-reset-1",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-26T18:30:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day2",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [
+            { id: "skip-a", weight: 60, reps: 8, completed: true, rir: 2 },
+            { id: "skip-b", weight: 60, reps: 8, completed: true, rir: 2 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const trainingState = getProfileTrainingState(joshua, sessions, seed.exerciseLibrary, saturday);
+
+  assert.equal(trainingState.restDayState.isRest, true);
+  assert.equal(trainingState.restDayState.restReason, "user_skipped");
+  assert.equal(trainingState.restDayState.nextBestSessionDaysOut, 0);
+}
+
 function testRecoveryAwareNextFocus() {
   const seed = createSeedState();
   const joshua = seed.profiles.find((profile) => profile.id === "joshua");
@@ -1596,6 +1714,9 @@ const tests = [
   ["merge imported state safely", testSafeStateMerge],
   ["build streak and momentum state centrally", testStreakAndMomentumSelector],
   ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
+  ["mark scheduled rest days centrally", testScheduledRestDayBuildsRestState],
+  ["rest when recovery is low on a planned day", testRecoveryNeededRestDayUsesRecoveryIndex],
+  ["treat missed planned day as reset rest", testSkippedPlannedDayTurnsIntoRestReset],
   ["bias next focus away from just-trained zones", testRecoveryAwareNextFocus],
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],

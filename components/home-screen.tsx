@@ -9,6 +9,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
 import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
+import type { RestDayState } from "@/lib/profile-training-state";
 import { getSessionPresentation } from "@/lib/session-presentation";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
@@ -42,11 +43,24 @@ function formatRecentTrainingUpdate(update: {
   };
 }
 
+function formatNextSessionDaysOut(daysOut: number) {
+  if (daysOut <= 0) {
+    return "today";
+  }
+  if (daysOut === 1) {
+    return "tomorrow";
+  }
+  return `in ${daysOut} days`;
+}
+
 type HomeScreenProps = {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
   activeWorkoutName: string | null;
   trainingInsight: string;
+  restDayState: RestDayState;
+  restDayRead: string | null;
+  restRecoveryLabel: string;
   weeklyCount: number;
   streak: number;
   pbCount: number;
@@ -91,6 +105,9 @@ export function HomeScreen({
   todaysWorkout,
   activeWorkoutName,
   trainingInsight,
+  restDayState,
+  restDayRead,
+  restRecoveryLabel,
   weeklyCount,
   streak,
   pbCount,
@@ -138,7 +155,6 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const moreSummary = dailyMobilityPrompt ? "Note first. Mobility if you want it." : "Note first. One quiet utility layer.";
   const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
   const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
   const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
@@ -150,90 +166,125 @@ export function HomeScreen({
       : joshuaWeekCount > natashaWeekCount
         ? `Joshua leads ${joshuaWeekCount} to ${natashaWeekCount}.`
         : `Natasha leads ${natashaWeekCount} to ${joshuaWeekCount}.`;
+  const showRestDayHero = restDayState.isRest && restDayRead;
+  const moreSummary = showRestDayHero
+    ? "Note first. One quiet utility layer."
+    : dailyMobilityPrompt
+      ? "Note first. Mobility if you want it."
+      : "Note first. One quiet utility layer.";
 
   return (
     <div className="space-y-4 pb-28">
       <ScrollReveal delay={30}>
-        <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
-                {sessionPresentation.splitLabel}
-              </p>
-              <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/58">
-                {homeStateLabel}
-              </span>
+        {showRestDayHero ? (
+          <Card className="home-session-hero tab-fade-enter space-y-5 px-6 py-6">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">Rest read</p>
+              <h2 className="text-[2rem] font-semibold tracking-[-0.06em] text-white">{restDayRead}</h2>
             </div>
-            <div className="space-y-1.5">
-              <h2 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-white">
-                {sessionPresentation.title}
-              </h2>
-              <p className="text-sm leading-6 text-white/56">
-                {homeStateDetail}
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/34">Recovery state</p>
+              <p className="text-sm leading-6 text-white/54">{restRecoveryLabel}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/34">Next session</p>
+              <p className="text-base font-medium tracking-[-0.02em] text-white/88">
+                {restDayState.nextBestSession} {"\u00b7"} {formatNextSessionDaysOut(restDayState.nextBestSessionDaysOut)}
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
-              }
-              className="rounded-[26px] bg-white px-5 py-4 text-base font-semibold tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
-            >
-              {primaryActionLabel}
-            </button>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <button
-                type="button"
-                onClick={() => onPreviewWorkout(todaysWorkout.id)}
-                className="rounded-full px-1 py-1 transition text-white/58 hover:text-white/82"
-              >
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowMoveChoices((value) => !value)}
-                className="rounded-full px-1 py-1 transition text-white/42 hover:text-white/72"
-              >
-                Move or skip
-              </button>
+          </Card>
+        ) : (
+          <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
+                  {sessionPresentation.splitLabel}
+                </p>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/58">
+                  {homeStateLabel}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-white">
+                  {sessionPresentation.title}
+                </h2>
+                <p className="text-sm leading-6 text-white/56">
+                  {homeStateDetail}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {showMoveChoices ? (
-            <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
-              {profile.workoutPlan.map((workout) => (
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
+                }
+                className="rounded-[26px] bg-white px-5 py-4 text-base font-semibold tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
+              >
+                {primaryActionLabel}
+              </button>
+              <div className="flex items-center justify-between gap-3 text-sm">
                 <button
-                  key={workout.id}
+                  type="button"
+                  onClick={() => onPreviewWorkout(todaysWorkout.id)}
+                  className="rounded-full px-1 py-1 transition text-white/58 hover:text-white/82"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMoveChoices((value) => !value)}
+                  className="rounded-full px-1 py-1 transition text-white/42 hover:text-white/72"
+                >
+                  Move or skip
+                </button>
+              </div>
+            </div>
+
+            {showMoveChoices ? (
+              <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
+                {profile.workoutPlan.map((workout) => (
+                  <button
+                    key={workout.id}
+                    type="button"
+                    onClick={() => {
+                      onMoveWorkout(workout.id);
+                      setShowMoveChoices(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                  >
+                    <span className="text-sm font-medium text-white/86">
+                      {workout.dayLabel} {"\u2022"} {workout.name}
+                    </span>
+                    <span className="text-xs text-white/45">Move here</span>
+                  </button>
+                ))}
+                <button
                   type="button"
                   onClick={() => {
-                    onMoveWorkout(workout.id);
+                    onSkipWorkout();
                     setShowMoveChoices(false);
                   }}
-                  className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                  className="w-full rounded-[18px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.05]"
                 >
-                  <span className="text-sm font-medium text-white/86">
-                    {workout.dayLabel} {"\u2022"} {workout.name}
-                  </span>
-                  <span className="text-xs text-white/45">Move here</span>
+                  Skip for now
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  onSkipWorkout();
-                  setShowMoveChoices(false);
-                }}
-                className="w-full rounded-[18px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.05]"
-              >
-                Skip for now
-              </button>
-            </div>
-          ) : null}
-        </Card>
+              </div>
+            ) : null}
+          </Card>
+        )}
       </ScrollReveal>
+
+      {showRestDayHero && dailyMobilityPrompt ? (
+        <ScrollReveal delay={36}>
+          <DailyMobilityPromptCard
+            prompt={dailyMobilityPrompt}
+            completed={stretchCompletedToday}
+            onToggle={onToggleStretch}
+          />
+        </ScrollReveal>
+      ) : null}
 
       {momentumPillText ? (
         <ScrollReveal delay={36}>
@@ -294,7 +345,7 @@ export function HomeScreen({
                 <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
               </Card>
 
-              {dailyMobilityPrompt ? (
+              {dailyMobilityPrompt && !showRestDayHero ? (
                 <DailyMobilityPromptCard
                   prompt={dailyMobilityPrompt}
                   completed={stretchCompletedToday}
