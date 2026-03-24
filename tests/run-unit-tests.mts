@@ -4,7 +4,7 @@ import { addStretchCompletion, appendSession, replaceSession } from "@/lib/app-a
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import { buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
-import { getProfileTrainingState } from "@/lib/profile-training-state";
+import { getMomentumPillCopy, getProfileTrainingState, getStreakAndMomentum } from "@/lib/profile-training-state";
 import { createSeedState } from "@/lib/seed-data";
 
 const referenceDate = new Date("2026-03-23T12:00:00.000Z");
@@ -73,6 +73,69 @@ function testSafeStateMerge() {
   assert.equal(merged.sessions.length, 1);
   assert.equal(merged.sessions[0]?.id, "valid-session");
   assert.equal(merged.activeWorkout, null);
+  assert.deepEqual(merged.longestStreaks, seed.longestStreaks);
+}
+
+function testStreakAndMomentumSelector() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+  const localReferenceDate = new Date("2026-03-25T12:00:00+13:00");
+
+  assert.ok(joshua);
+
+  const sessions = [
+    {
+      id: "streak-1",
+      userId: "joshua",
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-25T08:00:00+13:00",
+      durationMinutes: 45,
+      feeling: "Solid" as const,
+      exercises: [{ exerciseId: "a", exerciseName: "Incline Dumbbell Press", muscleGroup: "Chest" as const, sets: [{ id: "a", weight: 30, reps: 8, completed: true }] }],
+    },
+    {
+      id: "streak-2",
+      userId: "joshua",
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-24T08:00:00+13:00",
+      durationMinutes: 45,
+      feeling: "Solid" as const,
+      exercises: [{ exerciseId: "b", exerciseName: "Lat Pulldown", muscleGroup: "Back" as const, sets: [{ id: "b", weight: 60, reps: 8, completed: true }] }],
+    },
+    {
+      id: "streak-3",
+      userId: "joshua",
+      workoutDayId: "joshua-legs",
+      workoutName: "Shoulders + Legs",
+      performedAt: "2026-03-23T08:00:00+13:00",
+      durationMinutes: 45,
+      feeling: "Solid" as const,
+      exercises: [{ exerciseId: "c", exerciseName: "Squat", muscleGroup: "Legs" as const, sets: [{ id: "c", weight: 80, reps: 8, completed: true }] }],
+    },
+  ];
+
+  const momentum = getStreakAndMomentum(joshua, sessions, localReferenceDate, 2);
+
+  assert.equal(momentum.currentStreak, 3);
+  assert.equal(momentum.longestStreak, 3);
+  assert.equal(momentum.momentumState, "steady");
+  assert.equal(momentum.lastSessionDaysAgo, 0);
+  assert.ok(momentum.weeklyConsistency > 0.5 && momentum.weeklyConsistency < 1);
+  assert.equal(getMomentumPillCopy("joshua", momentum, true), "Consistent. Good.");
+}
+
+function testMomentumPillHidesWithoutCompletedHistory() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const momentum = getStreakAndMomentum(natasha, [], referenceDate, 0);
+
+  assert.equal(momentum.momentumState, "cold");
+  assert.equal(getMomentumPillCopy("natasha", momentum, false), null);
 }
 
 function testRecoveryAwareNextFocus() {
@@ -1531,6 +1594,8 @@ function testReplaceSessionAdvanceCycleClearsQueuedWorkout() {
 const tests = [
   ["reject invalid imported state", testInvalidImportedState],
   ["merge imported state safely", testSafeStateMerge],
+  ["build streak and momentum state centrally", testStreakAndMomentumSelector],
+  ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
   ["bias next focus away from just-trained zones", testRecoveryAwareNextFocus],
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],

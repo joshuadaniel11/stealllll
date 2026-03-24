@@ -91,6 +91,14 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
 }
 
+function isNumberRecord(value: unknown): value is Record<AppState["selectedUserId"], number> {
+  return (
+    isRecord(value) &&
+    typeof value.joshua === "number" &&
+    typeof value.natasha === "number"
+  );
+}
+
 export function isValidActiveWorkout(value: unknown): value is ActiveWorkout {
   return (
     isRecord(value) &&
@@ -114,6 +122,10 @@ export function isValidImportedState(value: Partial<AppState>): boolean {
   }
 
   if (typeof value.sessions !== "undefined" && (!Array.isArray(value.sessions) || !value.sessions.every(isValidWorkoutSession))) {
+    return false;
+  }
+
+  if (typeof value.longestStreaks !== "undefined" && !isNumberRecord(value.longestStreaks)) {
     return false;
   }
 
@@ -192,6 +204,7 @@ export function mergeStateWithSeed(seed: AppState, incoming: Partial<AppState>):
     exerciseLibrary: seed.exerciseLibrary,
     weeklySummaries: seed.weeklySummaries,
     sessions: Array.isArray(incoming.sessions) ? incoming.sessions.filter(isValidWorkoutSession) : seed.sessions,
+    longestStreaks: isNumberRecord(incoming.longestStreaks) ? incoming.longestStreaks : seed.longestStreaks,
     measurements: sanitizeUserScopedList(seed.measurements, incoming.measurements, isValidMeasurementEntry),
     stretchCompletions: sanitizeUserScopedList(seed.stretchCompletions, incoming.stretchCompletions, isValidStretchCompletion),
     workoutOverrides: sanitizeWorkoutOverrides(seed.workoutOverrides, incoming.workoutOverrides),

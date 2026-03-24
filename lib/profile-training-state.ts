@@ -26,6 +26,7 @@ export type ProfileTrainingState = {
   totalWorkouts: number;
   weeklyCount: number;
   streak: number;
+  streakAndMomentum: StreakAndMomentum;
   recentWorkouts: WorkoutSession[];
   recentSessions: WorkoutSession[];
   trendData: TrendPoint[];
@@ -74,6 +75,14 @@ export type ProgressSignals = {
   leadingIndicator: ProgressSignal;
   primarySignal: ProgressSignal;
   supportSignal: ProgressSignal;
+};
+
+export type StreakAndMomentum = {
+  currentStreak: number;
+  longestStreak: number;
+  weeklyConsistency: number;
+  momentumState: "building" | "steady" | "cooling" | "cold";
+  lastSessionDaysAgo: number;
 };
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
@@ -162,6 +171,147 @@ function average(values: number[]) {
   return values.length
     ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
     : 0;
+}
+
+function toLocalDayKey(value: string | Date) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function fromDayKey(dayKey: string) {
+  return new Date(`${dayKey}T00:00:00`);
+}
+
+function getDayKeysFromCompletedSessions(sessions: WorkoutSession[]) {
+  return Array.from(
+    new Set(
+      sessions
+        .filter((session) => !session.partial)
+        .map((session) => toLocalDayKey(session.performedAt)),
+    ),
+  );
+}
+
+function getCurrentCompletedSessionStreak(sessions: WorkoutSession[], referenceDate = new Date()) {
+  const uniqueDays = getDayKeysFromCompletedSessions(sessions);
+  if (!uniqueDays.length) {
+    return 0;
+  }
+
+  const sortedDays = [...uniqueDays].sort((a, b) => +fromDayKey(b) - +fromDayKey(a));
+  const latestSessionDate = fromDayKey(sortedDays[0]);
+  const lastSessionDaysAgo = Math.max(
+    0,
+    Math.floor((new Date(referenceDate).setHours(0, 0, 0, 0) - new Date(latestSessionDate).setHours(0, 0, 0, 0)) / 86400000),
+  );
+
+  if (lastSessionDaysAgo > 1) {
+    return 0;
+  }
+
+  let streak = 0;
+  const cursor = new Date(latestSessionDate);
+  while (uniqueDays.includes(toLocalDayKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+}
+
+function getLongestCompletedSessionStreak(sessions: WorkoutSession[]) {
+  const uniqueDays = getDayKeysFromCompletedSessions(sessions)
+    .map((dayKey) => fromDayKey(dayKey))
+    .sort((a, b) => +a - +b);
+
+  if (!uniqueDays.length) {
+    return 0;
+  }
+
+  let longest = 1;
+  let current = 1;
+
+  for (let index = 1; index < uniqueDays.length; index += 1) {
+    const previous = new Date(uniqueDays[index - 1]);
+    const currentDay = new Date(uniqueDays[index]);
+    const diffDays = Math.round((currentDay.setHours(0, 0, 0, 0) - previous.setHours(0, 0, 0, 0)) / 86400000);
+
+    if (diffDays === 1) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+
+  return longest;
+}
+
+export function getStreakAndMomentum(
+  profile: Profile,
+  workoutHistory: WorkoutSession[],
+  referenceDate = new Date(),
+  persistedLongestStreak = 0,
+): StreakAndMomentum {
+  const completedSessions = sortSessionsDescending(workoutHistory.filter((session) => !session.partial));
+  const currentStreak = getCurrentCompletedSessionStreak(completedSessions, referenceDate);
+  const longestStreak = Math.max(persistedLongestStreak, getLongestCompletedSessionStreak(completedSessions));
+  const weeklySessions = getCurrentWeekSessions(completedSessions, referenceDate);
+  const weeklyConsistency = Math.min(1, weeklySessions.length / Math.max(profile.workoutPlan.length, 1));
+  const lastSessionDaysAgo = completedSessions.length
+    ? Math.max(
+        0,
+        Math.floor(
+          (new Date(referenceDate).setHours(0, 0, 0, 0) -
+            new Date(fromDayKey(toLocalDayKey(completedSessions[0].performedAt))).setHours(0, 0, 0, 0)) /
+            86400000,
+        ),
+      )
+    : Number.POSITIVE_INFINITY;
+
+  const momentumState: StreakAndMomentum["momentumState"] =
+    currentStreak >= 2 && weeklyConsistency >= 0.75
+      ? "building"
+      : currentStreak >= 1 && weeklyConsistency >= 0.5
+        ? "steady"
+        : lastSessionDaysAgo === 2
+          ? "cooling"
+          : "cold";
+
+  return {
+    currentStreak,
+    longestStreak,
+    weeklyConsistency,
+    momentumState,
+    lastSessionDaysAgo: Number.isFinite(lastSessionDaysAgo) ? lastSessionDaysAgo : 999,
+  };
+}
+
+export function getMomentumPillCopy(profileId: Profile["id"], streakAndMomentum: StreakAndMomentum, hasCompletedWorkout: boolean) {
+  if (!hasCompletedWorkout) {
+    return null;
+  }
+
+  const streakSuffix = streakAndMomentum.currentStreak >= 3 ? ` ${streakAndMomentum.currentStreak} days` : "";
+  const copyMap = {
+    joshua: {
+      building: `On a run. Keep pushing.${streakSuffix}`,
+      steady: "Consistent. Good.",
+      cooling: "Don't lose it.",
+      cold: "Time to get back.",
+    },
+    natasha: {
+      building: `In the flow. Keep it up.${streakSuffix}`,
+      steady: "Consistent. Nice.",
+      cooling: "Don't break the shape.",
+      cold: "Come back to it.",
+    },
+  } as const;
+
+  return copyMap[profileId][streakAndMomentum.momentumState];
 }
 
 function getRecentZoneExposure(sessions: WorkoutSession[], limit = 8) {
@@ -553,11 +703,13 @@ export function getProfileTrainingState(
   exerciseLibrary: ExerciseLibraryItem[],
   referenceDate = new Date(),
   stretchCompletions: StretchCompletion[] = [],
+  persistedLongestStreak = 0,
 ): ProfileTrainingState {
   const userSessions = sortSessionsDescending(allSessions.filter((session) => session.userId === profile.id));
   const trainingLoad = getWeeklyTrainingLoad(userSessions, profile.id, referenceDate);
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
+  const streakAndMomentum = getStreakAndMomentum(profile, userSessions, referenceDate, persistedLongestStreak);
   const trendData = getTrendData(userSessions);
   const weeklyStretchCount = getWeeklyStretchCount(stretchCompletions, profile.id, referenceDate);
   const metrics = getProfileTrainingMetrics(profile, userSessions, exerciseLibrary, trainingLoad, referenceDate);
@@ -576,6 +728,7 @@ export function getProfileTrainingState(
     totalWorkouts: userSessions.length,
     weeklyCount: trainingLoad.activeDays.size,
     streak,
+    streakAndMomentum,
     recentWorkouts: userSessions.slice(0, 3),
     recentSessions: userSessions.slice(0, 4),
     trendData,

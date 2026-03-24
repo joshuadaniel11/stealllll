@@ -62,6 +62,7 @@ type HomeScreenProps = {
     label: string;
   };
   recentTrainingUpdate: RecentTrainingUpdate | null;
+  momentumPillText: string | null;
   calendarRows: Array<{
     label: string;
     isCurrentWeek: boolean;
@@ -101,6 +102,7 @@ export function HomeScreen({
   recentWorkouts,
   weddingCountdown,
   recentTrainingUpdate,
+  momentumPillText,
   calendarRows,
   onOpenDailyVerse,
   onToggleStretch,
@@ -232,6 +234,14 @@ export function HomeScreen({
           ) : null}
         </Card>
       </ScrollReveal>
+
+      {momentumPillText ? (
+        <ScrollReveal delay={36}>
+          <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
+            {momentumPillText}
+          </p>
+        </ScrollReveal>
+      ) : null}
 
       <ScrollReveal delay={44}>
         <Card className="space-y-4 px-4 py-4">

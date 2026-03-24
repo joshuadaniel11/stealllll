@@ -30,7 +30,7 @@ import {
   setWorkoutOverride,
 } from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
-import { getProfileSessions, getProfileTrainingState } from "@/lib/profile-training-state";
+import { getProfileSessions, getProfileTrainingState, getStreakAndMomentum, getMomentumPillCopy } from "@/lib/profile-training-state";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
 import {
@@ -229,6 +229,19 @@ function toSuggestedFocusActiveWorkout(
 
 function normalizeCompletedWorkoutName(workoutName: string) {
   return workoutName.replace(/\s*\(Partial\)$/i, "");
+}
+
+function getUpdatedLongestStreaks(
+  currentState: AppState,
+  userId: UserId,
+  profile: Profile,
+  sessions: WorkoutSession[],
+) {
+  const nextLongest = getStreakAndMomentum(profile, sessions, new Date(), currentState.longestStreaks[userId]).longestStreak;
+  return {
+    ...currentState.longestStreaks,
+    [userId]: Math.max(currentState.longestStreaks[userId], nextLongest),
+  };
 }
 
 function getInstallCopy(
@@ -453,8 +466,9 @@ export function WorkoutTrackerApp() {
         state.exerciseLibrary,
         new Date(),
         state.stretchCompletions[selectedProfile.id],
+        state.longestStreaks[selectedProfile.id],
       ),
-    [selectedProfile, state.exerciseLibrary, state.sessions, state.stretchCompletions],
+    [selectedProfile, state.exerciseLibrary, state.longestStreaks, state.sessions, state.stretchCompletions],
   );
   const {
     nextFocusDestination,
@@ -537,6 +551,11 @@ export function WorkoutTrackerApp() {
   }, [selectedExerciseId, selectedProfile, state.exerciseLibrary]);
   const profileRecentTrainingUpdate =
     recentTrainingUpdate?.userId === selectedProfile.id ? recentTrainingUpdate : null;
+  const momentumPillText = getMomentumPillCopy(
+    selectedProfile.id,
+    trainingState.streakAndMomentum,
+    trainingState.userSessions.some((session) => !session.partial),
+  );
 
   const editingSession = useMemo(
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
@@ -711,11 +730,22 @@ export function WorkoutTrackerApp() {
     });
     const prSummary = getWorkoutPrSummary(completedSession, userSessions);
     setState((current) =>
-      appendSession(current, completedSession, {
-        clearActiveWorkoutForUser: selectedProfile.id,
-        nextWorkoutId: null,
-        updateSharedSummary: true,
-        sharedSummaryName: selectedProfile.name,
+      ({
+        ...appendSession(current, completedSession, {
+          clearActiveWorkoutForUser: selectedProfile.id,
+          nextWorkoutId: null,
+          updateSharedSummary: true,
+          sharedSummaryName: selectedProfile.name,
+        }),
+        longestStreaks: getUpdatedLongestStreaks(
+          current,
+          selectedProfile.id,
+          selectedProfile,
+          [
+            completedSession,
+            ...current.sessions.filter((session) => session.userId === selectedProfile.id),
+          ],
+        ),
       }),
     );
     setShowWorkoutFeelingPrompt(false);
@@ -1017,7 +1047,19 @@ export function WorkoutTrackerApp() {
       const existingSession = current.sessions.find((session) => session.id === updatedSession.id);
       const shouldAdvanceCycle =
         Boolean(options?.countAsDone) || Boolean(existingSession?.partial && updatedSession.partial === false);
-      return replaceSession(current, updatedSession, { advanceWorkoutCycle: shouldAdvanceCycle });
+      const replaced = replaceSession(current, updatedSession, { advanceWorkoutCycle: shouldAdvanceCycle });
+      if (!shouldAdvanceCycle || updatedSession.partial) {
+        return replaced;
+      }
+      return {
+        ...replaced,
+        longestStreaks: getUpdatedLongestStreaks(
+          current,
+          updatedSession.userId,
+          current.profiles.find((profile) => profile.id === updatedSession.userId) ?? selectedProfile,
+          replaced.sessions.filter((session) => session.userId === updatedSession.userId),
+        ),
+      };
     });
     setEditingSessionId(null);
     markTrainingStateUpdated(
@@ -1053,7 +1095,16 @@ export function WorkoutTrackerApp() {
         workoutName: normalizeCompletedWorkoutName(targetSession.workoutName),
       };
 
-      return replaceSession(current, updatedSession, { advanceWorkoutCycle: true });
+      const replaced = replaceSession(current, updatedSession, { advanceWorkoutCycle: true });
+      return {
+        ...replaced,
+        longestStreaks: getUpdatedLongestStreaks(
+          current,
+          updatedSession.userId,
+          current.profiles.find((profile) => profile.id === updatedSession.userId) ?? selectedProfile,
+          replaced.sessions.filter((session) => session.userId === updatedSession.userId),
+        ),
+      };
     });
 
     setSessionSummary(null);
@@ -1195,6 +1246,7 @@ export function WorkoutTrackerApp() {
                 weddingCountdown={weddingCountdown}
                 recentTrainingUpdate={profileRecentTrainingUpdate}
                 calendarRows={trainingState.calendarRows}
+                momentumPillText={momentumPillText}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}

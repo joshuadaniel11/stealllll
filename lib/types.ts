@@ -191,6 +191,7 @@ export type AppState = {
   selectedUserId: UserId;
   profiles: Profile[];
   sessions: WorkoutSession[];
+  longestStreaks: Record<UserId, number>;
   personalBests: Record<UserId, PersonalBest[]>;
   weeklySummaries: Record<UserId, WeeklySummary>;
   sharedSummary: SharedSummary;

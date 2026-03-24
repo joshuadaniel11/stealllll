@@ -626,6 +626,10 @@ export function createSeedState(): AppState {
     selectedUserId: "joshua",
     profiles,
     sessions,
+    longestStreaks: {
+      natasha: 0,
+      joshua: 0,
+    },
     personalBests: {
       natasha: [],
       joshua: [],
