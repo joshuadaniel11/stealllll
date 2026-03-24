@@ -36,8 +36,10 @@ import { createSeedState } from "@/lib/seed-data";
 import {
   deserializeState,
   loadLockedProfile,
+  loadRememberedProfile,
   loadState,
   saveLockedProfile,
+  saveRememberedProfile,
   saveState,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
@@ -332,6 +334,7 @@ export function WorkoutTrackerApp() {
   useEffect(() => {
     const localState = loadState();
     const deviceLockedProfile = loadLockedProfile();
+    const rememberedProfile = loadRememberedProfile();
     const profileFromQuery =
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("profile")
@@ -345,13 +348,19 @@ export function WorkoutTrackerApp() {
       setState((current) => ({
         ...current,
         ...mergedState,
-        selectedUserId: deviceLockedProfile ?? launchProfile ?? mergedState.selectedUserId,
+        selectedUserId:
+          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? mergedState.selectedUserId,
       }));
-      if (deviceLockedProfile || launchProfile) {
+      if (deviceLockedProfile || launchProfile || rememberedProfile) {
         setHasEnteredProfile(true);
       }
-    } else if (deviceLockedProfile || launchProfile) {
-      setState((current) => setSelectedUserId(current, deviceLockedProfile ?? launchProfile ?? current.selectedUserId));
+    } else if (deviceLockedProfile || launchProfile || rememberedProfile) {
+      setState((current) =>
+        setSelectedUserId(
+          current,
+          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? current.selectedUserId,
+        ),
+      );
       setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && launchProfile) {
@@ -932,6 +941,7 @@ export function WorkoutTrackerApp() {
   const enterProfile = (profileId: UserId) => {
     setProfileEntryTransition(profileId);
     softHaptic(8);
+    saveRememberedProfile(profileId);
     window.setTimeout(() => {
       setSelectedExerciseId(null);
       setSuggestedSessionPreview(false);
@@ -997,6 +1007,7 @@ export function WorkoutTrackerApp() {
 
     setLockedProfile(selectedProfile.id);
     saveLockedProfile(selectedProfile.id);
+    saveRememberedProfile(selectedProfile.id);
     setHasEnteredProfile(true);
     showToast(`This phone is now locked to ${selectedProfile.name}.`, { title: "Phone locked" });
   };
