@@ -38,6 +38,7 @@ export type ProfileTrainingState = {
   streak: number;
   streakAndMomentum: StreakAndMomentum;
   restDayState: RestDayState;
+  signatureLifts: SignatureLiftsState;
   recentWorkouts: WorkoutSession[];
   recentSessions: WorkoutSession[];
   trendData: TrendPoint[];
@@ -122,6 +123,21 @@ export type RestDayState = {
   recoveryScore: number;
   nextBestSession: string;
   nextBestSessionDaysOut: number;
+};
+
+export type SignatureLiftEntry = {
+  exerciseName: string;
+  consistencyScore: number;
+  volumeScore: number;
+  recencyScore: number;
+  compositeScore: number;
+  rank: 1 | 2 | 3;
+};
+
+export type SignatureLiftsState = {
+  ready: boolean;
+  signatures: SignatureLiftEntry[];
+  basedOnSessions: number;
 };
 
 function sortSessionsDescending(sessions: WorkoutSession[]) {
@@ -210,6 +226,11 @@ function average(values: number[]) {
   return values.length
     ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
     : 0;
+}
+
+function roundTo(value: number, decimals = 3) {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -690,6 +711,125 @@ export function getMomentumPillCopy(profileId: Profile["id"], streakAndMomentum:
   return copyMap[profileId][streakAndMomentum.momentumState];
 }
 
+export function getSignatureLifts(profile: Profile, exerciseHistory: WorkoutSession[]): SignatureLiftsState {
+  const completedSessions = sortSessionsDescending(exerciseHistory.filter((session) => !session.partial));
+  const basedOnSessions = completedSessions.length;
+
+  if (basedOnSessions < 8) {
+    return {
+      ready: false,
+      signatures: [],
+      basedOnSessions,
+    };
+  }
+
+  const recentWindow = completedSessions.slice(0, 12);
+  const recentWindowSize = Math.max(recentWindow.length, 1);
+  const maxRecencyWeight = recentWindow.reduce((sum, _session, index) => sum + (recentWindowSize - index), 0);
+  const candidateMap = completedSessions.reduce<
+    Record<
+      string,
+      {
+        sessionIds: Set<string>;
+        weightedVolumeTotal: number;
+        recentWeightedHits: number;
+      }
+    >
+  >((accumulator, session) => {
+    const recentIndex = recentWindow.findIndex((entry) => entry.id === session.id);
+    const recencyWeight = recentIndex === -1 ? 0 : recentWindowSize - recentIndex;
+
+    for (const exercise of session.exercises) {
+      const completedSets = exercise.sets.filter((set) => set.completed && (set.reps > 0 || set.weight > 0));
+      if (!completedSets.length) {
+        continue;
+      }
+
+      const exerciseKey = exercise.exerciseName;
+      if (!accumulator[exerciseKey]) {
+        accumulator[exerciseKey] = {
+          sessionIds: new Set<string>(),
+          weightedVolumeTotal: 0,
+          recentWeightedHits: 0,
+        };
+      }
+
+      accumulator[exerciseKey].sessionIds.add(session.id);
+      accumulator[exerciseKey].weightedVolumeTotal += completedSets.reduce(
+        (sum, set) => sum + set.weight * Math.max(set.reps, 1),
+        0,
+      );
+      if (recencyWeight > 0) {
+        accumulator[exerciseKey].recentWeightedHits += recencyWeight;
+      }
+    }
+
+    return accumulator;
+  }, {});
+
+  const candidates = Object.entries(candidateMap)
+    .map(([exerciseName, entry]) => ({
+      exerciseName,
+      appearances: entry.sessionIds.size,
+      averageWeightedVolume: entry.weightedVolumeTotal / Math.max(entry.sessionIds.size, 1),
+      recentWeightedHits: entry.recentWeightedHits,
+    }))
+    .filter((candidate) => candidate.appearances >= 4);
+
+  if (candidates.length < 3) {
+    return {
+      ready: false,
+      signatures: [],
+      basedOnSessions,
+    };
+  }
+
+  const maxAverageVolume = Math.max(...candidates.map((candidate) => candidate.averageWeightedVolume), 1);
+
+  const signatures = candidates
+    .map((candidate) => {
+      const consistencyScore = roundTo(candidate.appearances / basedOnSessions);
+      const volumeScore = roundTo(candidate.averageWeightedVolume / maxAverageVolume);
+      const recencyScore = roundTo(candidate.recentWeightedHits / Math.max(maxRecencyWeight, 1));
+      const compositeScore = roundTo(
+        consistencyScore * 0.4 +
+          volumeScore * 0.35 +
+          recencyScore * 0.25,
+      );
+
+      return {
+        exerciseName: candidate.exerciseName,
+        consistencyScore,
+        volumeScore,
+        recencyScore,
+        compositeScore,
+      };
+    })
+    .sort((a, b) => {
+      if (b.compositeScore !== a.compositeScore) {
+        return b.compositeScore - a.compositeScore;
+      }
+      if (b.consistencyScore !== a.consistencyScore) {
+        return b.consistencyScore - a.consistencyScore;
+      }
+      if (b.recencyScore !== a.recencyScore) {
+        return b.recencyScore - a.recencyScore;
+      }
+      return a.exerciseName.localeCompare(b.exerciseName);
+    })
+    .slice(0, 3)
+    .map((entry, index) => ({
+      ...entry,
+      rank: (index + 1) as 1 | 2 | 3,
+    }));
+
+  return {
+    ready: signatures.length === 3,
+    signatures,
+    basedOnSessions,
+  };
+}
+
 function getRecentZoneExposure(sessions: WorkoutSession[], limit = 8) {
   const recentSessions = sessions.slice(0, limit);
   const zoneExposure: Record<string, number> = {};
@@ -1087,6 +1227,7 @@ export function getProfileTrainingState(
   const weeklySummary = getWeeklySummary(profile, userSessions, referenceDate);
   const streak = getWorkoutStreak(userSessions, referenceDate);
   const streakAndMomentum = getStreakAndMomentum(profile, userSessions, referenceDate, persistedLongestStreak);
+  const signatureLifts = getSignatureLifts(profile, userSessions);
   const trendData = getTrendData(userSessions);
   const weeklyStretchCount = getWeeklyStretchCount(stretchCompletions, profile.id, referenceDate);
   const metrics = getProfileTrainingMetrics(profile, userSessions, exerciseLibrary, trainingLoad, referenceDate);
@@ -1131,6 +1272,7 @@ export function getProfileTrainingState(
     streak,
     streakAndMomentum,
     restDayState,
+    signatureLifts,
     recentWorkouts: userSessions.slice(0, 3),
     recentSessions: userSessions.slice(0, 4),
     trendData,

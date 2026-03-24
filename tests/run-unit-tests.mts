@@ -9,6 +9,7 @@ import {
   getMomentumPillCopy,
   getProfileTrainingState,
   getRivalryCardCopy,
+  getSignatureLifts,
   getStreakAndMomentum,
   getWeeklyRivalryState,
   syncWeeklyRivalryArchive,
@@ -144,6 +145,97 @@ function testMomentumPillHidesWithoutCompletedHistory() {
 
   assert.equal(momentum.momentumState, "cold");
   assert.equal(getMomentumPillCopy("natasha", momentum, false), null);
+}
+
+function testSignatureLiftsRequireEnoughHistoryAndRankTopThree() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const sparse = getSignatureLifts(
+    joshua,
+    Array.from({ length: 7 }, (_, index) => ({
+      id: `sig-sparse-${index}`,
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: `2026-03-${String(index + 1).padStart(2, "0")}T08:00:00+13:00`,
+      durationMinutes: 45,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [{ id: `sig-sparse-set-${index}`, weight: 30, reps: 8, completed: true }],
+        },
+      ],
+    })),
+  );
+
+  assert.equal(sparse.ready, false);
+
+  const richHistory = Array.from({ length: 8 }, (_, index) => ({
+    id: `sig-rich-${index}`,
+    userId: "joshua" as const,
+    workoutDayId: index % 2 === 0 ? "joshua-chest-triceps" : "joshua-back-biceps",
+    workoutName: index % 2 === 0 ? "Chest + Triceps A" : "Back + Biceps A",
+    performedAt: `2026-03-${String(index + 10).padStart(2, "0")}T08:00:00+13:00`,
+    durationMinutes: 50,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: "incline-dumbbell-press-day1",
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: `sig-ip-${index}-1`, weight: 34, reps: 8, completed: true },
+          { id: `sig-ip-${index}-2`, weight: 34, reps: 8, completed: true },
+        ],
+      },
+      {
+        exerciseId: "lat-pulldown-day1",
+        exerciseName: "Lat Pulldown",
+        muscleGroup: "Back" as const,
+        sets: [
+          { id: `sig-lp-${index}-1`, weight: 65, reps: 10, completed: true },
+          { id: `sig-lp-${index}-2`, weight: 65, reps: 10, completed: true },
+        ],
+      },
+      {
+        exerciseId: "cable-lateral-raise-day1",
+        exerciseName: "Cable Lateral Raise",
+        muscleGroup: "Shoulders" as const,
+        sets: [
+          { id: `sig-clr-${index}-1`, weight: 12, reps: 14, completed: true },
+          { id: `sig-clr-${index}-2`, weight: 12, reps: 14, completed: true },
+        ],
+      },
+      ...(index < 4
+        ? [
+            {
+              exerciseId: "rope-pushdown-day1",
+              exerciseName: "Rope Pushdown",
+              muscleGroup: "Triceps" as const,
+              sets: [{ id: `sig-rp-${index}-1`, weight: 25, reps: 12, completed: true }],
+            },
+          ]
+        : []),
+    ],
+  }));
+
+  const signatures = getSignatureLifts(joshua, richHistory);
+
+  assert.equal(signatures.ready, true);
+  assert.equal(signatures.signatures.length, 3);
+  assert.deepEqual(
+    signatures.signatures.map((entry) => entry.rank),
+    [1, 2, 3],
+  );
+  assert.ok(signatures.signatures.some((entry) => entry.exerciseName === "Incline Dumbbell Press"));
+  assert.ok(signatures.signatures.some((entry) => entry.exerciseName === "Lat Pulldown"));
+  assert.ok(signatures.signatures.some((entry) => entry.exerciseName === "Cable Lateral Raise"));
 }
 
 function testLiveSessionSignalPrefersPrCloseAndRotatesCopy() {
@@ -2132,6 +2224,7 @@ const tests = [
   ["merge imported state safely", testSafeStateMerge],
   ["build streak and momentum state centrally", testStreakAndMomentumSelector],
   ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
+  ["detect signature lifts from repeated real work", testSignatureLiftsRequireEnoughHistoryAndRankTopThree],
   ["fire live signals from mid-session reads", testLiveSessionSignalPrefersPrCloseAndRotatesCopy],
   ["only bank live signals after fatigue has context", testLiveSessionSignalBanksOnlyAfterFirstSessionOfWeek],
   ["suppress repeat live signals and log them cleanly", testLiveSessionSignalStaysQuietWhenAlreadyFiredAndBuildsLogEntry],

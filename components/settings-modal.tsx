@@ -2,10 +2,12 @@ import { ChevronRight, Download, RefreshCcw, Shield, Trash2, Upload, UserRound }
 
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
+import type { SignatureLiftsState } from "@/lib/profile-training-state";
 import type { Profile } from "@/lib/types";
 
 export function SettingsModal({
   profile,
+  signatureLifts,
   isProfileLocked,
   installState,
   onClose,
@@ -18,6 +20,7 @@ export function SettingsModal({
   onToggleProfileLock,
 }: {
   profile: Profile;
+  signatureLifts: SignatureLiftsState;
   isProfileLocked: boolean;
   installState: {
     isStandalone: boolean;
@@ -105,6 +108,24 @@ export function SettingsModal({
             </ScrollReveal>
 
             <ScrollReveal delay={110} y={18} scale={0.994}>
+              {signatureLifts.ready ? (
+                <div>
+                  <p className="caption-text px-2 pb-2 uppercase tracking-[0.18em] text-muted">Signature lifts</p>
+                  <div className="grouped-section px-4 py-4">
+                    <div className="space-y-2.5">
+                      {signatureLifts.signatures.map((signature) => (
+                        <p key={signature.exerciseName} className="text-[14px] font-medium text-text">
+                          {signature.exerciseName}
+                        </p>
+                      ))}
+                    </div>
+                    <p className="caption-text mt-4 text-muted">Based on {signatureLifts.basedOnSessions} sessions</p>
+                  </div>
+                </div>
+              ) : null}
+            </ScrollReveal>
+
+            <ScrollReveal delay={135} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Install</p>
                 <div className="grouped-section">
@@ -135,7 +156,7 @@ export function SettingsModal({
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={135} y={18} scale={0.994}>
+            <ScrollReveal delay={160} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Backups</p>
                 <div className="grouped-section">
@@ -173,7 +194,7 @@ export function SettingsModal({
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={185} y={18} scale={0.994}>
+            <ScrollReveal delay={210} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Resets</p>
                 <div className="grouped-section">

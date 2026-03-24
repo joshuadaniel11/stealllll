@@ -1381,6 +1381,7 @@ export function WorkoutTrackerApp() {
               previewWorkoutId={workoutPreviewId}
               suggestedFocusSession={suggestedFocusSession}
               suggestedSessionPreview={suggestedSessionPreview}
+              signatureLifts={trainingState.signatureLifts}
               activeWorkout={state.activeWorkout}
               activeWorkoutTemplate={activeWorkoutTemplate}
               liveSignal={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.liveSignal ?? null : null}
@@ -1427,6 +1428,7 @@ export function WorkoutTrackerApp() {
       {showSettings && (
         <SettingsModal
           profile={selectedProfile}
+          signatureLifts={trainingState.signatureLifts}
           isProfileLocked={lockedProfile === selectedProfile.id}
           installState={installState}
           onClose={() => setShowSettings(false)}

@@ -8,6 +8,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import { getExerciseSwapOptions, getSwapSectionLabel } from "@/lib/exercise-swaps";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
+import type { SignatureLiftsState } from "@/lib/profile-training-state";
 import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
 import { getExerciseTargetSummary } from "@/lib/training-load";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
@@ -138,6 +139,7 @@ export function WorkoutScreen({
   previewWorkoutId,
   suggestedFocusSession,
   suggestedSessionPreview,
+  signatureLifts,
   activeWorkout,
   activeWorkoutTemplate,
   liveSignal,
@@ -158,6 +160,7 @@ export function WorkoutScreen({
   previewWorkoutId?: string | null;
   suggestedFocusSession: SuggestedFocusSession | null;
   suggestedSessionPreview: boolean;
+  signatureLifts: SignatureLiftsState;
   activeWorkout: ActiveWorkout | null;
   activeWorkoutTemplate: WorkoutPlanDay | undefined;
   liveSignal: LiveSessionSignal | null;
@@ -621,6 +624,9 @@ export function WorkoutScreen({
                 const done = isExerciseComplete(exercise);
                 const selected = index === currentExerciseIndex;
                 const recommended = recommendedExercise?.index === index;
+                const isSignatureLift =
+                  signatureLifts.ready &&
+                  signatureLifts.signatures.some((signature) => signature.exerciseName === exercise.exerciseName);
 
                 return (
                   <button
@@ -638,9 +644,18 @@ export function WorkoutScreen({
                     }}
                   >
                     <div>
-                      <p className="text-sm font-medium">
-                        {index + 1}. {exercise.exerciseName}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {isSignatureLift ? (
+                          <span
+                            className={`inline-block h-1 w-1 rounded-full ${
+                              profile.id === "joshua" ? "bg-emerald-300/90" : "bg-sky-300/90"
+                            }`}
+                          />
+                        ) : null}
+                        <p className="text-sm font-medium">
+                          {index + 1}. {exercise.exerciseName}
+                        </p>
+                      </div>
                       <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
                         {done ? "Done" : getExerciseTargetText(exercise)}
                       </p>
