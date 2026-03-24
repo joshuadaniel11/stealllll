@@ -113,6 +113,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
+  const [showUtilityStack, setShowUtilityStack] = useState(false);
   const [showMoveChoices, setShowMoveChoices] = useState(false);
 
   const sessionPresentation = getSessionPresentation(profile, todaysWorkout);
@@ -135,7 +136,7 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const moreSummary = dailyMobilityPrompt ? "Note first. Mobility if you want it." : "Note first. Extras stay quiet.";
+  const moreSummary = dailyMobilityPrompt ? "Note first. Mobility if you want it." : "Note first. One quiet utility layer.";
   const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
   const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
   const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
@@ -298,7 +299,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, and shared detail.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, then deeper utility.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -328,74 +329,92 @@ export function HomeScreen({
                 </div>
               </div>
 
-              <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                    Recent
-                  </p>
-                  <span className="text-xs text-white/40">One look</span>
+              <button
+                type="button"
+                onClick={() => setShowUtilityStack((value) => !value)}
+                className="flex w-full items-center justify-between rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.04]"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Utility stack</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Recent, shared, strength, and verse.</p>
                 </div>
-                {recentWorkouts.length ? (
-                  <div className="space-y-2">
-                    {recentWorkouts.slice(0, 1).map((workout) => (
-                      <button
-                        key={workout.id}
-                        type="button"
-                        onClick={() =>
-                          onOpenRecentWorkout(workout.workoutDayId, workout.exercises[0]?.exerciseId)
-                        }
-                        className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-white/86">
-                            {workout.workoutName}
-                          </p>
-                          <p className="text-xs leading-5 text-white/48">
-                            {formatDate(workout.performedAt)} {"\u2022"}{" "}
-                            {workout.exercises.reduce(
-                              (total, exercise) =>
-                                total +
-                                exercise.sets.filter((set) => set.completed).length,
-                              0,
-                            )}{" "}
-                            sets
-                          </p>
-                        </div>
-                        <span className="text-xs text-white/38">Reopen</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm leading-6 text-white/52">
-                    No sessions yet. Your first workout will show here.
-                  </p>
-                )}
-                <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">
+                <ChevronDown
+                  className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
+                    showUtilityStack ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showUtilityStack ? (
+                <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Shared</p>
-                    <p className="text-[11px] text-white/42">
-                      {sharedSummary.teamStreak}w • {sharedSummary.combinedWorkouts} this week
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
+                      Recent
+                    </p>
+                    <span className="text-xs text-white/40">One look</span>
+                  </div>
+                  {recentWorkouts.length ? (
+                    <div className="space-y-2">
+                      {recentWorkouts.slice(0, 1).map((workout) => (
+                        <button
+                          key={workout.id}
+                          type="button"
+                          onClick={() =>
+                            onOpenRecentWorkout(workout.workoutDayId, workout.exercises[0]?.exerciseId)
+                          }
+                          className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-white/86">
+                              {workout.workoutName}
+                            </p>
+                            <p className="text-xs leading-5 text-white/48">
+                              {formatDate(workout.performedAt)} {"\u2022"}{" "}
+                              {workout.exercises.reduce(
+                                (total, exercise) =>
+                                  total +
+                                  exercise.sets.filter((set) => set.completed).length,
+                                0,
+                              )}{" "}
+                              sets
+                            </p>
+                          </div>
+                          <span className="text-xs text-white/38">Reopen</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-6 text-white/52">
+                      No sessions yet. Your first workout will show here.
+                    </p>
+                  )}
+                  <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Shared</p>
+                      <p className="text-[11px] text-white/42">
+                        {sharedSummary.teamStreak}w • {sharedSummary.combinedWorkouts} this week
+                      </p>
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-white/82">
+                      {sharedSummary.weeklyHighlight}
                     </p>
                   </div>
-                  <p className="mt-2 text-sm font-medium text-white/82">
-                    {sharedSummary.weeklyHighlight}
-                  </p>
-                </div>
-                <div className="space-y-2 pt-1">
-                  {sharedSummary.recentMilestones.slice(0, 2).map((milestone) => (
-                    <div
-                      key={milestone}
-                      className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-sm leading-6 text-white/64"
-                    >
-                      {milestone}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 gap-3 pt-1">
-                  <StrengthPredictionCard predictions={strengthPredictions} />
-                  <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
-                </div>
-              </Card>
+                  <div className="space-y-2 pt-1">
+                    {sharedSummary.recentMilestones.slice(0, 2).map((milestone) => (
+                      <div
+                        key={milestone}
+                        className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-sm leading-6 text-white/64"
+                      >
+                        {milestone}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 pt-1">
+                    <StrengthPredictionCard predictions={strengthPredictions} />
+                    <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
+                  </div>
+                </Card>
+              ) : null}
               </>
               ) : null}
             </div>

@@ -95,7 +95,7 @@ function FocusDirectionCard({
           onClick={onOpen}
           className="inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-medium text-white/72 transition active:scale-[0.98]"
         >
-          Open
+          Session
           <ChevronRight className="h-4 w-4 text-white/46" />
         </button>
       </div>
@@ -141,6 +141,7 @@ export function ProgressScreen({
   const [showAllGoalCards, setShowAllGoalCards] = useState(false);
   const [showSecondarySignals, setShowSecondarySignals] = useState(false);
   const [showDetailSections, setShowDetailSections] = useState(false);
+  const [showAllRecentSessions, setShowAllRecentSessions] = useState(false);
   const {
     calendarRows,
     nextFocusDestination,
@@ -153,7 +154,7 @@ export function ProgressScreen({
     weeklySummary,
   } = trainingState;
   const goalDashboard = trainingState.goalDashboard;
-  const visibleGoalCards = showAllGoalCards ? goalDashboard.cards : goalDashboard.cards.slice(0, 2);
+  const visibleGoalCards = showAllGoalCards ? goalDashboard.cards : goalDashboard.cards.slice(0, 1);
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -183,6 +184,7 @@ export function ProgressScreen({
   const showingBodyMetrics = bodyweightTrend.length > 0;
   const hasDetailContent = showingBodyMetrics || trendData.length > 0 || recentSessions.length > 0;
   const { insights } = trainingState;
+  const visibleRecentSessions = showAllRecentSessions ? recentSessions : recentSessions.slice(0, 2);
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
         const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(recentTrainingUpdate.timestamp).getTime()) / 60000));
@@ -364,12 +366,10 @@ export function ProgressScreen({
                 <div>
                   <p className="text-[13px] font-medium text-white/54">Archive</p>
                   <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
-                    {showingBodyMetrics ? "Body metrics and saved sessions" : "Trend and saved sessions"}
+                    {showingBodyMetrics ? "Body metrics and sessions" : "Trend and sessions"}
                   </h3>
                   <p className="mt-2 text-[14px] leading-6 text-white/58">
-                    {showingBodyMetrics
-                      ? "Trend, check-ins, and saved workouts when you want them."
-                      : "Trend and saved workouts when you want them."}
+                    Open the deeper history only when you want it.
                   </p>
                 </div>
                 <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
@@ -458,7 +458,7 @@ export function ProgressScreen({
                     }
                   />
                   <div className="mt-4 space-y-3">
-                    {recentSessions.map((session) => (
+                    {visibleRecentSessions.map((session) => (
                       <div key={session.id} className="progress-session-row rounded-[24px] border px-4 py-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -489,6 +489,15 @@ export function ProgressScreen({
                         </div>
                       </div>
                     ))}
+                    {recentSessions.length > 2 ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllRecentSessions((value) => !value)}
+                        className="text-sm font-medium text-white/56 transition hover:text-white/82"
+                      >
+                        {showAllRecentSessions ? "Show less" : "Show more"}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

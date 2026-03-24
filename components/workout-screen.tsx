@@ -499,6 +499,14 @@ export function WorkoutScreen({
     ? activeWorkout.exercises
     : activeWorkout.exercises.filter((exercise) => !isExerciseComplete(exercise));
   const remainingExerciseCount = activeWorkout.exercises.filter((exercise) => !isExerciseComplete(exercise)).length;
+  const quickFillLabel =
+    suggestedStart && currentSetIndex === 0
+      ? "Use start"
+      : previousSet && currentSetIndex > 0
+        ? "Repeat last"
+        : targetRepSuggestion
+          ? "Target reps"
+          : null;
 
   const applyQuickFill = (field: "weight" | "reps", value: number) => {
     onUpdateSet(currentExerciseIndex, currentSetIndex, field, value);
@@ -548,7 +556,7 @@ export function WorkoutScreen({
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
             </h1>
-            <p className="mt-2 text-sm text-muted">Pick the next move and keep going.</p>
+            <p className="mt-2 text-sm text-muted">Choose the next move.</p>
             {compressionInsight ? (
               <div className="surface-quiet animate-soft-shift mt-4 rounded-[22px] px-4 py-4">
                 <p className="text-sm font-medium text-text">Coach read</p>
@@ -561,7 +569,7 @@ export function WorkoutScreen({
 
             {recommendedExercise ? (
               <div className="surface-quiet animate-soft-shift mt-4 rounded-[22px] px-4 py-4">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Up next</p>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Best next</p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-white/88">{activeWorkout.exercises[recommendedExercise.index]?.exerciseName}</p>
@@ -684,7 +692,7 @@ export function WorkoutScreen({
     <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
       <Card className="tab-fade-enter bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
-        <p className="text-sm text-muted">Workout mode</p>
+        <p className="text-sm text-muted">Live</p>
         <h1 className="mt-1.5 text-[1.95rem] font-semibold leading-[0.98] tracking-[-0.07em] text-text">{currentExercise.exerciseName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-black">
@@ -889,7 +897,10 @@ export function WorkoutScreen({
         ) : null}
 
         <div className="mt-2.5">
-          <p className="text-sm text-muted">Logged sets</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted">Logged sets</p>
+            {quickFillLabel ? <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">{quickFillLabel}</p> : null}
+          </div>
           <div className="hide-scrollbar mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
             {currentExercise.sets.map((set, index) => (
               <div
@@ -923,7 +934,7 @@ export function WorkoutScreen({
           disabled={!canCompleteSet}
           onClick={handleCompleteSet}
         >
-          Log set
+          Save set
         </button>
       </Card>
       </ScrollReveal>
@@ -944,7 +955,7 @@ export function WorkoutScreen({
           onClick={() => setShowExercisePicker(true)}
         >
           <div className="flex items-center justify-center gap-2">
-            List
+            Flow
             <ChevronRight className="h-4 w-4" />
           </div>
           <p className="caption-text mt-1 text-muted">
