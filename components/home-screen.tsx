@@ -120,7 +120,7 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const moreSummary = dailyMobilityPrompt ? "Note, mobility, and quieter extras." : "Note and quieter extras.";
+  const moreSummary = dailyMobilityPrompt ? "Note, mobility, and extras when you want them." : "Note and extras when you want them.";
 
   return (
     <div className="space-y-4 pb-28">
@@ -249,7 +249,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, recent, and shared.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, recent, and shared.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -318,7 +318,7 @@ export function HomeScreen({
                   </div>
                 ) : (
                   <p className="text-sm leading-6 text-white/52">
-                    No sessions logged yet. Your recent workouts will appear here.
+                    No sessions yet. This fills in once you log the first workout.
                   </p>
                 )}
                 <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">

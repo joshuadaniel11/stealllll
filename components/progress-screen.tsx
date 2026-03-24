@@ -153,7 +153,7 @@ export function ProgressScreen({
     weeklySummary,
   } = trainingState;
   const goalDashboard = trainingState.goalDashboard;
-  const visibleGoalCards = showAllGoalCards ? goalDashboard.cards : goalDashboard.cards.slice(0, 3);
+  const visibleGoalCards = showAllGoalCards ? goalDashboard.cards : goalDashboard.cards.slice(0, 2);
   const bodyweightTrend = [...measurements]
     .sort((a, b) => +new Date(a.date) - +new Date(b.date))
     .map((entry) => ({
@@ -170,6 +170,7 @@ export function ProgressScreen({
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
+  const hasDetailContent = showingBodyMetrics || trendData.length > 0 || recentSessions.length > 0;
   const { insights } = trainingState;
   const recentUpdateLabel = recentTrainingUpdate
     ? (() => {
@@ -254,7 +255,7 @@ export function ProgressScreen({
               <DashboardMetricCard key={card.label} card={card} />
             ))}
           </div>
-          {goalDashboard.cards.length > 3 ? (
+          {goalDashboard.cards.length > 2 ? (
             <button
               type="button"
               onClick={() => setShowAllGoalCards((value) => !value)}
@@ -344,28 +345,30 @@ export function ProgressScreen({
 
       <ScrollReveal delay={122}>
         <Card className="progress-panel">
-          <button
-            type="button"
-            onClick={() => setShowDetailSections((value) => !value)}
-            className="flex w-full items-start justify-between gap-3 text-left"
-          >
-            <div>
-              <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
-              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
-                {showingBodyMetrics ? "Body metrics and saved sessions" : "Trend and saved sessions"}
-              </h3>
-              <p className="mt-2 text-[14px] leading-6 text-white/58">
-                {showingBodyMetrics
-                  ? "Trend, check-ins, and saved workouts when you want the extra detail."
-                  : "Volume trend and saved workouts when you want the extra detail."}
-              </p>
-            </div>
-            <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-              {showDetailSections ? "Hide" : "Open"}
-            </div>
-          </button>
+          {hasDetailContent ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDetailSections((value) => !value)}
+                className="flex w-full items-start justify-between gap-3 text-left"
+              >
+                <div>
+                  <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
+                  <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
+                    {showingBodyMetrics ? "Body metrics and saved sessions" : "Trend and saved sessions"}
+                  </h3>
+                  <p className="mt-2 text-[14px] leading-6 text-white/58">
+                    {showingBodyMetrics
+                      ? "Trend, check-ins, and saved workouts when you want the extra detail."
+                      : "Volume trend and saved workouts when you want the extra detail."}
+                  </p>
+                </div>
+                <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
+                  {showDetailSections ? "Hide" : "Open"}
+                </div>
+              </button>
 
-          {showDetailSections ? (
+              {showDetailSections ? (
             <div className="mt-5 space-y-5">
               <div>
                 <SectionHeader
@@ -481,7 +484,19 @@ export function ProgressScreen({
                 </div>
               ) : null}
             </div>
-          ) : null}
+              ) : null}
+            </>
+          ) : (
+            <div>
+              <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
+              <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
+                More detail unlocks after a few sessions
+              </h3>
+              <p className="mt-2 text-[14px] leading-6 text-white/58">
+                Once trend, check-ins, or saved sessions build up, the deeper detail layer will live here.
+              </p>
+            </div>
+          )}
         </Card>
       </ScrollReveal>
     </>

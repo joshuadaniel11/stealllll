@@ -119,7 +119,11 @@ export function SessionSummaryModal({
             </ScrollReveal>
           ) : null}
           <ScrollReveal delay={120} y={14} scale={0.996}>
-            <div className={`mt-6 grid gap-3 ${summary.partial ? "grid-cols-2" : "grid-cols-1"}`}>
+            <div
+              className={`mt-6 grid gap-3 ${
+                summary.partial || (!summary.partial && onViewProgress) ? "grid-cols-2" : "grid-cols-1"
+              }`}
+            >
               {summary.partial ? (
                 <button
                   className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
@@ -130,14 +134,14 @@ export function SessionSummaryModal({
               ) : null}
               {!summary.partial && onViewProgress ? (
                 <button
-                  className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                  className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
                   onClick={onViewProgress}
                 >
                   View progress
                 </button>
               ) : null}
               <button
-                className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
+                className={`${!summary.partial && onViewProgress ? "sheet-action-secondary" : "sheet-action-primary"} rounded-[28px] px-4 py-4 text-sm font-semibold`}
                 onClick={onClose}
               >
                 {summary.partial ? "Done" : "Close"}

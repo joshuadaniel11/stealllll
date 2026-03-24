@@ -478,27 +478,32 @@ function buildTrainingInsights(
   const recoveryLow = metrics.recoveryIndex.score < 55;
   const recoverySoft = metrics.recoveryIndex.score < 68;
   const consistencyStrong = metrics.consistencyScore.score >= 75;
+  const noTrainingYet = weeklySummary.workoutsCompleted === 0;
   const undercovered = (primaryFocusMetric?.coveragePct ?? 0) < 100;
   const phase1Primary = metrics.phase1Insights.primaryInsight;
   const phase2Recovery = metrics.phase2Insights.recoveryInsight ?? metrics.phase2Insights.fatigueInsight;
   const phase3RepRange = metrics.phase3Insights.repRangeInsight;
 
-  const homeAction = recoveryLow
-    ? phase2Recovery ?? `Recovery is slightly low. Keep ${focusDirection.toLowerCase()} clean.`
-    : phase1Primary && undercovered
-      ? phase1Primary
-      : phase3RepRange && undercovered
-        ? phase3RepRange
-      : `Give ${primaryFocusLabel.toLowerCase()} more this week.`;
+  const homeAction = noTrainingYet
+    ? `Start with ${focusDirection.toLowerCase()}.`
+    : recoveryLow
+      ? phase2Recovery ?? `Recovery is slightly low. Keep ${focusDirection.toLowerCase()} clean.`
+      : phase1Primary && undercovered
+        ? phase1Primary
+        : phase3RepRange && undercovered
+          ? phase3RepRange
+        : `Give ${primaryFocusLabel.toLowerCase()} more this week.`;
 
-  const completionNext = recoverySoft
-    ? phase2Recovery ?? `Recovery is slightly low. Shift to ${focusDirection.toLowerCase()} next.`
-    : strongestCovered && undercovered
-      ? `${strongestCovered} are covered. Shift to ${focusDirection.toLowerCase()} next.`
-      : `Keep the week moving toward ${focusDirection.toLowerCase()}.`;
+  const completionNext = noTrainingYet
+    ? `Open progress after the first session and let the week take shape.`
+    : recoverySoft
+      ? phase2Recovery ?? `Recovery is slightly low. Shift to ${focusDirection.toLowerCase()} next.`
+      : strongestCovered && undercovered
+        ? `${strongestCovered} are covered. Shift to ${focusDirection.toLowerCase()} next.`
+        : `Keep the week moving toward ${focusDirection.toLowerCase()}.`;
 
   const weeklyStatusTitle =
-    weeklySummary.workoutsCompleted === 0
+    noTrainingYet
       ? "No training logged yet this week"
       : recoveryLow
         ? "Recovery is slightly low"
@@ -509,7 +514,7 @@ function buildTrainingInsights(
             : "Upper-body work is moving well";
 
   const weeklyStatusDetail =
-    weeklySummary.workoutsCompleted === 0
+    noTrainingYet
       ? `Start with ${focusDirection.toLowerCase()}.`
       : recoveryLow
         ? `Keep ${focusDirection.toLowerCase()} clean and skip junk volume.`

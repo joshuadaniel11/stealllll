@@ -108,6 +108,19 @@ function getLoadCue(repRange?: string) {
   return "Light load";
 }
 
+function getTargetRepSuggestion(repRange?: string) {
+  if (!repRange) {
+    return null;
+  }
+
+  const match = repRange.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (!match) {
+    return Number.parseInt(repRange, 10) || null;
+  }
+
+  return Number.parseInt(match[1], 10);
+}
+
 export function WorkoutScreen({
   profile,
   todaysWorkoutId,
@@ -156,6 +169,7 @@ export function WorkoutScreen({
   const [localPreviewWorkoutId, setLocalPreviewWorkoutId] = useState<string | null>(null);
   const [showPreviewExercises, setShowPreviewExercises] = useState(false);
   const [showSwapOptions, setShowSwapOptions] = useState(false);
+  const [showCompletedExercises, setShowCompletedExercises] = useState(false);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const focusExercise = activeWorkout?.exercises[currentExerciseIndex];
@@ -174,6 +188,7 @@ export function WorkoutScreen({
     setCurrentExerciseIndex(getFirstPendingExerciseIndex(activeWorkout.exercises));
     setShowExercisePicker(true);
     setShowSwapOptions(false);
+    setShowCompletedExercises(false);
   }, [activeWorkout?.id, activeWorkout?.userId, profile.id]);
 
   useEffect(() => {
@@ -217,6 +232,7 @@ export function WorkoutScreen({
       suggestedFocusSession &&
       previewWorkout &&
       previewWorkout.id === (suggestedFocusSession.sourceWorkoutId ?? previewWorkout.id);
+    const previewPresentation = previewWorkout ? getSessionPresentation(profile, previewWorkout) : null;
 
     return (
       <>
@@ -348,7 +364,7 @@ export function WorkoutScreen({
                   {previewWorkout.exercises.length} exercises - ~{previewWorkout.durationMinutes} min
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted">
-                  {getPreviewTease(profile.id, previewWorkout.id)}
+                  {previewPresentation ? getSessionSupportLine(previewWorkout) : getPreviewTease(profile.id, previewWorkout.id)}
                 </p>
 
                 {previewPartialSession ? (
@@ -378,10 +394,9 @@ export function WorkoutScreen({
                         Guided
                       </span>
                     </div>
-                    <div className="mt-3 flex items-center justify-between gap-3 text-sm text-muted">
-                        <p>{suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min</p>
-                        <p>{suggestedFocusSession.targetLabels.slice(0, 2).join(" + ")}</p>
-                      </div>
+                    <p className="mt-3 text-sm text-muted">
+                      {suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min
+                    </p>
                     </div>
                 ) : null}
 
@@ -390,7 +405,7 @@ export function WorkoutScreen({
                     <div>
                       <p className="text-sm font-medium text-text">Session plan</p>
                         <p className="mt-1 text-sm leading-6 text-muted">
-                          Starts with {previewWorkout.exercises[0]?.name}.
+                          Starts with {previewWorkout.exercises[0]?.name}. Then {previewWorkout.exercises[1]?.name ?? "finish strong"}.
                         </p>
                     </div>
                     <button
@@ -466,6 +481,11 @@ export function WorkoutScreen({
   const compressionInsight = getAdaptiveCompressionInsight(activeWorkoutTemplate, userSessions);
   const recommendedExercise = getRecommendedExercise(activeWorkout, activeWorkoutTemplate);
   const canShowQuickFill = Boolean(currentSet && !currentSet.completed);
+  const targetRepSuggestion = getTargetRepSuggestion(currentTemplate?.repRange);
+  const exercisePickerRows = showCompletedExercises
+    ? activeWorkout.exercises
+    : activeWorkout.exercises.filter((exercise) => !isExerciseComplete(exercise));
+  const remainingExerciseCount = activeWorkout.exercises.filter((exercise) => !isExerciseComplete(exercise)).length;
 
   const applyQuickFill = (field: "weight" | "reps", value: number) => {
     onUpdateSet(currentExerciseIndex, currentSetIndex, field, value);
@@ -475,8 +495,7 @@ export function WorkoutScreen({
     if (!previousSet) {
       return;
     }
-    applyQuickFill("weight", previousSet.weight);
-    applyQuickFill("reps", previousSet.reps);
+    onCopyPreviousSet(currentExerciseIndex, currentSetIndex);
     repsInputRef.current?.focus();
   };
 
@@ -516,7 +535,7 @@ export function WorkoutScreen({
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
             </h1>
-            <p className="mt-2 text-sm text-muted">Pick the next exercise and keep moving.</p>
+            <p className="mt-2 text-sm text-muted">Pick the best next move and keep the session moving.</p>
             {compressionInsight ? (
               <div className="mt-4 rounded-[22px] bg-[var(--card-strong)] px-4 py-4">
                 <p className="text-sm font-medium text-text">Short version</p>
@@ -527,8 +546,32 @@ export function WorkoutScreen({
               </div>
             ) : null}
 
+            {recommendedExercise ? (
+              <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.045] px-4 py-4">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Best next</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-white/88">{activeWorkout.exercises[recommendedExercise.index]?.exerciseName}</p>
+                    <p className="mt-1 text-[12px] text-white/50">
+                      {remainingExerciseCount} exercise{remainingExerciseCount === 1 ? "" : "s"} left
+                    </p>
+                  </div>
+                  <button
+                    className="rounded-[18px] bg-white px-3 py-2 text-sm font-semibold text-black"
+                    onClick={() => {
+                      setCurrentExerciseIndex(recommendedExercise.index);
+                      setShowExercisePicker(false);
+                    }}
+                  >
+                    Go here
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-4 grid grid-cols-1 gap-2">
-              {activeWorkout.exercises.map((exercise, index) => {
+              {exercisePickerRows.map((exercise) => {
+                const index = activeWorkout.exercises.findIndex((candidate) => candidate.exerciseId === exercise.exerciseId && candidate.exerciseName === exercise.exerciseName);
                 const done = isExerciseComplete(exercise);
                 const selected = index === currentExerciseIndex;
                 const recommended = recommendedExercise?.index === index;
@@ -574,6 +617,16 @@ export function WorkoutScreen({
                 );
               })}
             </div>
+
+            {activeWorkout.exercises.some(isExerciseComplete) ? (
+              <button
+                type="button"
+                className="mt-3 text-sm font-medium text-white/56 transition hover:text-white/82"
+                onClick={() => setShowCompletedExercises((value) => !value)}
+              >
+                {showCompletedExercises ? "Hide completed" : "Show completed"}
+              </button>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button
@@ -688,6 +741,11 @@ export function WorkoutScreen({
             </p>
           </div>
         ) : null}
+        {previousSet && !currentSet?.completed ? (
+          <div className="mt-2 rounded-[18px] bg-white/[0.03] px-3 py-2 text-[12px] text-white/56">
+            Last set: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
+          </div>
+        ) : null}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
@@ -740,6 +798,9 @@ export function WorkoutScreen({
                   className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
                   onClick={() => {
                     applyQuickFill("weight", suggestedStart.suggestedWeight);
+                    if (targetRepSuggestion) {
+                      applyQuickFill("reps", targetRepSuggestion);
+                    }
                     weightInputRef.current?.focus();
                   }}
                 >
@@ -771,6 +832,15 @@ export function WorkoutScreen({
                   >
                     +1 rep
                   </button>
+                  {targetRepSuggestion ? (
+                    <button
+                      type="button"
+                      className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                      onClick={() => applyQuickFill("reps", targetRepSuggestion)}
+                    >
+                      Target reps
+                    </button>
+                  ) : null}
                 </>
               ) : null}
             </div>
