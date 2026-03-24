@@ -581,7 +581,7 @@ export function getProfileTrainingState(
     trendData,
     weeklySummary,
     trainingLoad: derivedTrainingLoad,
-    calendarRows: getWeeklyCalendarRows(userSessions, 6, referenceDate),
+    calendarRows: getWeeklyCalendarRows(allSessions, 6, referenceDate),
     nextFocusDestination: getSuggestedWorkoutDestination(
       profile.id,
       profile.workoutPlan,

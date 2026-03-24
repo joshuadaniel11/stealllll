@@ -236,6 +236,8 @@ type CalendarCell = {
   dayNumber: number;
   completed: boolean;
   isToday: boolean;
+  joshuaCompleted: boolean;
+  natashaCompleted: boolean;
 };
 
 type CalendarRow = {
@@ -1231,7 +1233,20 @@ export function getWeeklyCalendarRows(
   referenceDate = new Date(),
 ): CalendarRow[] {
   const currentWeek = getCurrentWeekWindow(referenceDate);
-  const workoutDays = new Set(sessions.map((session) => toLocalDayKey(session.performedAt)));
+  const workoutDays = sessions.reduce<
+    Record<string, { joshuaCompleted: boolean; natashaCompleted: boolean }>
+  >((accumulator, session) => {
+    const key = toLocalDayKey(session.performedAt);
+    const current = accumulator[key] ?? { joshuaCompleted: false, natashaCompleted: false };
+    if (session.userId === "joshua") {
+      current.joshuaCompleted = true;
+    }
+    if (session.userId === "natasha") {
+      current.natashaCompleted = true;
+    }
+    accumulator[key] = current;
+    return accumulator;
+  }, {});
   const todayKey = toLocalDayKey(referenceDate);
 
   return Array.from({ length: weeksToShow }, (_, index) => {
@@ -1246,13 +1261,16 @@ export function getWeeklyCalendarRows(
         const date = new Date(weekStart);
         date.setDate(date.getDate() + dayIndex);
         const key = toLocalDayKey(date);
+        const dayCompletion = workoutDays[key] ?? { joshuaCompleted: false, natashaCompleted: false };
 
         return {
           key,
           dayLabel: DAY_LABELS[dayIndex],
           dayNumber: date.getDate(),
-          completed: workoutDays.has(key),
+          completed: dayCompletion.joshuaCompleted || dayCompletion.natashaCompleted,
           isToday: key === todayKey,
+          joshuaCompleted: dayCompletion.joshuaCompleted,
+          natashaCompleted: dayCompletion.natashaCompleted,
         };
       }),
     };

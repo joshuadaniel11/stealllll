@@ -4,6 +4,8 @@ type CalendarCell = {
   dayNumber: number;
   completed: boolean;
   isToday: boolean;
+  joshuaCompleted: boolean;
+  natashaCompleted: boolean;
 };
 
 type CalendarRow = {
@@ -19,8 +21,31 @@ export function WeeklyTrainingCalendar({
 }) {
   const header = rows[0]?.days ?? [];
 
+  const getDayToneClass = (day: CalendarCell) => {
+    if (day.joshuaCompleted && day.natashaCompleted) {
+      return "calendar-day-cell-both text-white";
+    }
+    if (day.joshuaCompleted) {
+      return "calendar-day-cell-joshua text-white";
+    }
+    if (day.natashaCompleted) {
+      return "calendar-day-cell-natasha text-white";
+    }
+    return "calendar-day-cell-idle text-white/34";
+  };
+
   return (
     <div className="calendar-shell rounded-[28px] p-4 sm:p-4.5">
+      <div className="mb-3 flex items-center justify-end gap-3 text-[10px] uppercase tracking-[0.16em] text-white/38">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
+          <span>Joshua</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-sky-400/90" />
+          <span>Natasha</span>
+        </div>
+      </div>
       <div className="grid grid-cols-[28px_repeat(7,minmax(0,1fr))] gap-2.5 text-center text-[10px] uppercase tracking-[0.18em] text-white/34">
         <div />
         {header.map((day) => (
@@ -45,7 +70,7 @@ export function WeeklyTrainingCalendar({
               <div
                 key={day.key}
                 className={`calendar-day-cell relative flex aspect-square min-h-[38px] items-center justify-center overflow-hidden rounded-[14px] text-[11px] font-semibold transition ${
-                  day.completed ? "calendar-day-cell-complete text-white" : "calendar-day-cell-idle text-white/34"
+                  getDayToneClass(day)
                 } ${day.isToday ? "calendar-day-cell-today" : ""}`}
               >
                 {day.completed && (
