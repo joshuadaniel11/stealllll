@@ -1194,6 +1194,7 @@ export function WorkoutTrackerApp() {
                 recentWorkouts={recentWorkouts}
                 weddingCountdown={weddingCountdown}
                 recentTrainingUpdate={profileRecentTrainingUpdate}
+                calendarRows={trainingState.calendarRows}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}

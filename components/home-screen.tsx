@@ -8,6 +8,7 @@ import { DailyMobilityPromptCard } from "@/components/daily-mobility-prompt-card
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
+import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
 import { getSessionPresentation } from "@/lib/session-presentation";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
@@ -61,6 +62,19 @@ type HomeScreenProps = {
     label: string;
   };
   recentTrainingUpdate: RecentTrainingUpdate | null;
+  calendarRows: Array<{
+    label: string;
+    isCurrentWeek: boolean;
+    days: Array<{
+      key: string;
+      dayLabel: string;
+      dayNumber: number;
+      completed: boolean;
+      isToday: boolean;
+      joshuaCompleted: boolean;
+      natashaCompleted: boolean;
+    }>;
+  }>;
   onOpenDailyVerse: () => void;
   onToggleStretch: () => void;
   onStartWorkout: (workoutId?: string) => void;
@@ -87,6 +101,7 @@ export function HomeScreen({
   recentWorkouts,
   weddingCountdown,
   recentTrainingUpdate,
+  calendarRows,
   onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
@@ -121,6 +136,9 @@ export function HomeScreen({
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
   const moreSummary = dailyMobilityPrompt ? "Note, mobility, then extras." : "Note, then extras.";
+  const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
+  const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
+  const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
 
   return (
     <div className="space-y-4 pb-28">
@@ -203,6 +221,29 @@ export function HomeScreen({
               </button>
             </div>
           ) : null}
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={44}>
+        <Card className="space-y-4 px-4 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
+              <h3 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.05em] text-white/92">Head to head</h3>
+              <p className="mt-1 text-sm leading-6 text-white/56">Green is Joshua. Blue is Natasha.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-right">
+              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-emerald-300/80">Joshua</p>
+                <p className="mt-1 text-base font-semibold text-white">{joshuaWeekCount}</p>
+              </div>
+              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-sky-300/80">Natasha</p>
+                <p className="mt-1 text-base font-semibold text-white">{natashaWeekCount}</p>
+              </div>
+            </div>
+          </div>
+          <WeeklyTrainingCalendar rows={calendarRows} />
         </Card>
       </ScrollReveal>
 
