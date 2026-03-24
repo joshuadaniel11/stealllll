@@ -530,14 +530,14 @@ export function WorkoutScreen({
     return (
       <>
         <ScrollReveal delay={0} y={12} scale={0.996}>
-          <Card className="bg-[rgba(4,5,7,0.96)] px-4 py-4 shadow-[var(--shadow-card)]">
+          <Card className="tab-fade-enter bg-[rgba(4,5,7,0.96)] px-4 py-4 shadow-[var(--shadow-card)]">
             <p className="text-sm text-muted">Workout mode</p>
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
             </h1>
             <p className="mt-2 text-sm text-muted">Pick the next move and keep going.</p>
             {compressionInsight ? (
-              <div className="mt-4 rounded-[22px] bg-[var(--card-strong)] px-4 py-4">
+              <div className="surface-quiet animate-soft-shift mt-4 rounded-[22px] px-4 py-4">
                 <p className="text-sm font-medium text-text">Coach read</p>
                 <p className="mt-1 text-sm text-muted">{compressionInsight.note}</p>
                 <p className="mt-2 text-sm text-text">
@@ -547,7 +547,7 @@ export function WorkoutScreen({
             ) : null}
 
             {recommendedExercise ? (
-              <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.045] px-4 py-4">
+              <div className="surface-quiet animate-soft-shift mt-4 rounded-[22px] px-4 py-4">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Up next</p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <div>
@@ -557,7 +557,7 @@ export function WorkoutScreen({
                     </p>
                   </div>
                   <button
-                    className="rounded-[18px] bg-white px-3 py-2 text-sm font-semibold text-black"
+                    className="quiet-chip-strong rounded-[18px] px-3 py-2 text-sm font-semibold"
                     onClick={() => {
                       setCurrentExerciseIndex(recommendedExercise.index);
                       setShowExercisePicker(false);
@@ -670,7 +670,7 @@ export function WorkoutScreen({
   return (
     <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
-      <Card className="bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
+      <Card className="tab-fade-enter bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
         <p className="text-sm text-muted">Workout mode</p>
         <h1 className="mt-1.5 text-[1.95rem] font-semibold leading-[0.98] tracking-[-0.07em] text-text">{currentExercise.exerciseName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -692,7 +692,7 @@ export function WorkoutScreen({
           <p className="caption-text mt-2 text-muted">Final exercise.</p>
         )}
 
-        <div className="mt-3 rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+        <div className="surface-quiet mt-3 rounded-[24px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div>
                 <p className="text-sm text-muted">Flow</p>
@@ -718,13 +718,13 @@ export function WorkoutScreen({
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-2.5">
+          <div className="field-shell rounded-[24px] px-4 py-2.5">
             <p className="text-sm text-muted">Set</p>
             <p className="mt-1 text-[1.8rem] font-semibold text-text">
               {Math.min(currentSetIndex + 1, currentExercise.sets.length)} of {currentExercise.sets.length}
             </p>
           </div>
-          <div className="rounded-[24px] bg-[var(--card-strong)] px-4 py-2.5">
+          <div className="field-shell rounded-[24px] px-4 py-2.5">
             <p className="text-sm text-muted">Target</p>
             <p className="mt-1 text-[1.8rem] font-semibold text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
             <p className="mt-1 text-sm text-muted">{loadCue}</p>
@@ -734,7 +734,7 @@ export function WorkoutScreen({
           {currentExerciseComplete ? "Exercise complete." : currentExercise.muscleGroup}
         </p>
         {suggestedStart ? (
-          <div className="mt-2 rounded-[20px] border border-white/6 bg-white/[0.025] px-3 py-2.5">
+          <div className="surface-quiet mt-2 rounded-[20px] px-3 py-2.5">
             <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Start here</p>
             <p className="mt-1 text-sm text-white/76">
               {suggestedStart.suggestedWeight}kg from {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
@@ -742,13 +742,13 @@ export function WorkoutScreen({
           </div>
         ) : null}
         {previousSet && !currentSet?.completed ? (
-          <div className="mt-2 rounded-[18px] bg-white/[0.03] px-3 py-2 text-[12px] text-white/56">
+          <div className="surface-quiet mt-2 rounded-[18px] px-3 py-2 text-[12px] text-white/56">
             Last: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
           </div>
         ) : null}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <label className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+            <label className="field-shell rounded-[24px] px-4 py-3">
             <span className="text-sm text-muted">Weight</span>
             <input
               ref={weightInputRef}
@@ -768,7 +768,7 @@ export function WorkoutScreen({
               }}
             />
           </label>
-          <label className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
+          <label className="field-shell rounded-[24px] px-4 py-3">
             <span className="text-sm text-muted">Reps</span>
             <input
               ref={repsInputRef}
@@ -795,7 +795,7 @@ export function WorkoutScreen({
               {suggestedStart && currentSetIndex === 0 ? (
                 <button
                   type="button"
-                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                  className="quiet-chip-strong rounded-[18px] px-3 py-2 text-sm font-medium"
                   onClick={() => {
                     applyQuickFill("weight", suggestedStart.suggestedWeight);
                     if (targetRepSuggestion) {
@@ -810,7 +810,7 @@ export function WorkoutScreen({
               {previousSet && currentSetIndex > 0 ? (
                 <button
                   type="button"
-                  className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                  className="quiet-chip rounded-[18px] px-3 py-2 text-sm font-medium text-white/78"
                   onClick={applyRepeatLastSet}
                 >
                   Repeat
@@ -835,7 +835,7 @@ export function WorkoutScreen({
                   {targetRepSuggestion ? (
                     <button
                       type="button"
-                      className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
+                      className="quiet-chip rounded-[18px] px-3 py-2 text-sm font-medium text-white/78"
                       onClick={() => applyQuickFill("reps", targetRepSuggestion)}
                     >
                       Use target

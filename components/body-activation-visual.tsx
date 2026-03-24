@@ -187,32 +187,35 @@ function Shape({
 }
 
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const shellFill = "rgba(255,255,255,0.03)";
-  const shellStroke = "rgba(244,246,255,0.16)";
-  const contourStroke = "rgba(255,255,255,0.045)";
-  const frame = variant === "male" ? { x: 14, y: 12, width: 92, height: 228 } : { x: 16, y: 12, width: 88, height: 228 };
+  const shellFill = "rgba(255,255,255,0.024)";
+  const shellStroke = "rgba(244,246,255,0.18)";
+  const contourStroke = "rgba(255,255,255,0.038)";
+  const frame = variant === "male" ? { x: 14, y: 10, width: 92, height: 232 } : { x: 16, y: 10, width: 88, height: 232 };
   const frontShell =
     variant === "male"
-      ? "M60 29C54 29 50 31 48 34C44 40 42 45 39 48C33 55 31 65 32 75C33 87 36 95 38 106C40 120 42 137 46 150C48 158 50 164 52 171C54 178 54 190 53 206L51 244H57L59 207C59 190 59 177 60 166C61 177 61 190 61 207L63 244H69L67 206C66 190 66 178 68 171C70 164 72 158 74 150C78 137 80 120 82 106C84 95 87 87 88 75C89 65 87 55 81 48C78 45 76 40 72 34C70 31 66 29 60 29Z"
-      : "M60 29C55 29 51 31 49 34C45 40 43 45 40 48C35 54 33 63 34 73C35 84 37 94 39 106C41 120 43 137 46 150C48 158 50 165 53 173C55 180 55 191 54 206L52 244H58L59 207C59 191 59 179 60 169C61 179 61 191 61 207L62 244H68L66 206C65 191 65 180 67 173C70 165 72 158 74 150C77 137 79 120 81 106C83 94 85 84 86 73C87 63 85 54 80 48C77 45 75 40 71 34C69 31 65 29 60 29Z";
+      ? "M60 28C54 28 50 30 47 34C43 40 41 45 38 49C33 56 31 66 32 77C33 89 35 98 37 111C39 124 42 140 46 153C48 161 50 168 52 176C54 184 54 194 53 207L51 245H57L59 208C59 191 59 179 60 168C61 179 61 191 61 208L63 245H69L67 207C66 194 66 184 68 176C70 168 72 161 74 153C78 140 81 124 83 111C85 98 87 89 88 77C89 66 87 56 82 49C79 45 77 40 73 34C70 30 66 28 60 28Z"
+      : "M60 28C55 28 51 30 48 34C44 40 42 45 39 49C35 55 33 64 34 75C35 87 37 97 39 110C41 123 43 139 46 153C48 161 50 168 53 177C55 185 55 195 54 208L52 245H58L59 209C59 193 59 181 60 170C61 181 61 193 61 209L62 245H68L66 208C65 195 65 185 67 177C70 168 72 161 74 153C77 139 79 123 81 110C83 97 85 87 86 75C87 64 85 55 81 49C78 45 76 40 72 34C69 30 65 28 60 28Z";
   const backShell =
     variant === "male"
-      ? "M60 29C54 29 50 31 48 34C44 40 42 45 39 48C33 55 31 65 32 75C33 87 35 97 38 109C40 121 42 138 46 151C48 159 50 166 52 173C54 180 54 191 53 206L51 244H57L59 207C59 191 59 179 60 169C61 179 61 191 61 207L63 244H69L67 206C66 191 66 180 68 173C70 166 72 159 74 151C78 138 80 121 82 109C85 97 87 87 88 75C89 65 87 55 81 48C78 45 76 40 72 34C70 31 66 29 60 29Z"
-      : "M60 29C55 29 51 31 49 34C45 40 43 45 40 48C35 54 33 63 34 73C35 84 37 95 39 108C41 121 43 138 46 151C48 159 50 166 53 174C55 181 55 191 54 206L52 244H58L59 207C59 191 59 180 60 170C61 180 61 191 61 207L62 244H68L66 206C65 191 65 181 67 174C70 166 72 159 74 151C77 138 79 121 81 108C83 95 85 84 86 73C87 63 85 54 80 48C77 45 75 40 71 34C69 31 65 29 60 29Z";
+      ? "M60 28C54 28 50 30 47 34C43 40 41 45 38 49C33 56 31 66 32 77C33 89 35 100 38 112C40 124 42 140 46 153C48 161 50 168 52 176C54 184 54 194 53 207L51 245H57L59 208C59 192 59 180 60 170C61 180 61 192 61 208L63 245H69L67 207C66 194 66 184 68 176C70 168 72 161 74 153C78 140 80 124 82 112C85 100 87 89 88 77C89 66 87 56 82 49C79 45 77 40 73 34C70 30 66 28 60 28Z"
+      : "M60 28C55 28 51 30 48 34C44 40 42 45 39 49C35 55 33 64 34 75C35 87 37 98 39 111C41 123 43 139 46 153C48 161 50 168 53 177C55 185 55 195 54 208L52 245H58L59 209C59 193 59 181 60 171C61 181 61 193 61 209L62 245H68L66 208C65 195 65 185 67 177C70 168 72 161 74 153C77 139 79 123 81 111C83 98 85 87 86 75C87 64 85 55 81 49C78 45 76 40 72 34C69 30 65 28 60 28Z";
 
   return (
     <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
+      <ellipse cx="60" cy="112" rx={variant === "male" ? 22 : 20} ry="60" fill="rgba(255,255,255,0.012)" />
       <circle cx="60" cy="18" r={variant === "male" ? 10.5 : 10} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
       <path d={view === "front" ? frontShell : backShell} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path d={variant === "male" ? "M43 48C38 60 36 74 36 90" : "M44 49C40 60 38 74 38 90"} fill="none" stroke={contourStroke} strokeWidth="0.9" strokeLinecap="round" />
-      <path d={variant === "male" ? "M77 48C82 60 84 74 84 90" : "M76 49C80 60 82 74 82 90"} fill="none" stroke={contourStroke} strokeWidth="0.9" strokeLinecap="round" />
+      <path d={variant === "male" ? "M43 50C39 61 37 75 37 92" : "M44 51C40 61 38 75 38 92"} fill="none" stroke={contourStroke} strokeWidth="0.82" strokeLinecap="round" />
+      <path d={variant === "male" ? "M77 50C81 61 83 75 83 92" : "M76 51C80 61 82 75 82 92"} fill="none" stroke={contourStroke} strokeWidth="0.82" strokeLinecap="round" />
       {view === "front" ? (
         <>
-          <path d="M48 54C51 51 55 50 60 50C65 50 69 51 72 54" fill="none" stroke={contourStroke} strokeWidth="0.68" strokeLinecap="round" />
+          <path d="M48 54C51 51 55 50 60 50C65 50 69 51 72 54" fill="none" stroke={contourStroke} strokeWidth="0.62" strokeLinecap="round" />
+          <path d="M60 52L60 143" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.72" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <path d="M48 50L60 68L72 50" fill="none" stroke={contourStroke} strokeWidth="0.72" strokeLinecap="round" />
+          <path d="M48 50L60 68L72 50" fill="none" stroke={contourStroke} strokeWidth="0.7" strokeLinecap="round" />
+          <path d="M60 66L60 145" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.7" strokeLinecap="round" />
         </>
       )}
     </svg>

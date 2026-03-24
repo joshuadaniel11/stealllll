@@ -125,7 +125,7 @@ export function HomeScreen({
   return (
     <div className="space-y-4 pb-28">
       <ScrollReveal delay={30}>
-        <Card className="home-session-hero space-y-4 px-6 py-6">
+        <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
@@ -207,7 +207,7 @@ export function HomeScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={55}>
-        <Card className="space-y-3 px-4 py-4">
+        <Card className="tab-fade-enter space-y-3 px-4 py-4">
           <button
             type="button"
             onClick={() => setShowDetails((value) => !value)}

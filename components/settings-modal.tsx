@@ -41,7 +41,7 @@ export function SettingsModal({
           <div className="sheet-drag-handle" />
 
           <ScrollReveal delay={0} y={18} scale={0.994}>
-            <div className="settings-hero-card flex items-start justify-between gap-4 rounded-[28px] px-4 py-4">
+            <div className="settings-hero-card animate-soft-shift flex items-start justify-between gap-4 rounded-[28px] px-4 py-4">
               <div className="pr-2">
                 <p className="text-sm font-medium text-muted">Settings</p>
                 <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Private. Calm. Yours.</h2>

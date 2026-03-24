@@ -188,7 +188,7 @@ export function ProgressScreen({
   return (
     <>
       <ScrollReveal delay={0}>
-        <Card className="progress-panel">
+        <Card className="progress-panel tab-fade-enter">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[13px] font-medium text-white/52">This week</p>
@@ -239,7 +239,7 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={40}>
-        <Card className="progress-panel">
+        <Card className="progress-panel tab-fade-enter">
           <SectionHeader
             eyebrow="Goal dashboard"
             title={goalDashboard.label}
@@ -267,7 +267,7 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={62}>
-        <Card className="progress-panel">
+        <Card className="progress-panel tab-fade-enter">
           <SectionHeader
             eyebrow="Workout calendar"
             title="Last 6 weeks"
