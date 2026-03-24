@@ -9,6 +9,7 @@ import { Card } from "@/components/ui";
 import { getExerciseSwapOptions, getSwapSectionLabel } from "@/lib/exercise-swaps";
 import { getPreviousBestScore, getSuggestedStartingWeight, isPersonalBestSet } from "@/lib/progression";
 import { getSessionPresentation, getSessionSupportLine } from "@/lib/session-presentation";
+import { getExerciseTargetSummary } from "@/lib/training-load";
 import { getAdaptiveCompressionInsight, getRecommendedExercise } from "@/lib/workout-intelligence";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, ExerciseLibraryItem, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
@@ -119,6 +120,16 @@ function getTargetRepSuggestion(repRange?: string) {
   }
 
   return Number.parseInt(match[1], 10);
+}
+
+function getExerciseTargetText(exercise: { exerciseName: string; muscleGroup: ExerciseLibraryItem["muscleGroup"] }, limit = 2) {
+  return getExerciseTargetSummary(
+    {
+      exerciseName: exercise.exerciseName,
+      muscleGroup: exercise.muscleGroup,
+    },
+    limit,
+  );
 }
 
 export function WorkoutScreen({
@@ -429,7 +440,9 @@ export function WorkoutScreen({
                                 {exercise.sets} x {exercise.repRange}
                               </p>
                             </div>
-                            <p className="medium-label mt-2 text-muted">Targets: {exercise.muscleGroup}</p>
+                            <p className="medium-label mt-2 text-muted">
+                              Targets: {getExerciseTargetText({ exerciseName: exercise.name, muscleGroup: exercise.muscleGroup }, 3)}
+                            </p>
                           </div>
                         </ScrollReveal>
                       ))}
@@ -596,7 +609,7 @@ export function WorkoutScreen({
                         {index + 1}. {exercise.exerciseName}
                       </p>
                       <p className={`caption-text mt-1 ${done ? "text-black/65" : "text-muted"}`}>
-                        {done ? "Done" : `Targets ${exercise.muscleGroup}`}
+                        {done ? "Done" : getExerciseTargetText(exercise)}
                       </p>
                       {!done && recommended ? (
                         <p className={`mt-1 text-[11px] font-medium ${selected ? "text-text/80" : "text-accent"}`}>
@@ -731,11 +744,11 @@ export function WorkoutScreen({
           </div>
         </div>
         <p className="mt-2 text-sm text-muted">
-          {currentExerciseComplete ? "Exercise complete." : currentExercise.muscleGroup}
+          {currentExerciseComplete ? "Exercise complete." : getExerciseTargetText(currentExercise)}
         </p>
         {suggestedStart ? (
           <div className="surface-quiet mt-2 rounded-[20px] px-3 py-2.5">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Start here</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Starting point</p>
             <p className="mt-1 text-sm text-white/76">
               {suggestedStart.suggestedWeight}kg from {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
             </p>
@@ -743,7 +756,7 @@ export function WorkoutScreen({
         ) : null}
         {previousSet && !currentSet?.completed ? (
           <div className="surface-quiet mt-2 rounded-[18px] px-3 py-2 text-[12px] text-white/56">
-            Last: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
+            Previous: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
           </div>
         ) : null}
 
@@ -804,7 +817,7 @@ export function WorkoutScreen({
                     weightInputRef.current?.focus();
                   }}
                 >
-                  Start
+                  Use start
                 </button>
               ) : null}
               {previousSet && currentSetIndex > 0 ? (
@@ -813,7 +826,7 @@ export function WorkoutScreen({
                   className="quiet-chip rounded-[18px] px-3 py-2 text-sm font-medium text-white/78"
                   onClick={applyRepeatLastSet}
                 >
-                  Repeat
+                  Repeat last
                 </button>
               ) : null}
               {currentSet ? (
@@ -838,7 +851,7 @@ export function WorkoutScreen({
                       className="quiet-chip rounded-[18px] px-3 py-2 text-sm font-medium text-white/78"
                       onClick={() => applyQuickFill("reps", targetRepSuggestion)}
                     >
-                      Use target
+                      Target reps
                     </button>
                   ) : null}
                 </>

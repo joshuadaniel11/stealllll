@@ -135,10 +135,18 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const moreSummary = dailyMobilityPrompt ? "Note, mobility, then extras." : "Note, then extras.";
+  const moreSummary = dailyMobilityPrompt ? "Note first. Mobility if you want it." : "Note first. Extras stay quiet.";
   const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
   const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
   const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
+  const competitionSummary =
+    joshuaWeekCount === natashaWeekCount
+      ? joshuaWeekCount === 0
+        ? "Fresh week. First session sets the tone."
+        : `Tied this week at ${joshuaWeekCount} each.`
+      : joshuaWeekCount > natashaWeekCount
+        ? `Joshua leads ${joshuaWeekCount} to ${natashaWeekCount}.`
+        : `Natasha leads ${natashaWeekCount} to ${joshuaWeekCount}.`;
 
   return (
     <div className="space-y-4 pb-28">
@@ -230,7 +238,7 @@ export function HomeScreen({
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
               <h3 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.05em] text-white/92">Head to head</h3>
-              <p className="mt-1 text-sm leading-6 text-white/56">Green is Joshua. Blue is Natasha.</p>
+              <p className="mt-1 text-sm leading-6 text-white/56">{competitionSummary}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-right">
               <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-2">
@@ -290,7 +298,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown and quiet detail.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, and shared detail.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${

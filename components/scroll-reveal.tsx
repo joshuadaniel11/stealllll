@@ -13,8 +13,8 @@ export function ScrollReveal({
   children,
   className,
   delay = 0,
-  y = 28,
-  scale = 0.985,
+  y = 18,
+  scale = 0.992,
 }: {
   children: ReactNode;
   className?: string;

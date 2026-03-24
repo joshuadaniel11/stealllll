@@ -66,8 +66,8 @@ export function SettingsModal({
                       <Shield className="h-4 w-4" />
                     </span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-text">Saved on this device</p>
-                      <p className="caption-text mt-1 text-muted">Stay on this phone and browser to keep progress seamless here.</p>
+                      <p className="text-sm font-medium text-text">This phone opens as {profile.name}</p>
+                      <p className="caption-text mt-1 text-muted">Your last-used profile is remembered here automatically.</p>
                     </div>
                   </div>
                   <button className="grouped-row" onClick={onToggleProfileLock}>
@@ -81,7 +81,7 @@ export function SettingsModal({
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
                           ? "Let this phone choose between profiles again."
-                          : "Open straight into this profile every time on this phone."}
+                          : `Keep this phone fixed on ${profile.name}.`}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />
@@ -95,7 +95,7 @@ export function SettingsModal({
                       <p className="caption-text mt-1 text-muted">
                         {isProfileLocked
                           ? "Unlock this phone first to switch profiles."
-                          : "Go back to the opening profile chooser."}
+                          : "Switch the default profile for this phone."}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted" />

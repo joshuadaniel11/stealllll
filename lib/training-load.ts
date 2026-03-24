@@ -286,6 +286,31 @@ export const TRAINING_LOAD_ZONE_META: Record<
   calves: { label: "Calves", group: "legs", color: "#95db72", targetSets: 4 },
 };
 
+const TARGET_DISPLAY_LABELS: Record<TrainingLoadZone, string> = {
+  upperChest: "Upper chest",
+  midChest: "Mid chest",
+  lowerChest: "Lower chest",
+  frontDelts: "Front delts",
+  sideDelts: "Side delts",
+  rearDelts: "Rear delts",
+  upperBack: "Upper back",
+  lats: "Lats",
+  midBack: "Mid back",
+  lowerBack: "Lower back",
+  upperAbs: "Upper abs",
+  lowerAbs: "Lower abs",
+  obliques: "Obliques",
+  upperGlutes: "Glute shelf",
+  gluteMax: "Lower glute",
+  sideGlutes: "Side glute",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  forearms: "Forearms",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
+  calves: "Calves",
+};
+
 const USER_TARGET_OVERRIDES: Record<UserId, Partial<Record<TrainingLoadZone, number>>> = {
   joshua: {
     upperChest: 6,
@@ -476,6 +501,10 @@ function getZoneLabel(zone: TrainingLoadZone) {
   return TRAINING_LOAD_ZONE_META[zone].label;
 }
 
+export function getTargetDisplayLabel(zone: TrainingLoadZone) {
+  return TARGET_DISPLAY_LABELS[zone] ?? getZoneLabel(zone);
+}
+
 export function getCurrentWeekWindow(referenceDate = new Date()): WeekWindow {
   const start = new Date(referenceDate);
   const day = start.getDay();
@@ -532,6 +561,18 @@ export function getExerciseMuscleContribution(exercise: ExerciseLike): ZoneContr
   const normalizedName = normalizeExerciseName(exercise.exerciseName);
   const matchedRule = EXERCISE_RULES.find((rule) => rule.pattern.test(normalizedName));
   return matchedRule?.contribution ?? getFallbackContribution(exercise);
+}
+
+export function getExerciseTargetLabels(exercise: ExerciseLike, limit = 2) {
+  return Object.entries(getExerciseMuscleContribution(exercise))
+    .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
+    .slice(0, limit)
+    .map(([zoneId]) => getTargetDisplayLabel(zoneId as TrainingLoadZone));
+}
+
+export function getExerciseTargetSummary(exercise: ExerciseLike, limit = 2) {
+  const labels = getExerciseTargetLabels(exercise, limit);
+  return labels.length ? labels.join(" • ") : exercise.muscleGroup;
 }
 
 function getTemplateExerciseContribution(exercise: ExerciseTemplate) {

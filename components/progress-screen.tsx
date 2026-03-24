@@ -167,6 +167,17 @@ export function ProgressScreen({
     const date = new Date(entry.date);
     return date >= currentWeek.start && date <= currentWeek.end;
   }).length;
+  const currentWeekRow = calendarRows.find((row) => row.isCurrentWeek) ?? calendarRows.at(-1) ?? null;
+  const joshuaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.joshuaCompleted).length : 0;
+  const natashaWeekCount = currentWeekRow ? currentWeekRow.days.filter((day) => day.natashaCompleted).length : 0;
+  const competitionLabel =
+    joshuaWeekCount === natashaWeekCount
+      ? joshuaWeekCount === 0
+        ? "Fresh week"
+        : `Tied at ${joshuaWeekCount}`
+      : joshuaWeekCount > natashaWeekCount
+        ? `Joshua ${joshuaWeekCount}-${natashaWeekCount}`
+        : `Natasha ${natashaWeekCount}-${joshuaWeekCount}`;
 
   const aestheticSignal = getAestheticSignal(profile.id, userSessions, measurements);
   const showingBodyMetrics = bodyweightTrend.length > 0;
@@ -273,7 +284,7 @@ export function ProgressScreen({
             title="Last 6 weeks"
             aside={
               <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
-                {weeklySummary.workoutsCompleted} this week
+                {competitionLabel}
               </div>
             }
           />

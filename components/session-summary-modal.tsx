@@ -70,7 +70,7 @@ export function SessionSummaryModal({
               <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
               {summary.partial ? (
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  Resume it from Workout whenever you want.
+                  Pick it back up from Workout whenever you want.
                 </p>
               ) : null}
             </div>
@@ -97,7 +97,7 @@ export function SessionSummaryModal({
           {!summary.partial && nextInsight ? (
             <ScrollReveal delay={102} y={14} scale={0.996}>
               <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
-                <p className="text-sm text-muted">Next</p>
+                <p className="text-sm text-muted">Next up</p>
                 <p className="mt-2 text-base font-semibold text-text">{nextInsight}</p>
               </div>
             </ScrollReveal>
@@ -137,7 +137,7 @@ export function SessionSummaryModal({
                   className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
                   onClick={onViewProgress}
                 >
-                  Progress
+                  View progress
                 </button>
               ) : null}
               <button
