@@ -44,8 +44,8 @@ export function SettingsModal({
             <div className="settings-hero-card flex items-start justify-between gap-4 rounded-[28px] px-4 py-4">
               <div className="pr-2">
                 <p className="text-sm font-medium text-muted">Settings</p>
-                <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Quiet, private, simple.</h2>
-                <p className="caption-text mt-2 text-muted">Everything important for this phone, kept calm and easy to manage.</p>
+                <h2 className="large-title mt-1 font-semibold tracking-[-0.05em]">Private. Calm. Yours.</h2>
+                <p className="caption-text mt-2 text-muted">Everything important for this phone, in one place.</p>
               </div>
               <button
                 className="sheet-close-button rounded-full px-3 py-2 text-sm font-medium"

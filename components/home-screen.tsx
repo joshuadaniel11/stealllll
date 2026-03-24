@@ -120,7 +120,7 @@ export function HomeScreen({
       ? "Resume Session"
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const moreSummary = dailyMobilityPrompt ? "Note, mobility, and extras when you want them." : "Note and extras when you want them.";
+  const moreSummary = dailyMobilityPrompt ? "Note, mobility, then extras." : "Note, then extras.";
 
   return (
     <div className="space-y-4 pb-28">
@@ -249,7 +249,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, recent, and shared momentum.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown and quiet detail.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -284,7 +284,7 @@ export function HomeScreen({
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
                     Recent
                   </p>
-                  <span className="text-xs text-white/40">Quiet detail</span>
+                  <span className="text-xs text-white/40">One look</span>
                 </div>
                 {recentWorkouts.length ? (
                   <div className="space-y-2">
@@ -318,12 +318,12 @@ export function HomeScreen({
                   </div>
                 ) : (
                   <p className="text-sm leading-6 text-white/52">
-                    No sessions yet. This fills in once you log the first workout.
+                    No sessions yet. Your first workout will show here.
                   </p>
                 )}
                 <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Together</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Shared</p>
                     <p className="text-[11px] text-white/42">
                       {sharedSummary.teamStreak}w • {sharedSummary.combinedWorkouts} this week
                     </p>
@@ -333,7 +333,7 @@ export function HomeScreen({
                   </p>
                 </div>
                 <div className="space-y-2 pt-1">
-                  {sharedSummary.recentMilestones.slice(0, 3).map((milestone) => (
+                  {sharedSummary.recentMilestones.slice(0, 2).map((milestone) => (
                     <div
                       key={milestone}
                       className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-sm leading-6 text-white/64"

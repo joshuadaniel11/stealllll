@@ -62,9 +62,9 @@ function getZoneStatus(metric: TrainingLoadMetric) {
 function ZoneContributorPanel({ metric }: { metric: TrainingLoadMetric | null }) {
   if (!metric) {
     return (
-      <div className="progress-subcard rounded-[20px] border border-dashed px-4 py-4 text-sm text-white/48">
-        Tap a muscle region to inspect what contributed to it this week.
-      </div>
+        <div className="progress-subcard rounded-[20px] border border-dashed px-4 py-4 text-sm text-white/48">
+        Tap a region to inspect it.
+        </div>
     );
   }
 
@@ -269,7 +269,7 @@ export function TrainingLoadCard({
             <div>
               <p className="text-sm font-medium text-white/78">Worked muscle map</p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/34">
-                Tap a lit zone to inspect it
+                Tap a lit zone
               </p>
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -299,7 +299,7 @@ export function TrainingLoadCard({
           />
           <p className="mt-3 text-[12px] leading-6 text-white/42">
             {hasVisibleLoad
-              ? "Only regions with real work this week stay visible here."
+              ? "Only real work shows here."
               : `No ${view} work has loaded yet this week.`}
           </p>
         </div>

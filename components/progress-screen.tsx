@@ -243,7 +243,6 @@ export function ProgressScreen({
           <SectionHeader
             eyebrow="Goal dashboard"
             title={goalDashboard.label}
-            description={goalDashboard.headline}
             aside={
               <div className="max-w-[10rem] rounded-full bg-white/8 px-3 py-1.5 text-center text-[11px] font-medium text-white/68">
                 {goalDashboard.emphasisLabel}
@@ -272,7 +271,6 @@ export function ProgressScreen({
           <SectionHeader
             eyebrow="Workout calendar"
             title="Last 6 weeks"
-            description="Your recent rhythm, with this week kept in focus."
             aside={
               <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
                 {weeklySummary.workoutsCompleted} this week
@@ -293,7 +291,7 @@ export function ProgressScreen({
             className="flex w-full items-start justify-between gap-3 text-left"
           >
             <div>
-              <p className="text-[13px] font-medium text-white/54">More insights</p>
+              <p className="text-[13px] font-medium text-white/54">Signals</p>
               <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
                 {progressSignals.leadingIndicator.title}
               </h3>
@@ -353,14 +351,14 @@ export function ProgressScreen({
                 className="flex w-full items-start justify-between gap-3 text-left"
               >
                 <div>
-                  <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
+                  <p className="text-[13px] font-medium text-white/54">Archive</p>
                   <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
                     {showingBodyMetrics ? "Body metrics and saved sessions" : "Trend and saved sessions"}
                   </h3>
                   <p className="mt-2 text-[14px] leading-6 text-white/58">
                     {showingBodyMetrics
-                      ? "Trend, check-ins, and saved workouts when you want the extra detail."
-                      : "Volume trend and saved workouts when you want the extra detail."}
+                      ? "Trend, check-ins, and saved workouts when you want them."
+                      : "Trend and saved workouts when you want them."}
                   </p>
                 </div>
                 <div className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-medium text-white/70">
@@ -488,7 +486,7 @@ export function ProgressScreen({
             </>
           ) : (
             <div>
-              <p className="text-[13px] font-medium text-white/54">Visuals and details</p>
+              <p className="text-[13px] font-medium text-white/54">Archive</p>
               <h3 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.05em] text-white/94">
                 More detail unlocks after a few sessions
               </h3>

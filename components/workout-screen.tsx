@@ -387,7 +387,7 @@ export function WorkoutScreen({
                   <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-text">Suggested session</p>
+                        <p className="text-sm font-medium text-text">Guided add-on</p>
                         <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.focusText}</p>
                       </div>
                       <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
@@ -403,7 +403,7 @@ export function WorkoutScreen({
                 <div className="mt-5 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-text">Session plan</p>
+                      <p className="text-sm font-medium text-text">Session flow</p>
                         <p className="mt-1 text-sm leading-6 text-muted">
                           Starts with {previewWorkout.exercises[0]?.name}. Then {previewWorkout.exercises[1]?.name ?? "finish strong"}.
                         </p>
@@ -535,10 +535,10 @@ export function WorkoutScreen({
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
             </h1>
-            <p className="mt-2 text-sm text-muted">Pick the best next move and keep the session moving.</p>
+            <p className="mt-2 text-sm text-muted">Pick the next move and keep going.</p>
             {compressionInsight ? (
               <div className="mt-4 rounded-[22px] bg-[var(--card-strong)] px-4 py-4">
-                <p className="text-sm font-medium text-text">Short version</p>
+                <p className="text-sm font-medium text-text">Coach read</p>
                 <p className="mt-1 text-sm text-muted">{compressionInsight.note}</p>
                 <p className="mt-2 text-sm text-text">
                   {compressionInsight.suggestedExerciseNames.join(" • ")}
@@ -548,7 +548,7 @@ export function WorkoutScreen({
 
             {recommendedExercise ? (
               <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.045] px-4 py-4">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Best next</p>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Up next</p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-white/88">{activeWorkout.exercises[recommendedExercise.index]?.exerciseName}</p>
@@ -563,7 +563,7 @@ export function WorkoutScreen({
                       setShowExercisePicker(false);
                     }}
                   >
-                    Go here
+                    Jump in
                   </button>
                 </div>
               </div>
@@ -600,7 +600,7 @@ export function WorkoutScreen({
                       </p>
                       {!done && recommended ? (
                         <p className={`mt-1 text-[11px] font-medium ${selected ? "text-text/80" : "text-accent"}`}>
-                          Best next
+                          Next
                         </p>
                       ) : null}
                     </div>
@@ -624,7 +624,7 @@ export function WorkoutScreen({
                 className="mt-3 text-sm font-medium text-white/56 transition hover:text-white/82"
                 onClick={() => setShowCompletedExercises((value) => !value)}
               >
-                {showCompletedExercises ? "Hide completed" : "Show completed"}
+                {showCompletedExercises ? "Hide done" : "Show done"}
               </button>
             ) : null}
 
@@ -633,7 +633,7 @@ export function WorkoutScreen({
                 className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-text"
                 onClick={() => setShowExercisePicker(false)}
               >
-                Back to session
+                Back
               </button>
               <button
                 className="rounded-[24px] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-muted"
@@ -642,7 +642,7 @@ export function WorkoutScreen({
                   setShowExitConfirmation(true);
                 }}
               >
-                Save / exit
+                Save
               </button>
             </div>
           </Card>
@@ -695,7 +695,7 @@ export function WorkoutScreen({
         <div className="mt-3 rounded-[24px] bg-[var(--card-strong)] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-                <p className="text-sm text-muted">Progress</p>
+                <p className="text-sm text-muted">Flow</p>
               <p className="mt-1 text-sm font-medium text-text">
                 {completedExerciseCount} of {activeWorkout.exercises.length} exercises done
               </p>
@@ -704,7 +704,7 @@ export function WorkoutScreen({
                     ? "Everything is logged. Finish when ready."
                     : currentExerciseComplete
                       ? "This exercise is done. Pick the next one."
-                      : "Keep the session moving."}
+                      : "Keep it moving."}
                 </p>
             </div>
             <button
@@ -731,11 +731,11 @@ export function WorkoutScreen({
           </div>
         </div>
         <p className="mt-2 text-sm text-muted">
-          {currentExerciseComplete ? "Exercise complete." : `Targets ${currentExercise.muscleGroup}`}
+          {currentExerciseComplete ? "Exercise complete." : currentExercise.muscleGroup}
         </p>
         {suggestedStart ? (
           <div className="mt-2 rounded-[20px] border border-white/6 bg-white/[0.025] px-3 py-2.5">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Starting point</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-white/38">Start here</p>
             <p className="mt-1 text-sm text-white/76">
               {suggestedStart.suggestedWeight}kg from {suggestedStart.lastWeight}kg x {suggestedStart.lastAverageReps}
             </p>
@@ -743,7 +743,7 @@ export function WorkoutScreen({
         ) : null}
         {previousSet && !currentSet?.completed ? (
           <div className="mt-2 rounded-[18px] bg-white/[0.03] px-3 py-2 text-[12px] text-white/56">
-            Last set: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
+            Last: {previousSet.weight > 0 ? `${previousSet.weight}kg` : "Bodyweight"} x {previousSet.reps}
           </div>
         ) : null}
 
@@ -804,7 +804,7 @@ export function WorkoutScreen({
                     weightInputRef.current?.focus();
                   }}
                 >
-                  Use start
+                  Start
                 </button>
               ) : null}
               {previousSet && currentSetIndex > 0 ? (
@@ -813,7 +813,7 @@ export function WorkoutScreen({
                   className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
                   onClick={applyRepeatLastSet}
                 >
-                  Repeat last
+                  Repeat
                 </button>
               ) : null}
               {currentSet ? (
@@ -823,7 +823,7 @@ export function WorkoutScreen({
                     className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
                     onClick={() => applyQuickFill("weight", Number(((currentSet.weight || 0) + 2.5).toFixed(2)))}
                   >
-                    +2.5kg
+                    +2.5
                   </button>
                   <button
                     type="button"
@@ -838,7 +838,7 @@ export function WorkoutScreen({
                       className="swap-chip rounded-[18px] px-3 py-2 text-sm font-medium text-muted"
                       onClick={() => applyQuickFill("reps", targetRepSuggestion)}
                     >
-                      Target reps
+                      Use target
                     </button>
                   ) : null}
                 </>
@@ -876,7 +876,7 @@ export function WorkoutScreen({
         ) : null}
 
         <div className="mt-2.5">
-          <p className="text-sm text-muted">Completed sets</p>
+          <p className="text-sm text-muted">Logged sets</p>
           <div className="hide-scrollbar mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
             {currentExercise.sets.map((set, index) => (
               <div
@@ -910,7 +910,7 @@ export function WorkoutScreen({
           disabled={!canCompleteSet}
           onClick={handleCompleteSet}
         >
-          Complete set and move on
+          Log set
         </button>
       </Card>
       </ScrollReveal>
@@ -924,14 +924,14 @@ export function WorkoutScreen({
             setShowExitConfirmation(true);
           }}
         >
-          Save / exit
+          Save
         </button>
         <button
           className="rounded-[22px] bg-[var(--card-strong)] px-3 py-2.5 text-sm font-medium text-text"
           onClick={() => setShowExercisePicker(true)}
         >
           <div className="flex items-center justify-center gap-2">
-            Exercises
+            List
             <ChevronRight className="h-4 w-4" />
           </div>
           <p className="caption-text mt-1 text-muted">
@@ -945,7 +945,7 @@ export function WorkoutScreen({
           disabled={!workoutComplete}
           onClick={onCompleteWorkout}
         >
-          Finish Workout
+          Finish
         </button>
       </div>
       </ScrollReveal>

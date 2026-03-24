@@ -243,6 +243,8 @@ export function BodyActivationVisual({
   const metricsByZone = getMetricMap(metrics);
   const shapes = getShapes(variant, view);
   const hasSelection = Boolean(selectedZone);
+  const activeMetricCount = metrics.filter((metric) => metric.effectiveSets > 0).length;
+  const selectedMetric = selectedZone ? metricsByZone[selectedZone] : null;
   const zoneIsVisible = (zone: TrainingLoadZone) => {
     const metric = metricsByZone[zone];
     if (selectedZone === zone) {
@@ -252,14 +254,14 @@ export function BodyActivationVisual({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.008))] px-5 py-5">
+    <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.035),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.006))] px-5 py-5">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_center,rgba(110,120,255,0.06),transparent_72%)]" />
-      <div className="relative mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-white/34">
-        <span>Weekly activation</span>
-        <span>{selectedZone ? "Inspecting zone" : "Tap a lit zone"}</span>
+      <div className="relative mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-white/34">
+        <span>{selectedMetric ? selectedMetric.label : "Weekly activation"}</span>
+        <span>{selectedMetric ? `${selectedMetric.percentage}%` : `${activeMetricCount} active`}</span>
       </div>
       <div className="relative flex items-center justify-center">
-        <svg viewBox="0 0 120 260" className="h-[308px] w-[142px]" aria-hidden="true">
+        <svg viewBox="0 0 120 260" className="h-[322px] w-[148px]" aria-hidden="true">
           <defs>
             <linearGradient id="body-fade-left" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="rgba(14,15,22,0.96)" />
@@ -302,9 +304,9 @@ export function BodyActivationVisual({
           })}
         </svg>
       </div>
-      <div className="relative mt-2.5 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-white/30">
+      <div className="relative mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-white/30">
         <span>{view === "front" ? "Front" : "Back"} view</span>
-        <span>This week</span>
+        <span>{selectedMetric ? "Focused" : "This week"}</span>
       </div>
     </div>
   );

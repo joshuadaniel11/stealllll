@@ -66,11 +66,11 @@ export function SessionSummaryModal({
           <div className="sheet-drag-handle" />
           <ScrollReveal delay={0} y={18} scale={0.994}>
             <div>
-              <p className="text-sm text-muted">{summary.partial ? "Progress saved" : "Session complete"}</p>
+              <p className="text-sm text-muted">{summary.partial ? "Saved" : "Complete"}</p>
               <h3 className="large-title mt-2 font-semibold text-text">{summary.workoutName}</h3>
               {summary.partial ? (
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  Resume it from Workout whenever you&apos;re ready.
+                  Resume it from Workout whenever you want.
                 </p>
               ) : null}
             </div>
@@ -97,7 +97,7 @@ export function SessionSummaryModal({
           {!summary.partial && nextInsight ? (
             <ScrollReveal delay={102} y={14} scale={0.996}>
               <div className="mt-4 rounded-[24px] bg-[var(--card-strong)] px-4 py-4">
-                <p className="text-sm text-muted">Next up</p>
+                <p className="text-sm text-muted">Next</p>
                 <p className="mt-2 text-base font-semibold text-text">{nextInsight}</p>
               </div>
             </ScrollReveal>
@@ -129,7 +129,7 @@ export function SessionSummaryModal({
                   className="sheet-action-secondary rounded-[28px] px-4 py-4 text-sm font-semibold"
                   onClick={() => onMarkComplete?.(summary)}
                 >
-                  Count as done
+                  Mark done
                 </button>
               ) : null}
               {!summary.partial && onViewProgress ? (
@@ -137,7 +137,7 @@ export function SessionSummaryModal({
                   className="sheet-action-primary rounded-[28px] px-4 py-4 text-sm font-semibold"
                   onClick={onViewProgress}
                 >
-                  View progress
+                  Progress
                 </button>
               ) : null}
               <button
