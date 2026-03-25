@@ -4,6 +4,7 @@ const STORAGE_KEY = "workout-together-state-v2-clean-start";
 const STORAGE_VERSION = 1;
 const PROFILE_LOCK_KEY = "workout-together-profile-lock";
 const LAST_PROFILE_KEY = "workout-together-last-profile";
+const SYNC_STATE_UPDATED_AT_KEY = "workout-together-synced-state-updated-at";
 
 type StoredStateEnvelope = {
   version: number;
@@ -37,7 +38,7 @@ export function deserializeState(raw: string): Partial<AppState> | null {
   }
 }
 
-export function loadState(): Partial<AppState> | null {
+export function loadStateEnvelope(): StoredStateEnvelope | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -47,7 +48,32 @@ export function loadState(): Partial<AppState> | null {
     return null;
   }
 
-  const parsed = deserializeState(raw);
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      isObject(parsed) &&
+      typeof parsed.version === "number" &&
+      typeof parsed.savedAt === "string" &&
+      "state" in parsed &&
+      isObject(parsed.state) &&
+      parsed.version <= STORAGE_VERSION
+    ) {
+      return parsed as StoredStateEnvelope;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function loadState(): Partial<AppState> | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const envelope = loadStateEnvelope();
+  const parsed = envelope?.state ?? deserializeState(window.localStorage.getItem(STORAGE_KEY) ?? "");
   if (!parsed) {
     window.localStorage.removeItem(STORAGE_KEY);
     return null;
@@ -72,6 +98,28 @@ export function saveState(state: AppState) {
   } catch {
     // Storage can fail in private mode or when quota is exceeded. Ignore so the app keeps running.
   }
+}
+
+export function loadSyncedStateUpdatedAt(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(SYNC_STATE_UPDATED_AT_KEY);
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+export function saveSyncedStateUpdatedAt(updatedAt: string | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!updatedAt) {
+    window.localStorage.removeItem(SYNC_STATE_UPDATED_AT_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(SYNC_STATE_UPDATED_AT_KEY, updatedAt);
 }
 
 export function loadLockedProfile(): AppState["selectedUserId"] | null {

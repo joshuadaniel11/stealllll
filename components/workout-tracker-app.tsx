@@ -30,6 +30,7 @@ import {
   setWorkoutOverride,
 } from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
+import { applyCloudState, getSyncedAppState, getSyncedStateHash, isCloudSyncConfigured, loadCloudSnapshot, saveCloudSnapshot } from "@/lib/cloud-sync";
 import {
   buildMuscleCeilingLogEntries,
   getRivalryCardCopy,
@@ -62,9 +63,12 @@ import {
   loadLockedProfile,
   loadRememberedProfile,
   loadState,
+  loadStateEnvelope,
+  loadSyncedStateUpdatedAt,
   saveLockedProfile,
   saveRememberedProfile,
   saveState,
+  saveSyncedStateUpdatedAt,
 } from "@/lib/storage";
 import { getStrengthPredictions } from "@/lib/strength-prediction";
 import {
@@ -201,6 +205,15 @@ function normalizeCompletedWorkoutName(workoutName: string) {
   return workoutName.replace(/\s*\(Partial\)$/i, "");
 }
 
+function toComparableTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 function getUpdatedLongestStreaks(
   currentState: AppState,
   userId: UserId,
@@ -320,6 +333,9 @@ export function WorkoutTrackerApp() {
   });
   const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<RecentTrainingUpdate | null>(null);
   const previousRivalryLeaderRef = useRef<"joshua" | "natasha" | "tied" | null>(null);
+  const lastLocalSyncedHashRef = useRef<string | null>(null);
+  const lastCloudSyncedHashRef = useRef<string | null>(null);
+  const lastKnownSyncUpdatedAtRef = useRef<string | null>(null);
   const weddingDate = useMemo(() => WeddingDateService.getState(new Date()), [weddingDayKey]);
 
   const showToast = (
@@ -353,51 +369,85 @@ export function WorkoutTrackerApp() {
   };
 
   useEffect(() => {
-    const localState = loadState();
-    const deviceLockedProfile = loadLockedProfile();
-    const rememberedProfile = loadRememberedProfile();
-    const profileFromQuery =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("profile")
-        : null;
-    const launchProfile =
-      profileFromQuery === "joshua" || profileFromQuery === "natasha" ? profileFromQuery : null;
-    setLockedProfile(deviceLockedProfile);
-      if (localState) {
-        const seed = createSeedState();
-        const mergedState = mergeStateWithSeed(seed, localState);
-        const resolvedSelectedUserId =
-          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? mergedState.selectedUserId;
-        setState((current) => ({
-          ...current,
-          ...mergedState,
-          selectedUserId: resolvedSelectedUserId,
-        }));
-        if (mergedState.isSessionActive && mergedState.activeWorkout?.userId === resolvedSelectedUserId) {
-          setActiveTab("workout");
-        }
-        if (deviceLockedProfile || launchProfile || rememberedProfile) {
-          setHasEnteredProfile(true);
-        }
-    } else if (deviceLockedProfile || launchProfile || rememberedProfile) {
-      setState((current) =>
-        setSelectedUserId(
-          current,
-          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? current.selectedUserId,
-        ),
-      );
-      if (launchProfile || rememberedProfile || deviceLockedProfile) {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      const localEnvelope = loadStateEnvelope();
+      const localState = localEnvelope?.state ?? loadState();
+      const localSyncedUpdatedAt = loadSyncedStateUpdatedAt();
+      const cloudSnapshot = await loadCloudSnapshot();
+      const cloudUpdatedAt = cloudSnapshot?.updatedAt ?? null;
+      const shouldUseCloud =
+        Boolean(cloudSnapshot?.state) &&
+        toComparableTimestamp(cloudUpdatedAt) > toComparableTimestamp(localSyncedUpdatedAt);
+      const deviceLockedProfile = loadLockedProfile();
+      const rememberedProfile = loadRememberedProfile();
+      const profileFromQuery =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("profile")
+          : null;
+      const launchProfile =
+        profileFromQuery === "joshua" || profileFromQuery === "natasha" ? profileFromQuery : null;
+
+      if (cancelled) {
+        return;
+      }
+
+      const seed = createSeedState();
+      const mergedLocalState = localState ? mergeStateWithSeed(seed, localState) : seed;
+      const initialState =
+        shouldUseCloud && cloudSnapshot?.state
+          ? applyCloudState(mergedLocalState, cloudSnapshot.state)
+          : mergedLocalState;
+      const resolvedSelectedUserId =
+        deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? initialState.selectedUserId;
+      const syncedHash = getSyncedStateHash(getSyncedAppState(initialState));
+
+      lastLocalSyncedHashRef.current = syncedHash;
+      lastCloudSyncedHashRef.current = shouldUseCloud
+        ? syncedHash
+        : cloudSnapshot?.state
+          ? getSyncedStateHash(cloudSnapshot.state)
+          : null;
+      lastKnownSyncUpdatedAtRef.current = shouldUseCloud
+        ? cloudUpdatedAt
+        : localSyncedUpdatedAt ?? cloudUpdatedAt;
+
+      if (shouldUseCloud && cloudUpdatedAt) {
+        saveSyncedStateUpdatedAt(cloudUpdatedAt);
+      }
+
+      setLockedProfile(deviceLockedProfile);
+      setState((current) => ({
+        ...current,
+        ...initialState,
+        selectedUserId: resolvedSelectedUserId,
+      }));
+
+      if (initialState.isSessionActive && initialState.activeWorkout?.userId === resolvedSelectedUserId) {
+        setActiveTab("workout");
+      } else if (launchProfile || rememberedProfile || deviceLockedProfile) {
         setActiveTab("home");
       }
-      setHasEnteredProfile(true);
-    }
-    if (typeof window !== "undefined" && launchProfile) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-    if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
-      setShowOnboarding(true);
-    }
-    setHydrated(true);
+
+      if (deviceLockedProfile || launchProfile || rememberedProfile) {
+        setHasEnteredProfile(true);
+      }
+
+      if (typeof window !== "undefined" && launchProfile) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+      if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
+        setShowOnboarding(true);
+      }
+      setHydrated(true);
+    };
+
+    void hydrate();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -442,10 +492,95 @@ export function WorkoutTrackerApp() {
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      saveState(state);
+    if (!hydrated) {
+      return;
+    }
+
+    saveState(state);
+
+    const syncedHash = getSyncedStateHash(getSyncedAppState(state));
+    if (syncedHash !== lastLocalSyncedHashRef.current) {
+      const updatedAt = new Date().toISOString();
+      lastLocalSyncedHashRef.current = syncedHash;
+      lastKnownSyncUpdatedAtRef.current = updatedAt;
+      saveSyncedStateUpdatedAt(updatedAt);
     }
   }, [state, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || !isCloudSyncConfigured()) {
+      return;
+    }
+
+    const syncedHash = getSyncedStateHash(getSyncedAppState(state));
+    if (syncedHash === lastCloudSyncedHashRef.current) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void saveCloudSnapshot(state).then((snapshot) => {
+        if (!snapshot) {
+          return;
+        }
+
+        lastCloudSyncedHashRef.current = syncedHash;
+        lastKnownSyncUpdatedAtRef.current = snapshot.updatedAt;
+        saveSyncedStateUpdatedAt(snapshot.updatedAt);
+      });
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [state, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || !isCloudSyncConfigured() || typeof document === "undefined") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncFromCloud = async () => {
+      const snapshot = await loadCloudSnapshot();
+      if (
+        cancelled ||
+        !snapshot?.state ||
+        !snapshot.updatedAt ||
+        toComparableTimestamp(snapshot.updatedAt) <= toComparableTimestamp(lastKnownSyncUpdatedAtRef.current)
+      ) {
+        return;
+      }
+
+      lastCloudSyncedHashRef.current = getSyncedStateHash(snapshot.state);
+      lastKnownSyncUpdatedAtRef.current = snapshot.updatedAt;
+      saveSyncedStateUpdatedAt(snapshot.updatedAt);
+
+      setState((current) => {
+        const next = applyCloudState(current, snapshot.state ?? {});
+        lastLocalSyncedHashRef.current = getSyncedStateHash(getSyncedAppState(next));
+        return next;
+      });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void syncFromCloud();
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void syncFromCloud();
+      }
+    }, 15000);
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [hydrated]);
 
   useEffect(() => {
     const now = new Date();
@@ -1323,6 +1458,50 @@ export function WorkoutTrackerApp() {
     }, 850);
   };
 
+  const markTrainingAgeMilestoneShown = useCallback(() => {
+    const milestone = trainingState.trainingAge.milestone;
+    if (!milestone) {
+      return;
+    }
+
+    setState((current) => {
+      const existing = current.trainingAgeState[selectedProfile.id].milestonesShown;
+      if (existing.includes(milestone)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        trainingAgeState: {
+          ...current.trainingAgeState,
+          [selectedProfile.id]: {
+            ...current.trainingAgeState[selectedProfile.id],
+            milestonesShown: [...existing, milestone],
+          },
+        },
+      };
+    });
+  }, [selectedProfile.id, trainingState.trainingAge.milestone]);
+
+  useEffect(() => {
+    const milestone = trainingState.trainingAge.milestone;
+    if (
+      !showSettings ||
+      !milestone ||
+      state.trainingAgeState[selectedProfile.id].milestonesShown.includes(milestone)
+    ) {
+      return;
+    }
+
+    markTrainingAgeMilestoneShown();
+  }, [
+    markTrainingAgeMilestoneShown,
+    selectedProfile.id,
+    showSettings,
+    state.trainingAgeState,
+    trainingState.trainingAge.milestone,
+  ]);
+
   if (showInstallLaunch) {
     return (
       <main className="theme-shell install-launch-shell flex min-h-screen items-center justify-center px-6 text-text">
@@ -1389,50 +1568,6 @@ export function WorkoutTrackerApp() {
       },
     }));
   };
-
-  const markTrainingAgeMilestoneShown = useCallback(() => {
-    const milestone = trainingState.trainingAge.milestone;
-    if (!milestone) {
-      return;
-    }
-
-    setState((current) => {
-      const existing = current.trainingAgeState[selectedProfile.id].milestonesShown;
-      if (existing.includes(milestone)) {
-        return current;
-      }
-
-      return {
-        ...current,
-        trainingAgeState: {
-          ...current.trainingAgeState,
-          [selectedProfile.id]: {
-            ...current.trainingAgeState[selectedProfile.id],
-            milestonesShown: [...existing, milestone],
-          },
-        },
-      };
-    });
-  }, [selectedProfile.id, trainingState.trainingAge.milestone]);
-
-  useEffect(() => {
-    const milestone = trainingState.trainingAge.milestone;
-    if (
-      !showSettings ||
-      !milestone ||
-      state.trainingAgeState[selectedProfile.id].milestonesShown.includes(milestone)
-    ) {
-      return;
-    }
-
-    markTrainingAgeMilestoneShown();
-  }, [
-    markTrainingAgeMilestoneShown,
-    selectedProfile.id,
-    showSettings,
-    state.trainingAgeState,
-    trainingState.trainingAge.milestone,
-  ]);
 
   const saveEditedSession = (updatedSession: WorkoutSession, options?: { countAsDone?: boolean }) => {
     let weekStreakMilestone: number | null = null;

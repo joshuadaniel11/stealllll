@@ -7,3 +7,6 @@ STEaLLLLLL
 playwright-report
 test-results
 tsconfig.tsbuildinfo
+.env.local
+.env*.local
+.npm-cache
