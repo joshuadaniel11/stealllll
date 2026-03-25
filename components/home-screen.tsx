@@ -9,8 +9,9 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { StrengthPredictionCard } from "@/components/strength-prediction-card";
 import { Card, MiniMetric } from "@/components/ui";
 import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
-import type { RestDayState, RivalryCardCopy, WeeklyRivalryState } from "@/lib/profile-training-state";
+import type { MonthlyReportCard, RestDayState, RivalryCardCopy, WeeklyRivalryState } from "@/lib/profile-training-state";
 import { getSessionPresentation } from "@/lib/session-presentation";
+import { getWeddingCountdownCardState, type WeddingDateState } from "@/lib/wedding-date";
 import type { RecentTrainingUpdate } from "@/lib/types";
 import type {
   BibleVerse,
@@ -70,11 +71,39 @@ function renderRivalryHeadline(copy: RivalryCardCopy) {
   );
 }
 
+function getWeddingCountdownBorderClass(urgencyLevel: WeddingDateState["urgencyLevel"]) {
+  switch (urgencyLevel) {
+    case "low":
+      return "border-white/8";
+    case "medium":
+      return "border-white/12";
+    case "high":
+      return "border-white/18";
+    case "final":
+      return "border-white/24";
+  }
+}
+
+function getWeddingCountdownNumberClass(urgencyLevel: WeddingDateState["urgencyLevel"]) {
+  switch (urgencyLevel) {
+    case "low":
+      return "text-white/72";
+    case "medium":
+      return "text-white/86";
+    case "high":
+    case "final":
+      return "text-white";
+  }
+}
+
 type HomeScreenProps = {
   profile: Profile;
   todaysWorkout: WorkoutPlanDay;
   activeWorkoutName: string | null;
+  isSessionActive: boolean;
+  activeSessionSetCount: number;
   trainingInsight: string;
+  liftReadyLine: string | null;
   restDayState: RestDayState;
   restDayRead: string | null;
   restRecoveryLabel: string;
@@ -87,15 +116,13 @@ type HomeScreenProps = {
   stretchCompletedToday: boolean;
   sharedSummary: SharedSummary;
   recentWorkouts: WorkoutSession[];
-  weddingCountdown: {
-    months: number;
-    days: number;
-    label: string;
-  };
+  weddingDate: WeddingDateState;
+  phaseTransitionLine: string | null;
   recentTrainingUpdate: RecentTrainingUpdate | null;
   momentumPillText: string | null;
   rivalryState: WeeklyRivalryState;
   rivalryCopy: RivalryCardCopy;
+  monthlyReport: MonthlyReportCard | null;
   calendarRows: Array<{
     label: string;
     isCurrentWeek: boolean;
@@ -107,6 +134,7 @@ type HomeScreenProps = {
       isToday: boolean;
       joshuaCompleted: boolean;
       natashaCompleted: boolean;
+      stolenBy?: "joshua" | "natasha" | null;
     }>;
   }>;
   onOpenDailyVerse: () => void;
@@ -123,7 +151,10 @@ export function HomeScreen({
   profile,
   todaysWorkout,
   activeWorkoutName,
+  isSessionActive,
+  activeSessionSetCount,
   trainingInsight,
+  liftReadyLine,
   restDayState,
   restDayRead,
   restRecoveryLabel,
@@ -136,11 +167,13 @@ export function HomeScreen({
   stretchCompletedToday,
   sharedSummary,
   recentWorkouts,
-  weddingCountdown,
+  weddingDate,
+  phaseTransitionLine,
   recentTrainingUpdate,
   momentumPillText,
   rivalryState,
   rivalryCopy,
+  monthlyReport,
   calendarRows,
   onOpenDailyVerse,
   onToggleStretch,
@@ -177,6 +210,8 @@ export function HomeScreen({
       : "Start Session";
   const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
   const showRestDayHero = restDayState.isRest && restDayRead;
+  const showActiveSessionPulse = isSessionActive && Boolean(activeWorkoutName);
+  const weddingCountdown = getWeddingCountdownCardState(profile.id, weddingDate);
   const moreSummary = showRestDayHero
     ? "Note first. One quiet utility layer."
     : dailyMobilityPrompt
@@ -185,8 +220,94 @@ export function HomeScreen({
 
   return (
     <div className="space-y-4 pb-28">
+      {monthlyReport ? (
+        <ScrollReveal delay={18}>
+          <div className={showActiveSessionPulse ? "opacity-35" : ""}>
+          <Card className="home-session-hero tab-fade-enter max-h-[70vh] space-y-5 overflow-y-auto px-6 py-6">
+            <div className="space-y-1 text-center">
+              <h2 className="text-[1.65rem] font-medium tracking-[-0.04em] text-white">
+                {monthlyReport.month} {monthlyReport.year}
+              </h2>
+              <p className="text-[12px] text-white/42">Month closed.</p>
+            </div>
+
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-4">
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-white/78">
+                  <span className="text-emerald-300/85">Joshua</span>
+                </p>
+                <div className="space-y-2 text-sm text-white/58">
+                  <p>{monthlyReport.joshua.sessions} sessions</p>
+                  <p>{monthlyReport.joshua.totalSets} sets</p>
+                  <p>{monthlyReport.joshua.topMuscleGroup}</p>
+                  <p>{monthlyReport.joshua.streakBest} day streak</p>
+                  {monthlyReport.joshua.newPRs > 0 ? <p>{monthlyReport.joshua.newPRs} PRs</p> : null}
+                </div>
+              </div>
+              <div className="h-full w-px bg-white/10" />
+              <div className="space-y-3 text-right">
+                <p className="text-sm font-medium text-white/78">
+                  <span className="text-sky-300/85">Natasha</span>
+                </p>
+                <div className="space-y-2 text-sm text-white/58">
+                  <p>{monthlyReport.natasha.sessions} sessions</p>
+                  <p>{monthlyReport.natasha.totalSets} sets</p>
+                  <p>{monthlyReport.natasha.topMuscleGroup}</p>
+                  <p>{monthlyReport.natasha.streakBest} day streak</p>
+                  {monthlyReport.natasha.newPRs > 0 ? <p>{monthlyReport.natasha.newPRs} PRs</p> : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-4">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/36">Rivalry record this month</p>
+              <p className="text-sm text-white/70">
+                Week wins: Joshua {monthlyReport.rivalry.weekWins.joshua} {"\u2014"} Natasha {monthlyReport.rivalry.weekWins.natasha}
+                {monthlyReport.rivalry.weekWins.tied > 0 ? ` \u2014 Tied ${monthlyReport.rivalry.weekWins.tied}` : ""}
+              </p>
+              <p className="text-sm text-white/58">
+                Steals: Joshua {monthlyReport.rivalry.totalSteals.joshua} {"\u00b7"} Natasha {monthlyReport.rivalry.totalSteals.natasha}
+              </p>
+              <p className="text-sm font-medium text-white/82">
+                Month winner:{" "}
+                {monthlyReport.rivalry.monthWinner === "joshua" ? (
+                  <span className="text-emerald-300/85">Joshua</span>
+                ) : monthlyReport.rivalry.monthWinner === "natasha" ? (
+                  <span className="text-sky-300/85">Natasha</span>
+                ) : (
+                  "Tied"
+                )}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <p className="text-left italic text-emerald-300/80">{monthlyReport.closingLine.joshua}</p>
+              <p className="text-right italic text-sky-300/80">{monthlyReport.closingLine.natasha}</p>
+            </div>
+          </Card>
+          </div>
+        </ScrollReveal>
+      ) : null}
+
       <ScrollReveal delay={30}>
-        {showRestDayHero ? (
+        {showActiveSessionPulse ? (
+          <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
+            <div className="space-y-1.5">
+              <h2 className={`text-[2rem] font-semibold tracking-[-0.06em] ${profile.id === "joshua" ? "text-emerald-300/88" : "text-sky-300/88"}`}>
+                {activeWorkoutName}
+              </h2>
+              <p className="text-sm text-white/46">In progress</p>
+              <p className="text-sm leading-6 text-white/58">{activeSessionSetCount} sets logged</p>
+            </div>
+            <button
+              type="button"
+              onClick={onResumeWorkout}
+              className="text-left text-sm text-white/46 transition hover:text-white/72"
+            >
+              Return to session {"\u2192"}
+            </button>
+          </Card>
+        ) : showRestDayHero ? (
           <Card className="home-session-hero tab-fade-enter space-y-5 px-6 py-6">
             <div className="space-y-2">
               <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">Rest read</p>
@@ -286,26 +407,68 @@ export function HomeScreen({
         )}
       </ScrollReveal>
 
-      {showRestDayHero && dailyMobilityPrompt ? (
-        <ScrollReveal delay={36}>
-          <DailyMobilityPromptCard
-            prompt={dailyMobilityPrompt}
-            completed={stretchCompletedToday}
-            onToggle={onToggleStretch}
-          />
-        </ScrollReveal>
-      ) : null}
-
-      {momentumPillText ? (
-        <ScrollReveal delay={36}>
+      {liftReadyLine ? (
+        <ScrollReveal delay={34}>
           <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
-            {momentumPillText}
+            {liftReadyLine}
           </p>
         </ScrollReveal>
       ) : null}
 
-      <ScrollReveal delay={44}>
-        <Card className="space-y-4 px-4 py-4">
+      <div className={showActiveSessionPulse ? "opacity-35" : ""}>
+        {phaseTransitionLine ? (
+          <ScrollReveal delay={34}>
+            <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
+              {phaseTransitionLine}
+            </p>
+          </ScrollReveal>
+        ) : null}
+
+        {weddingCountdown.visible ? (
+          <ScrollReveal delay={38}>
+            <Card className={`tab-fade-enter px-5 py-5 ${getWeddingCountdownBorderClass(weddingDate.urgencyLevel)}`}>
+              {weddingDate.isWeddingDay ? (
+                <div className="py-2 text-center">
+                  <p className="text-[1.5rem] font-medium tracking-[-0.05em] text-white">{weddingCountdown.copy}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-[auto_1fr] items-center gap-5">
+                  <div className="min-w-[92px]">
+                    <p className={`text-[3rem] font-semibold leading-none tracking-[-0.08em] ${getWeddingCountdownNumberClass(weddingDate.urgencyLevel)}`}>
+                      {weddingCountdown.heroValue}
+                    </p>
+                    <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-white/36">{weddingCountdown.heroUnit}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm leading-6 text-white/74">{weddingCountdown.copy}</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/34">{weddingCountdown.phaseLabel}</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </ScrollReveal>
+        ) : null}
+
+        {showRestDayHero && dailyMobilityPrompt ? (
+          <ScrollReveal delay={36}>
+            <DailyMobilityPromptCard
+              prompt={dailyMobilityPrompt}
+              completed={stretchCompletedToday}
+              onToggle={onToggleStretch}
+            />
+          </ScrollReveal>
+        ) : null}
+
+        {momentumPillText ? (
+          <ScrollReveal delay={36}>
+            <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
+              {momentumPillText}
+            </p>
+          </ScrollReveal>
+        ) : null}
+
+        <ScrollReveal delay={44}>
+          <Card className="space-y-4 px-4 py-4">
           <div className="space-y-3">
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
             <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
@@ -321,15 +484,31 @@ export function HomeScreen({
                 </p>
               </div>
             </div>
-            <p className="text-[1.12rem] font-semibold tracking-[-0.04em] text-white/92">{renderRivalryHeadline(rivalryCopy)}</p>
-            <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
+            {rivalryCopy.headline ? (
+              <p className="text-[1.12rem] font-semibold tracking-[-0.04em] text-white/92">{renderRivalryHeadline(rivalryCopy)}</p>
+            ) : null}
+            {rivalryCopy.detail ? (
+              <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
+            ) : null}
+            {rivalryCopy.stealDetail ? (
+              <p className="text-[12px] leading-5 text-white/40">{rivalryCopy.stealDetail}</p>
+            ) : null}
+            {rivalryCopy.weddingGoalDetail ? (
+              <>
+                <div className="h-px bg-white/8" />
+                <div className="space-y-1.5">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/34">Wedding goal</p>
+                  <p className="text-[12px] leading-5 text-white/48">{rivalryCopy.weddingGoalDetail}</p>
+                </div>
+              </>
+            ) : null}
           </div>
           <WeeklyTrainingCalendar rows={calendarRows} />
-        </Card>
-      </ScrollReveal>
+          </Card>
+        </ScrollReveal>
 
-      <ScrollReveal delay={55}>
-        <Card className="tab-fade-enter space-y-3 px-4 py-4">
+        <ScrollReveal delay={55}>
+          <Card className="tab-fade-enter space-y-3 px-4 py-4">
           <button
             type="button"
             onClick={() => setShowDetails((value) => !value)}
@@ -371,7 +550,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Countdown, stats, then deeper utility.</p>
+                  <p className="mt-1 text-sm leading-6 text-white/54">Stats, then deeper utility.</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
@@ -386,19 +565,10 @@ export function HomeScreen({
 
               {showExtras ? (
               <>
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="home-quiet-card space-y-2 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Countdown</p>
-                  <p className="text-xl font-semibold tracking-[-0.04em] text-white">
-                    {weddingCountdown.months}m {"\u2022"} {weddingCountdown.days}d
-                  </p>
-                  <p className="text-sm leading-6 text-white/52">{weddingCountdown.label}</p>
-                </Card>
-                <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                   <MiniMetric label="Sessions" value={String(weeklyCount)} />
                   <MiniMetric label="Streak" value={`${streak}d`} />
                   <MiniMetric label="PRs" value={String(pbCount)} />
-                </div>
               </div>
 
               <button
@@ -491,8 +661,9 @@ export function HomeScreen({
               ) : null}
             </div>
           ) : null}
-        </Card>
-      </ScrollReveal>
+          </Card>
+        </ScrollReveal>
+      </div>
     </div>
   );
 }

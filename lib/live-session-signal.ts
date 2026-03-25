@@ -1,5 +1,12 @@
 import { getCurrentWeekWindow } from "@/lib/training-load";
-import type { LiveSessionSignal, LiveSessionSignalType, Profile, SessionSignalLogEntry, WorkoutSession } from "@/lib/types";
+import type {
+  LiveSessionSignal,
+  LiveSessionSignalType,
+  Profile,
+  SessionSignalLogEntry,
+  StrongDayState,
+  WorkoutSession,
+} from "@/lib/types";
 
 export type LiveSessionSignalRead = {
   shouldFire: boolean;
@@ -7,16 +14,35 @@ export type LiveSessionSignalRead = {
   targetExercise: string;
   message: string;
   copyIndex: number;
+  strongDayState?: StrongDayState | null;
 };
 
 type HistoricalExerciseSession = {
   performedAt: string;
   setScores: number[];
   bestSetScore: number;
+  sets: WorkoutSession["exercises"][number]["sets"];
 };
 
 const SESSION_SIGNAL_COPY = {
   joshua: {
+    strong_day: {
+      strong: [
+        "Stronger than last time here. Keep moving.",
+        "Above your last session. Use it.",
+        "Good numbers early. Don't back off.",
+      ],
+      very_strong: [
+        "Clearly a strong day. Push the ceiling.",
+        "Way above pace. This is yours to take.",
+        "Best numbers in a while on this. Go.",
+      ],
+      exceptional: [
+        "Best session in weeks on this lift. Lock in.",
+        "Exceptional pace. Everything today counts.",
+        "This is a training day you'll remember.",
+      ],
+    },
     push: [
       "You're ahead of pace on this. Push the next set.",
       "Tracking strong. Don't leave weight on the bar.",
@@ -36,6 +62,23 @@ const SESSION_SIGNAL_COPY = {
     ],
   },
   natasha: {
+    strong_day: {
+      strong: [
+        "Stronger than last time here. Stay with it.",
+        "Above your last session. Good energy today.",
+        "Early numbers are clean. Keep the form.",
+      ],
+      very_strong: [
+        "Clearly a strong day. Stay controlled and push.",
+        "Well above your last session. Use this.",
+        "Strong energy today. Make the most of it.",
+      ],
+      exceptional: [
+        "Best session in a while on this. Stay smooth.",
+        "Exceptional pace. Everything today has potential.",
+        "This is a strong day. Own it cleanly.",
+      ],
+    },
     push: [
       "Stronger than usual here. Use it.",
       "Tracking above your average. Stay controlled and push.",
@@ -60,10 +103,12 @@ function getSetScore(weight: number, reps: number) {
   return weight * reps;
 }
 
+function getCompletedLoggedSets(sets: WorkoutSession["exercises"][number]["sets"]) {
+  return sets.filter((set) => set.completed && (set.weight > 0 || set.reps > 0));
+}
+
 function getCompletedSetScores(sets: WorkoutSession["exercises"][number]["sets"]) {
-  return sets
-    .filter((set) => set.completed && (set.weight > 0 || set.reps > 0))
-    .map((set) => getSetScore(set.weight, set.reps));
+  return getCompletedLoggedSets(sets).map((set) => getSetScore(set.weight, set.reps));
 }
 
 function average(values: number[]) {
@@ -111,10 +156,23 @@ function getHistoricalExerciseSessions(exerciseName: string, exerciseHistory: Wo
         performedAt: session.performedAt,
         setScores,
         bestSetScore: Math.max(...setScores),
+        sets: matchedExercise.sets,
       } satisfies HistoricalExerciseSession;
     })
     .filter((entry): entry is HistoricalExerciseSession => Boolean(entry))
     .sort((a, b) => +new Date(b.performedAt) - +new Date(a.performedAt));
+}
+
+function getSignalOptions(
+  profileId: Profile["id"],
+  signalType: LiveSessionSignalType,
+  strongDayState?: StrongDayState | null,
+) {
+  if (signalType === "strong_day") {
+    return SESSION_SIGNAL_COPY[profileId].strong_day[strongDayState?.strengthLevel ?? "strong"];
+  }
+
+  return SESSION_SIGNAL_COPY[profileId][signalType];
 }
 
 function getMessageSelection(
@@ -122,8 +180,9 @@ function getMessageSelection(
   targetExercise: string,
   signalType: LiveSessionSignalType,
   signalHistory: SessionSignalLogEntry[],
+  strongDayState?: StrongDayState | null,
 ) {
-  const options = SESSION_SIGNAL_COPY[profileId][signalType];
+  const options = getSignalOptions(profileId, signalType, strongDayState);
   const priorExerciseSignals = signalHistory.filter((entry) => entry.exercise === targetExercise);
   const lastExerciseSignal = priorExerciseSignals[0] ?? null;
   let copyIndex = priorExerciseSignals.filter((entry) => entry.signalType === signalType).length % options.length;
@@ -135,6 +194,90 @@ function getMessageSelection(
   return {
     copyIndex,
     message: options[copyIndex],
+  };
+}
+
+export function getStrongDayState(
+  _profile: Profile,
+  currentSession: WorkoutSession,
+  exerciseHistory: WorkoutSession[],
+): StrongDayState {
+  const currentExercise = getCurrentExerciseForSignal(currentSession);
+  if (!currentExercise) {
+    return {
+      strongDayDetected: false,
+      detectedAfterSet: 0,
+      triggerExercise: "",
+      weightDeltaPercent: 0,
+      repsDelta: 0,
+      strengthLevel: "strong",
+    };
+  }
+
+  const currentCompletedSets = getCompletedLoggedSets(currentExercise.sets);
+  if (currentCompletedSets.length < 2) {
+    return {
+      strongDayDetected: false,
+      detectedAfterSet: 0,
+      triggerExercise: currentExercise.exerciseName,
+      weightDeltaPercent: 0,
+      repsDelta: 0,
+      strengthLevel: "strong",
+    };
+  }
+
+  const lastSession = getHistoricalExerciseSessions(currentExercise.exerciseName, exerciseHistory)[0];
+  if (!lastSession) {
+    return {
+      strongDayDetected: false,
+      detectedAfterSet: 0,
+      triggerExercise: currentExercise.exerciseName,
+      weightDeltaPercent: 0,
+      repsDelta: 0,
+      strengthLevel: "strong",
+    };
+  }
+
+  const lastSessionSets = getCompletedLoggedSets(lastSession.sets);
+  for (let index = 1; index < currentCompletedSets.length; index += 1) {
+    const currentSet = currentCompletedSets[index];
+    const previousSet = lastSessionSets[index];
+    if (!currentSet || !previousSet) {
+      continue;
+    }
+
+    if (currentSet.weight <= previousSet.weight || currentSet.reps < previousSet.reps) {
+      continue;
+    }
+
+    const weightDeltaPercent =
+      previousSet.weight > 0 ? ((currentSet.weight - previousSet.weight) / previousSet.weight) * 100 : 100;
+    const repsDelta = currentSet.reps - previousSet.reps;
+
+    let strengthLevel: StrongDayState["strengthLevel"] = "strong";
+    if (weightDeltaPercent >= 10 && repsDelta >= 2) {
+      strengthLevel = "exceptional";
+    } else if (weightDeltaPercent >= 5 || repsDelta >= 2) {
+      strengthLevel = "very_strong";
+    }
+
+    return {
+      strongDayDetected: true,
+      detectedAfterSet: index + 1,
+      triggerExercise: currentExercise.exerciseName,
+      weightDeltaPercent,
+      repsDelta,
+      strengthLevel,
+    };
+  }
+
+  return {
+    strongDayDetected: false,
+    detectedAfterSet: 0,
+    triggerExercise: currentExercise.exerciseName,
+    weightDeltaPercent: 0,
+    repsDelta: 0,
+    strengthLevel: "strong",
   };
 }
 
@@ -152,44 +295,93 @@ export function getLiveSessionSignal(
       targetExercise: currentSession.liveSignal.targetExercise,
       message: "",
       copyIndex: currentSession.liveSignal.copyIndex,
+      strongDayState: currentSession.liveSignal.strongDayState ?? null,
     };
-  }
-
-  if (getLoggedSetCount(currentSession) < 3) {
-    return { shouldFire: false, signalType: null, targetExercise: "", message: "", copyIndex: 0 };
   }
 
   const currentExercise = getCurrentExerciseForSignal(currentSession);
   if (!currentExercise) {
-    return { shouldFire: false, signalType: null, targetExercise: "", message: "", copyIndex: 0 };
+    return { shouldFire: false, signalType: null, targetExercise: "", message: "", copyIndex: 0, strongDayState: null };
+  }
+
+  const strongDayState = getStrongDayState(profile, currentSession, exerciseHistory);
+  if (strongDayState.strongDayDetected) {
+    const { copyIndex, message } = getMessageSelection(
+      profile.id,
+      strongDayState.triggerExercise,
+      "strong_day",
+      signalHistory,
+      strongDayState,
+    );
+
+    return {
+      shouldFire: true,
+      signalType: "strong_day",
+      targetExercise: strongDayState.triggerExercise,
+      message,
+      copyIndex,
+      strongDayState,
+    };
+  }
+
+  if (getLoggedSetCount(currentSession) < 3) {
+    return {
+      shouldFire: false,
+      signalType: null,
+      targetExercise: currentExercise.exerciseName,
+      message: "",
+      copyIndex: 0,
+      strongDayState: null,
+    };
   }
 
   const currentSetScores = getCompletedSetScores(currentExercise.sets).slice(-3);
   if (currentSetScores.length < 3) {
-    return { shouldFire: false, signalType: null, targetExercise: currentExercise.exerciseName, message: "", copyIndex: 0 };
+    return {
+      shouldFire: false,
+      signalType: null,
+      targetExercise: currentExercise.exerciseName,
+      message: "",
+      copyIndex: 0,
+      strongDayState: null,
+    };
   }
 
   const historyForExercise = getHistoricalExerciseSessions(currentExercise.exerciseName, exerciseHistory);
   if (historyForExercise.length < 2) {
-    return { shouldFire: false, signalType: null, targetExercise: currentExercise.exerciseName, message: "", copyIndex: 0 };
+    return {
+      shouldFire: false,
+      signalType: null,
+      targetExercise: currentExercise.exerciseName,
+      message: "",
+      copyIndex: 0,
+      strongDayState: null,
+    };
   }
 
   const comparisonWindow = historyForExercise.slice(0, 4);
   const historicalAverage = average(comparisonWindow.flatMap((entry) => entry.setScores));
   if (historicalAverage <= 0) {
-    return { shouldFire: false, signalType: null, targetExercise: currentExercise.exerciseName, message: "", copyIndex: 0 };
+    return {
+      shouldFire: false,
+      signalType: null,
+      targetExercise: currentExercise.exerciseName,
+      message: "",
+      copyIndex: 0,
+      strongDayState: null,
+    };
   }
 
   const currentAverage = average(currentSetScores);
   const currentBestSet = Math.max(...currentSetScores);
   const historicalBestSet = Math.max(...historyForExercise.map((entry) => entry.bestSetScore));
   const relativeDelta = (currentAverage - historicalAverage) / historicalAverage;
-  const sessionCountThisWeek = getCurrentWeekWindow(referenceDate);
+  const weekWindow = getCurrentWeekWindow(referenceDate);
   const completedSessionsThisWeek = exerciseHistory.filter(
     (session) =>
       !session.partial &&
-      new Date(session.performedAt) >= sessionCountThisWeek.start &&
-      new Date(session.performedAt) <= sessionCountThisWeek.end,
+      new Date(session.performedAt) >= weekWindow.start &&
+      new Date(session.performedAt) <= weekWindow.end,
   ).length;
 
   let signalType: LiveSessionSignalType | null = null;
@@ -205,7 +397,14 @@ export function getLiveSessionSignal(
   }
 
   if (!signalType) {
-    return { shouldFire: false, signalType: null, targetExercise: currentExercise.exerciseName, message: "", copyIndex: 0 };
+    return {
+      shouldFire: false,
+      signalType: null,
+      targetExercise: currentExercise.exerciseName,
+      message: "",
+      copyIndex: 0,
+      strongDayState: null,
+    };
   }
 
   const { copyIndex, message } = getMessageSelection(profile.id, currentExercise.exerciseName, signalType, signalHistory);
@@ -216,6 +415,7 @@ export function getLiveSessionSignal(
     targetExercise: currentExercise.exerciseName,
     message,
     copyIndex,
+    strongDayState: null,
   };
 }
 
@@ -230,6 +430,7 @@ export function buildActiveLiveSignal(signal: LiveSessionSignalRead): LiveSessio
     message: signal.message,
     firedAt: new Date().toISOString(),
     copyIndex: signal.copyIndex,
+    strongDayState: signal.strongDayState ?? null,
     dismissedAt: null,
   };
 }
@@ -246,5 +447,6 @@ export function buildSessionSignalLogEntry(session: WorkoutSession): SessionSign
     signalType: session.liveSignal.signalType,
     firedAt: session.liveSignal.firedAt,
     copyIndex: session.liveSignal.copyIndex,
+    strongDayState: session.liveSignal.strongDayState ?? null,
   };
 }

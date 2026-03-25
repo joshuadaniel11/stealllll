@@ -2,13 +2,16 @@ import { ChevronRight, Download, RefreshCcw, Shield, Trash2, Upload, UserRound }
 
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
-import type { SignatureLiftsState } from "@/lib/profile-training-state";
+import type { SignatureLiftsState, TrainingAgeState } from "@/lib/profile-training-state";
 import type { Profile } from "@/lib/types";
 
 export function SettingsModal({
   profile,
   signatureLifts,
+  trainingAge,
+  trainingAgeMilestone,
   isProfileLocked,
+  hapticEnabled,
   installState,
   onClose,
   onInstall,
@@ -17,11 +20,15 @@ export function SettingsModal({
   onResetProfile,
   onResetAll,
   onChooseProfile,
+  onToggleHaptics,
   onToggleProfileLock,
 }: {
   profile: Profile;
   signatureLifts: SignatureLiftsState;
+  trainingAge: TrainingAgeState;
+  trainingAgeMilestone: string | null;
   isProfileLocked: boolean;
+  hapticEnabled: boolean;
   installState: {
     isStandalone: boolean;
     canPrompt: boolean;
@@ -35,6 +42,7 @@ export function SettingsModal({
   onResetProfile: () => void;
   onResetAll: () => void;
   onChooseProfile: () => void;
+  onToggleHaptics: () => void;
   onToggleProfileLock: () => void;
 }) {
   return (
@@ -108,6 +116,21 @@ export function SettingsModal({
             </ScrollReveal>
 
             <ScrollReveal delay={110} y={18} scale={0.994}>
+              <div>
+                <p className="caption-text px-2 pb-2 text-muted">Feel</p>
+                <div className="grouped-section">
+                  <button className="grouped-row" onClick={onToggleHaptics}>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text">Haptic feedback</p>
+                      <p className="caption-text mt-1 text-muted">Subtle feedback at key moments</p>
+                    </div>
+                    <span className="text-[12px] font-medium text-muted">{hapticEnabled ? "On" : "Off"}</span>
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={135} y={18} scale={0.994}>
               {signatureLifts.ready ? (
                 <div>
                   <p className="caption-text px-2 pb-2 uppercase tracking-[0.18em] text-muted">Signature lifts</p>
@@ -125,7 +148,7 @@ export function SettingsModal({
               ) : null}
             </ScrollReveal>
 
-            <ScrollReveal delay={135} y={18} scale={0.994}>
+            <ScrollReveal delay={160} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Install</p>
                 <div className="grouped-section">
@@ -156,7 +179,7 @@ export function SettingsModal({
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={160} y={18} scale={0.994}>
+            <ScrollReveal delay={185} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Backups</p>
                 <div className="grouped-section">
@@ -194,7 +217,7 @@ export function SettingsModal({
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={210} y={18} scale={0.994}>
+            <ScrollReveal delay={235} y={18} scale={0.994}>
               <div>
                 <p className="caption-text px-2 pb-2 text-muted">Resets</p>
                 <div className="grouped-section">
@@ -222,6 +245,19 @@ export function SettingsModal({
                 </div>
               </div>
             </ScrollReveal>
+
+            {trainingAge.rawSessionCount > 0 ? (
+              <ScrollReveal delay={260} y={18} scale={0.994}>
+                <div className="px-2 pb-1 pt-2">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Training age</p>
+                  <p className="mt-2 text-[13px] font-medium text-white/68">{trainingAge.trainingAgeLabel}</p>
+                  <p className="mt-1 text-[11px] text-muted">{trainingAge.rawSessionCount} sessions logged</p>
+                  {trainingAgeMilestone ? (
+                    <p className="mt-1 text-[11px] italic text-white/42">{trainingAgeMilestone}</p>
+                  ) : null}
+                </div>
+              </ScrollReveal>
+            ) : null}
           </div>
         </Card>
       </div>

@@ -431,6 +431,9 @@ export function WorkoutScreen({
                     <p className="mt-3 text-sm text-muted">
                       {suggestedFocusSession.exercises.length} moves - ~{suggestedFocusSession.estimatedDurationMinutes} min
                     </p>
+                    {suggestedFocusSession.ceilingPreviewLine ? (
+                      <p className="mt-2 text-xs text-muted/90">{suggestedFocusSession.ceilingPreviewLine}</p>
+                    ) : null}
                     </div>
                 ) : null}
 
@@ -522,7 +525,7 @@ export function WorkoutScreen({
   const compressionInsight = getAdaptiveCompressionInsight(activeWorkoutTemplate, userSessions);
   const recommendedExercise = getRecommendedExercise(activeWorkout, activeWorkoutTemplate);
   const canShowQuickFill = Boolean(currentSet && !currentSet.completed);
-  const targetRepSuggestion = getTargetRepSuggestion(currentTemplate?.repRange);
+  const targetRepSuggestion = currentTemplate?.suggestedRepTarget ?? getTargetRepSuggestion(currentTemplate?.repRange);
   const exercisePickerRows = showCompletedExercises
     ? activeWorkout.exercises
     : activeWorkout.exercises.filter((exercise) => !isExerciseComplete(exercise));
@@ -849,7 +852,7 @@ export function WorkoutScreen({
               inputMode="numeric"
               type="number"
               value={currentSet?.reps || ""}
-              placeholder="0"
+              placeholder={targetRepSuggestion ? String(targetRepSuggestion) : "0"}
               onChange={(event) =>
                 onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", Number(event.target.value))
               }

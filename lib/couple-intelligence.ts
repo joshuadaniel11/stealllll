@@ -1,4 +1,5 @@
 import { getExerciseMuscleContribution } from "@/lib/training-load";
+import type { WeddingDateState } from "@/lib/wedding-date";
 import type { MeasurementEntry, SharedSummary, WorkoutSession } from "@/lib/types";
 
 function getWeekStart(date = new Date()) {
@@ -90,13 +91,13 @@ function getNatashaComplement(natashaSessions: WorkoutSession[]) {
   return "Natasha's back definition work is leading the cleaner shape change right now.";
 }
 
-function getWeddingMomentumLine(combinedWorkouts: number, weddingCountdown: { months: number; days: number }) {
+function getWeddingMomentumLine(combinedWorkouts: number, weddingDate: WeddingDateState) {
   if (combinedWorkouts >= 5) {
-    return `Wedding momentum is ahead. ${combinedWorkouts} sessions this week is exactly the kind of rhythm that compounds by ${weddingCountdown.months} months to go.`;
+    return `Wedding momentum is ahead. ${combinedWorkouts} sessions this week is exactly the kind of rhythm that compounds over the next ${weddingDate.weeksRemaining} weeks.`;
   }
 
   if (combinedWorkouts >= 3) {
-    return `Wedding momentum is holding. ${combinedWorkouts} sessions this week keeps the trend moving in the right direction before the last ${weddingCountdown.months} months and ${weddingCountdown.days} days.`;
+    return `Wedding momentum is holding. ${combinedWorkouts} sessions this week keeps the trend moving in the right direction with ${weddingDate.daysRemaining} days left.`;
   }
 
   return `Wedding momentum is still open this week. A couple more sessions now will matter more than trying to make it perfect later.`;
@@ -105,11 +106,11 @@ function getWeddingMomentumLine(combinedWorkouts: number, weddingCountdown: { mo
 export function getCoupleIntelligenceSummary({
   sessions,
   measurements,
-  weddingCountdown,
+  weddingDate,
 }: {
   sessions: WorkoutSession[];
   measurements: Record<"joshua" | "natasha", MeasurementEntry[]>;
-  weddingCountdown: { months: number; days: number };
+  weddingDate: WeddingDateState;
 }): SharedSummary {
   const joshuaSessions = sessions
     .filter((session) => session.userId === "joshua")
@@ -154,7 +155,7 @@ export function getCoupleIntelligenceSummary({
       bothTrainedThisWeek
         ? "Both trained this week."
         : "Only one side has trained this week so far.",
-      getWeddingMomentumLine(combinedWorkouts, weddingCountdown),
+      getWeddingMomentumLine(combinedWorkouts, weddingDate),
       leaningOutTogether
         ? "Both body-fat trends are supporting the visual payoff."
         : complementarySignal,

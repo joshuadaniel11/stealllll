@@ -1,6 +1,8 @@
 import type {
   ExerciseLibraryItem,
   ExerciseTemplate,
+  MuscleCeilingResponse,
+  MuscleCeilingState,
   MuscleGroup,
   UserId,
   WorkoutPlanDay,
@@ -8,6 +10,8 @@ import type {
   WorkoutSessionExercise,
 } from "@/lib/types";
 import { buildCanonicalExerciseLibrary, normalizeExerciseName } from "@/lib/exercise-data";
+import { getExerciseSwapOptions } from "@/lib/exercise-swaps";
+import type { WeddingPhaseProfile } from "@/lib/wedding-date";
 
 export type TrainingLoadGroupId =
   | "chest"
@@ -113,6 +117,7 @@ export type SuggestedFocusSessionExercise = {
   muscleGroup: MuscleGroup;
   sets: number | null;
   repRange: string | null;
+  suggestedRepTarget?: number | null;
   note?: string;
   matchedZoneIds: TrainingLoadZone[];
   matchedLabels: string[];
@@ -132,7 +137,75 @@ export type SuggestedFocusSession = {
   actionLabel: string;
   canStartDirectly: boolean;
   isFallback: boolean;
+  ceilingPreviewLine?: string | null;
+  ceilingAppliedResponses?: Partial<Record<MuscleGroup, MuscleCeilingResponse>>;
 };
+
+type LiftReadySignalInput = {
+  readinessLevel: "early" | "developing" | "building" | "strong" | "ready";
+  trend: "rising" | "steady" | "slipping";
+};
+
+type NatashaPriorityLockInput = {
+  lockedPrimary: string[];
+  lockedSecondary: string[];
+  minimumFrequency: Record<string, number>;
+  phaseOverrides: {
+    noNewExercises?: boolean;
+    noHeavyLoading?: boolean;
+    repRangeBias?: "high";
+    lightOnly?: boolean;
+    noSoreness?: boolean;
+    avoidSwelling?: boolean;
+  };
+} | null;
+
+type NatashaWaistProtocolInput = {
+  active: boolean;
+  obliquePriority: "low" | "medium" | "high";
+  targetMovementTypes: string[];
+  setsPerSession: number;
+  avoidMovements: string[];
+} | null;
+
+type NatashaBackRevealInput = {
+  active: boolean;
+  weeksRemaining: number;
+  backPriorityLevel: "elevated" | "high" | "peak";
+  targetMuscles: string[];
+  movementBias: string[];
+  volumeAddition: number;
+} | null;
+
+type NatashaWaistMovementType =
+  | "cable_oblique"
+  | "rotational"
+  | "anti_rotation"
+  | "lateral_flexion"
+  | "core_vacuum"
+  | "light_rotational";
+
+type NatashaBackRevealMovementType =
+  | "lat_pulldown"
+  | "cable_row"
+  | "single_arm_row"
+  | "face_pull"
+  | "rear_delt"
+  | "band_pull_apart"
+  | "light_lat_pulldown";
+
+const HEAVY_COMPOUND_KEYWORDS = [
+  "squat",
+  "barbell row",
+  "romanian deadlift",
+  "deadlift",
+  "hip thrust",
+  "walking lunge",
+  "reverse lunge",
+  "bulgarian split squat",
+  "shoulder press",
+  "press",
+] as const;
 
 export type RecentLoadProfile = {
   zonePenalties: Record<TrainingLoadZone, number>;
@@ -155,8 +228,768 @@ type FocusExerciseCandidate = {
   sourceWorkoutName: string | null;
   preferredWorkout: boolean;
   favorite: boolean;
+  phasePriorityScore: number;
+  phaseAdjustedScore: number;
   stableOrder: number;
 };
+
+function getPhasePriorityScore(matchedZoneIds: TrainingLoadZone[], phaseProfile?: WeddingPhaseProfile | null) {
+  if (!phaseProfile?.priorityMuscles.length) {
+    return 0;
+  }
+
+  return matchedZoneIds.reduce((score, zoneId) => {
+    const priorityIndex = phaseProfile.priorityMuscles.indexOf(zoneId);
+    return priorityIndex === -1 ? score : score + (phaseProfile.priorityMuscles.length - priorityIndex);
+  }, 0);
+}
+
+function isHeavyCompoundExercise(name: string) {
+  const normalized = name.toLowerCase();
+  return HEAVY_COMPOUND_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+function adjustRepRangeForPhase(repRange: string | null, phaseProfile?: WeddingPhaseProfile | null) {
+  if (!repRange || !phaseProfile) {
+    return repRange;
+  }
+
+  if (phaseProfile.currentPhase === "wedding_week") {
+    return "10-15";
+  }
+
+  if (phaseProfile.intensityBias === "definition") {
+    return "10-15";
+  }
+
+  if (phaseProfile.intensityBias === "maintenance") {
+    return "8-12";
+  }
+
+  return repRange;
+}
+
+function isNatashaBackOrGluteExercise(exercise: FocusExerciseCandidate) {
+  if (exercise.muscleGroup === "Glutes" || exercise.muscleGroup === "Back") {
+    return true;
+  }
+
+  return Object.entries(
+    getExerciseMuscleContribution({
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+    }),
+  ).some(([zoneId, weight]) =>
+    weight > 0 &&
+    ["upperGlutes", "gluteMax", "sideGlutes", "lats", "upperBack", "midBack"].includes(zoneId),
+  );
+}
+
+function isNatashaHighDomsRiskExercise(name: string) {
+  const normalized = normalizeExerciseName(name);
+  return (
+    normalized.includes("hip thrust") ||
+    normalized.includes("romanian deadlift") ||
+    normalized.includes("bulgarian split squat") ||
+    normalized.includes("sumo deadlift")
+  );
+}
+
+function shouldAvoidNatashaExercise(
+  exercise: FocusExerciseCandidate,
+  priorityLock: NatashaPriorityLockInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  if (!priorityLock || !phaseProfile) {
+    return false;
+  }
+
+  const normalized = normalizeExerciseName(exercise.name);
+  const isHighDoms = isNatashaHighDomsRiskExercise(normalized);
+  const isBackOrGlute = isNatashaBackOrGluteExercise(exercise);
+
+  if (phaseProfile.currentPhase === "wedding_week" && priorityLock.phaseOverrides.lightOnly) {
+    if (isHighDoms) {
+      return true;
+    }
+    if (exercise.muscleGroup === "Glutes") {
+      return !(
+        normalized.includes("cable") ||
+        normalized.includes("band") ||
+        normalized.includes("abductor") ||
+        normalized.includes("bridge")
+      );
+    }
+    if (exercise.muscleGroup === "Back") {
+      return normalized.includes("barbell row") || normalized.includes("deadlift");
+    }
+  }
+
+  if (phaseProfile.currentPhase === "peak" && priorityLock.phaseOverrides.noHeavyLoading && isBackOrGlute) {
+    return isHighDoms || isHeavyCompoundExercise(normalized);
+  }
+
+  return false;
+}
+
+function adjustRepRangeForNatashaPriorityLock(
+  exercise: FocusExerciseCandidate,
+  repRange: string | null,
+  priorityLock: NatashaPriorityLockInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  if (!repRange || !priorityLock || !phaseProfile) {
+    return repRange;
+  }
+
+  const shouldBiasHigh =
+    (phaseProfile.currentPhase === "peak" && priorityLock.phaseOverrides.repRangeBias === "high") ||
+    phaseProfile.currentPhase === "wedding_week";
+
+  if (shouldBiasHigh && isNatashaBackOrGluteExercise(exercise)) {
+    return "15-20";
+  }
+
+  return repRange;
+}
+
+function getNatashaPriorityPreviewLine(
+  phase: WeddingPhaseProfile["currentPhase"],
+  hasLockedPrimary: boolean,
+) {
+  if (!hasLockedPrimary) {
+    return null;
+  }
+
+  switch (phase) {
+    case "build":
+      return "Glutes lead today. Build the base.";
+    case "define":
+      return "Shape work. Glutes, back, and waist.";
+    case "peak":
+      return "Definition session. Light, controlled, clean.";
+    case "wedding_week":
+      return "One last session. Keep it light and beautiful.";
+    default:
+      return null;
+  }
+}
+
+const NATASHA_WAIST_MOVEMENT_PRIORITY: Array<{
+  name: string;
+  movementType: NatashaWaistMovementType;
+  note: string;
+}> = [
+  {
+    name: "Cable Oblique Crunch",
+    movementType: "cable_oblique",
+    note: "Slow squeeze through the waist. No heaving.",
+  },
+  {
+    name: "Pallof Press",
+    movementType: "anti_rotation",
+    note: "Brace hard and resist the pull. Stay quiet through the ribs.",
+  },
+  {
+    name: "Side Plank Reach",
+    movementType: "lateral_flexion",
+    note: "Stay long through the waist and move with control.",
+  },
+  {
+    name: "Standing Cable Rotation",
+    movementType: "rotational",
+    note: "Rotate cleanly from the trunk. No rushing.",
+  },
+  {
+    name: "Cable Woodchop",
+    movementType: "light_rotational",
+    note: "Light rotation. Smooth and controlled.",
+  },
+  {
+    name: "Core Vacuum Hold",
+    movementType: "core_vacuum",
+    note: "Exhale fully and hold the shape without strain.",
+  },
+];
+
+const NATASHA_BACK_REVEAL_MOVEMENTS: Array<{
+  name: string;
+  movementType: NatashaBackRevealMovementType;
+  note: string;
+}> = [
+  {
+    name: "Lat Pulldown",
+    movementType: "lat_pulldown",
+    note: "Control the lower and feel the lat sweep through the whole rep.",
+  },
+  {
+    name: "Straight-Arm Cable Pulldown",
+    movementType: "lat_pulldown",
+    note: "Keep arms long and sweep through the lats without loading it heavy.",
+  },
+  {
+    name: "Single-Arm Lat Pulldown",
+    movementType: "single_arm_row",
+    note: "Pull elbow into hip and keep the line clean.",
+  },
+  {
+    name: "Seated Cable Row",
+    movementType: "cable_row",
+    note: "High chest, upper-back squeeze, slow return.",
+  },
+  {
+    name: "Face Pull",
+    movementType: "face_pull",
+    note: "Pull wide and high for upper-back detail.",
+  },
+  {
+    name: "Rear Delt Cable Fly",
+    movementType: "rear_delt",
+    note: "Light weight, open wide, stay in the rear delts.",
+  },
+  {
+    name: "Band Pull-Apart",
+    movementType: "band_pull_apart",
+    note: "Light tension, long line, no fatigue chase.",
+  },
+];
+
+function getWaistProtocolPreviewLine(phase: WeddingPhaseProfile["currentPhase"], active: boolean) {
+  if (!active) {
+    return null;
+  }
+
+  switch (phase) {
+    case "define":
+      return "Waist work included. Controlled and focused.";
+    case "peak":
+      return "Core definition included. Light and precise.";
+    case "wedding_week":
+      return "Light core. That's all it needs.";
+    default:
+      return null;
+  }
+}
+
+function getBackRevealPreviewLine(backReveal: NatashaBackRevealInput) {
+  if (!backReveal?.active) {
+    return null;
+  }
+
+  switch (backReveal.backPriorityLevel) {
+    case "elevated":
+      return "Back included today. Building the sweep.";
+    case "high":
+      return "Back work in every session now. Definition is the goal.";
+    case "peak":
+      return "Light back work. The sweep is already there.";
+    default:
+      return null;
+  }
+}
+
+function getBackRevealRepRange(backReveal: NatashaBackRevealInput) {
+  switch (backReveal?.backPriorityLevel) {
+    case "elevated":
+      return "10-15";
+    case "high":
+      return "12-20";
+    case "peak":
+      return "15-25";
+    default:
+      return "10-15";
+  }
+}
+
+function getBackRevealSets(backReveal: NatashaBackRevealInput) {
+  switch (backReveal?.backPriorityLevel) {
+    case "elevated":
+      return 1;
+    case "high":
+      return 2;
+    case "peak":
+      return 1;
+    default:
+      return 1;
+  }
+}
+
+function getNatashaWaistProtocolRepRange(phase: WeddingPhaseProfile["currentPhase"]) {
+  switch (phase) {
+    case "define":
+      return "15-20";
+    case "peak":
+      return "15-25";
+    case "wedding_week":
+      return "20-25";
+    default:
+      return "15-20";
+  }
+}
+
+function getNatashaWaistProtocolMovement(
+  targetMovementTypes: string[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  selectedSlice: FocusExerciseCandidate[],
+) {
+  const canonicalLibrary = buildCanonicalExerciseLibrary(exerciseLibrary);
+
+  for (const option of NATASHA_WAIST_MOVEMENT_PRIORITY) {
+    if (!targetMovementTypes.includes(option.movementType)) {
+      continue;
+    }
+    if (selectedSlice.some((exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(option.name))) {
+      continue;
+    }
+
+    const libraryItem = canonicalLibrary.find((exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(option.name));
+    if (!libraryItem) {
+      continue;
+    }
+
+    return {
+      libraryItem,
+      movementType: option.movementType,
+      note: option.note,
+    };
+  }
+
+  return null;
+}
+
+function isNatashaWaistProtocolExercise(name: string) {
+  return NATASHA_WAIST_MOVEMENT_PRIORITY.some(
+    (option) => normalizeExerciseName(option.name) === normalizeExerciseName(name),
+  );
+}
+
+function buildNatashaWaistProtocolExercise(
+  selection: NonNullable<ReturnType<typeof getNatashaWaistProtocolMovement>>,
+  phaseProfile: WeddingPhaseProfile,
+  waistProtocol: NatashaWaistProtocolInput,
+): FocusExerciseCandidate {
+  const repRange = getNatashaWaistProtocolRepRange(phaseProfile.currentPhase);
+  const sets = Math.max(1, waistProtocol?.setsPerSession ?? 2);
+  const contribution = getExerciseMuscleContribution({
+    exerciseName: selection.libraryItem.name,
+    muscleGroup: selection.libraryItem.muscleGroup,
+  });
+  const matchedZoneIds = Object.entries(contribution)
+    .filter(([, weight]) => weight > 0)
+    .map(([zoneId]) => zoneId as TrainingLoadZone);
+
+  return {
+    key: `waist-${selection.libraryItem.id}`,
+    exerciseId: selection.libraryItem.id,
+    name: selection.libraryItem.name,
+    muscleGroup: selection.libraryItem.muscleGroup,
+    sets,
+    repRange,
+    note: selection.note,
+    matchedZoneIds,
+    totalFocusScore: 0,
+    recoveryAdjustedScore: 0,
+    strongestZoneScore: 0,
+    sourceWorkoutId: null,
+    sourceWorkoutName: null,
+    preferredWorkout: false,
+    favorite: false,
+    phasePriorityScore: 0,
+    phaseAdjustedScore: 0,
+    stableOrder: 90000,
+  };
+}
+
+function weaveNatashaWaistProtocolIntoSession(
+  selectedSlice: FocusExerciseCandidate[],
+  exerciseLibrary: ExerciseLibraryItem[],
+  waistProtocol: NatashaWaistProtocolInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  if (!waistProtocol?.active || !phaseProfile) {
+    return { exercises: selectedSlice, added: false };
+  }
+
+  const existingCoreIndex = selectedSlice.findIndex((exercise) => {
+    const contribution = getExerciseMuscleContribution({
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+    });
+    return (contribution.obliques ?? 0) > 0 || (contribution.upperAbs ?? 0) > 0 || (contribution.lowerAbs ?? 0) > 0;
+  });
+
+  const adjusted = selectedSlice.map((exercise) => ({ ...exercise }));
+
+  if (existingCoreIndex !== -1) {
+    adjusted[existingCoreIndex] = {
+      ...adjusted[existingCoreIndex],
+      sets: Math.max(1, waistProtocol.setsPerSession),
+      repRange: getNatashaWaistProtocolRepRange(phaseProfile.currentPhase),
+      note: adjusted[existingCoreIndex].note ?? "Control the trunk and keep the reps clean.",
+    };
+    return { exercises: adjusted, added: true };
+  }
+
+  const movement = getNatashaWaistProtocolMovement(waistProtocol.targetMovementTypes, exerciseLibrary, adjusted);
+  if (!movement) {
+    return { exercises: adjusted, added: false };
+  }
+
+  const protocolExercise = buildNatashaWaistProtocolExercise(movement, phaseProfile, waistProtocol);
+  const lockedPrimaryIndex = adjusted.reduce((bestIndex, exercise, index) => {
+    const contribution = getExerciseMuscleContribution({
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+    });
+    const isPrimary = (contribution.gluteMax ?? 0) > 0 || (contribution.upperGlutes ?? 0) > 0 || (contribution.sideGlutes ?? 0) > 0;
+    return isPrimary ? index : bestIndex;
+  }, -1);
+  const insertIndex = Math.max(1, Math.min(adjusted.length - 1, lockedPrimaryIndex + 1));
+  adjusted.splice(insertIndex, 0, protocolExercise);
+
+  return { exercises: adjusted, added: true };
+}
+
+function adjustRepRangeForNatashaWaistProtocol(
+  exercise: FocusExerciseCandidate,
+  repRange: string | null,
+  waistProtocol: NatashaWaistProtocolInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  if (!waistProtocol?.active || !phaseProfile || !repRange) {
+    return repRange;
+  }
+
+  if (exercise.muscleGroup === "Core" && isNatashaWaistProtocolExercise(exercise.name)) {
+    return getNatashaWaistProtocolRepRange(phaseProfile.currentPhase);
+  }
+
+  return repRange;
+}
+
+function adjustSetsForNatashaWaistProtocol(
+  exercise: FocusExerciseCandidate,
+  sets: number | null,
+  waistProtocol: NatashaWaistProtocolInput,
+) {
+  if (!waistProtocol?.active || sets == null) {
+    return sets;
+  }
+
+  if (exercise.muscleGroup === "Core" && isNatashaWaistProtocolExercise(exercise.name)) {
+    return Math.max(1, waistProtocol.setsPerSession);
+  }
+
+  return sets;
+}
+
+function isNatashaBackPrimarySession(selectedSlice: FocusExerciseCandidate[], focus: NextWorkoutFocus) {
+  if (focus.zoneIds.some((zoneId) => zoneId === "lats" || zoneId === "upperBack" || zoneId === "midBack")) {
+    return true;
+  }
+
+  const backCount = selectedSlice.filter((exercise) => exercise.muscleGroup === "Back").length;
+  return backCount >= 2;
+}
+
+function getNatashaBackRevealMovement(
+  backReveal: NatashaBackRevealInput,
+  exerciseLibrary: ExerciseLibraryItem[],
+  selectedSlice: FocusExerciseCandidate[],
+) {
+  if (!backReveal?.active) {
+    return null;
+  }
+
+  const canonicalLibrary = buildCanonicalExerciseLibrary(exerciseLibrary);
+  for (const option of NATASHA_BACK_REVEAL_MOVEMENTS) {
+    if (!backReveal.movementBias.includes(option.movementType)) {
+      continue;
+    }
+    if (selectedSlice.some((exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(option.name))) {
+      continue;
+    }
+
+    const item = canonicalLibrary.find((exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(option.name));
+    if (!item) {
+      continue;
+    }
+
+    return { item, note: option.note };
+  }
+
+  return null;
+}
+
+function weaveNatashaBackRevealIntoSession(
+  selectedSlice: FocusExerciseCandidate[],
+  focus: NextWorkoutFocus,
+  exerciseLibrary: ExerciseLibraryItem[],
+  backReveal: NatashaBackRevealInput,
+) {
+  if (!backReveal?.active || isNatashaBackPrimarySession(selectedSlice, focus)) {
+    return { exercises: selectedSlice, added: false };
+  }
+
+  const adjusted = selectedSlice.map((exercise) => ({ ...exercise }));
+  const movement = getNatashaBackRevealMovement(backReveal, exerciseLibrary, adjusted);
+  if (!movement) {
+    return { exercises: adjusted, added: false };
+  }
+
+  const contribution = getExerciseMuscleContribution({
+    exerciseName: movement.item.name,
+    muscleGroup: movement.item.muscleGroup,
+  });
+  const matchedZoneIds = Object.entries(contribution)
+    .filter(([, weight]) => weight > 0)
+    .map(([zoneId]) => zoneId as TrainingLoadZone);
+  const insertIndex = Math.max(1, adjusted.length - 1);
+  adjusted.splice(insertIndex, 0, {
+    key: `back-reveal-${movement.item.id}`,
+    exerciseId: movement.item.id,
+    name: movement.item.name,
+    muscleGroup: movement.item.muscleGroup,
+    sets: getBackRevealSets(backReveal),
+    repRange: getBackRevealRepRange(backReveal),
+    note: movement.note,
+    matchedZoneIds,
+    totalFocusScore: 0,
+    recoveryAdjustedScore: 0,
+    strongestZoneScore: 0,
+    sourceWorkoutId: null,
+    sourceWorkoutName: null,
+    preferredWorkout: false,
+    favorite: false,
+    phasePriorityScore: 0,
+    phaseAdjustedScore: 0,
+    stableOrder: 91000,
+  });
+
+  return { exercises: adjusted, added: true };
+}
+
+function adjustRepRangeForNatashaBackReveal(
+  exercise: FocusExerciseCandidate,
+  repRange: string | null,
+  backReveal: NatashaBackRevealInput,
+) {
+  if (!backReveal?.active || !repRange) {
+    return repRange;
+  }
+
+  if (exercise.muscleGroup === "Back" && NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
+    return getBackRevealRepRange(backReveal);
+  }
+
+  return repRange;
+}
+
+function adjustSetsForNatashaBackReveal(
+  exercise: FocusExerciseCandidate,
+  sets: number | null,
+  backReveal: NatashaBackRevealInput,
+) {
+  if (!backReveal?.active || sets == null) {
+    return sets;
+  }
+
+  if (exercise.muscleGroup === "Back" && NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
+    return Math.max(1, getBackRevealSets(backReveal));
+  }
+
+  return sets;
+}
+
+function matchesNatashaSecondary(exercise: FocusExerciseCandidate, secondaryZones: string[]) {
+  return Object.entries(
+    getExerciseMuscleContribution({
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+    }),
+  ).some(([zoneId, weight]) => weight > 0 && secondaryZones.includes(zoneId));
+}
+
+function findNatashaReplacement(
+  exercise: FocusExerciseCandidate,
+  candidates: FocusExerciseCandidate[],
+  selectedSlice: FocusExerciseCandidate[],
+  priorityLock: NatashaPriorityLockInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  return (
+    candidates.find((candidate) => {
+      if (selectedSlice.some((selected) => normalizeExerciseName(selected.name) === normalizeExerciseName(candidate.name))) {
+        return false;
+      }
+      if (
+        candidate.muscleGroup !== exercise.muscleGroup &&
+        !candidate.matchedZoneIds.some((zoneId) => exercise.matchedZoneIds.includes(zoneId))
+      ) {
+        return false;
+      }
+      return !shouldAvoidNatashaExercise(candidate, priorityLock, phaseProfile);
+    }) ?? null
+  );
+}
+
+function enforceNatashaPrioritySessionShape(
+  selectedSlice: FocusExerciseCandidate[],
+  candidates: FocusExerciseCandidate[],
+  priorityLock: NatashaPriorityLockInput,
+  phaseProfile?: WeddingPhaseProfile | null,
+) {
+  if (!priorityLock || !phaseProfile) {
+    return selectedSlice;
+  }
+
+  const adjusted = selectedSlice.map((exercise) => ({ ...exercise }));
+
+  for (let index = adjusted.length - 1; index >= 0; index -= 1) {
+    const exercise = adjusted[index];
+    if (!shouldAvoidNatashaExercise(exercise, priorityLock, phaseProfile)) {
+      continue;
+    }
+
+    const replacement = findNatashaReplacement(exercise, candidates, adjusted, priorityLock, phaseProfile);
+    if (replacement) {
+      adjusted[index] = { ...replacement };
+      continue;
+    }
+
+    if (phaseProfile.currentPhase === "wedding_week") {
+      adjusted.splice(index, 1);
+    }
+  }
+
+  if (phaseProfile.currentPhase === "define") {
+    const hasRequiredSecondary = adjusted.some((exercise) => matchesNatashaSecondary(exercise, ["lats", "obliques"]));
+
+    if (!hasRequiredSecondary) {
+      const secondaryCandidate = candidates.find((candidate) => {
+        if (adjusted.some((selected) => normalizeExerciseName(selected.name) === normalizeExerciseName(candidate.name))) {
+          return false;
+        }
+        if (!matchesNatashaSecondary(candidate, ["lats", "obliques"])) {
+          return false;
+        }
+        return !shouldAvoidNatashaExercise(candidate, priorityLock, phaseProfile);
+      });
+
+      if (secondaryCandidate) {
+        const replaceIndex = adjusted.findIndex(
+          (exercise) => !exercise.matchedZoneIds.some((zoneId) => priorityLock.lockedPrimary.includes(zoneId)),
+        );
+        adjusted[replaceIndex === -1 ? adjusted.length - 1 : replaceIndex] = { ...secondaryCandidate };
+      }
+    }
+  }
+
+  return adjusted;
+}
+
+function getSuggestedRepTarget(repRange: string | null) {
+  if (!repRange) {
+    return null;
+  }
+
+  const match = repRange.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (!match) {
+    const parsed = Number.parseInt(repRange, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return Number.parseInt(match[1], 10);
+}
+
+function shiftRepRangeForCeiling(repRange: string | null) {
+  if (!repRange) {
+    return "8-12";
+  }
+
+  const match = repRange.match(/(\d+)\s*[-–]\s*(\d+)/);
+  const lower = match ? Number.parseInt(match[1], 10) : Number.parseInt(repRange, 10);
+
+  if (Number.isNaN(lower)) {
+    return "8-12";
+  }
+
+  if (lower >= 12) {
+    return "6-8";
+  }
+
+  if (lower >= 8) {
+    return "12-15";
+  }
+
+  return "8-12";
+}
+
+function getCeilingPreviewLine(
+  userId: UserId,
+  muscleGroup: MuscleGroup,
+  response: MuscleCeilingResponse,
+) {
+  const muscleLabel = muscleGroup.toLowerCase();
+  const copy = {
+    joshua: {
+      technique_swap: `Mixing up the approach on ${muscleLabel} today.`,
+      rep_range_shift: `Shifting the rep range on ${muscleLabel}.`,
+      rest: `${muscleGroup} is lighter today. Intentional.`,
+    },
+    natasha: {
+      technique_swap: `Different angle on ${muscleLabel} this session.`,
+      rep_range_shift: `Changing the rep range on ${muscleLabel} today.`,
+      rest: `Easier on ${muscleLabel} today. By design.`,
+    },
+  } as const;
+
+  return copy[userId][response];
+}
+
+function getLiftReadyPriorityBoost(
+  userId: UserId,
+  matchedZoneIds: TrainingLoadZone[],
+  muscleGroup: MuscleGroup,
+  liftReady?: LiftReadySignalInput | null,
+) {
+  if (userId !== "joshua" || !liftReady) {
+    return 0;
+  }
+
+  if (liftReady.readinessLevel === "early" || liftReady.readinessLevel === "developing") {
+    return matchedZoneIds.some((zoneId) => zoneId === "upperChest" || zoneId === "midChest") ? 4 : 0;
+  }
+
+  if (liftReady.readinessLevel === "building") {
+    if (matchedZoneIds.some((zoneId) => zoneId === "upperChest" || zoneId === "midChest")) {
+      return 2.5;
+    }
+    if (matchedZoneIds.some((zoneId) => zoneId === "sideDelts" || zoneId === "frontDelts") || muscleGroup === "Shoulders") {
+      return 2.5;
+    }
+  }
+
+  if (liftReady.readinessLevel === "strong" || liftReady.readinessLevel === "ready") {
+    return muscleGroup === "Chest" || muscleGroup === "Shoulders" ? 1.5 : 0;
+  }
+
+  return 0;
+}
+
+function adjustSetsForPhase(sets: number | null, exerciseName: string, phaseProfile?: WeddingPhaseProfile | null) {
+  if (sets === null || !phaseProfile) {
+    return sets;
+  }
+
+  let adjusted = Math.max(1, Math.round(sets * phaseProfile.volumeModifier));
+
+  if ((phaseProfile.currentPhase === "peak" || phaseProfile.currentPhase === "wedding_week") && isHeavyCompoundExercise(exerciseName)) {
+    adjusted = Math.max(1, Math.round(adjusted * 0.8));
+  }
+
+  return adjusted;
+}
 
 export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone[]> = {
   front: [
@@ -923,6 +1756,12 @@ export function getSuggestedFocusSession(
   focus: NextWorkoutFocus,
   exerciseLibrary: ExerciseLibraryItem[] = [],
   recentLoad?: RecentLoadProfile,
+  phaseProfile?: WeddingPhaseProfile | null,
+  ceilingStates: MuscleCeilingState[] = [],
+  liftReady?: LiftReadySignalInput | null,
+  natashaPriorityLock: NatashaPriorityLockInput = null,
+  natashaWaistProtocol: NatashaWaistProtocolInput = null,
+  natashaBackReveal: NatashaBackRevealInput = null,
 ): SuggestedFocusSession | null {
   if (!focus.zoneIds.length) {
     return null;
@@ -964,6 +1803,11 @@ export function getSuggestedFocusSession(
         sourceWorkoutName: workout.name,
         preferredWorkout: workout.id === preferredWorkoutId,
         favorite: Boolean(exercise.favorite),
+        phasePriorityScore: getPhasePriorityScore(score.matchedZoneIds, phaseProfile),
+        phaseAdjustedScore:
+          score.totalFocusScore +
+          getPhasePriorityScore(score.matchedZoneIds, phaseProfile) * 0.35 +
+          getLiftReadyPriorityBoost(userId, score.matchedZoneIds, exercise.muscleGroup, liftReady),
         stableOrder: workoutIndex * 100 + exerciseIndex,
       };
     }),
@@ -978,6 +1822,9 @@ export function getSuggestedFocusSession(
           }
           if (b.recoveryAdjustedScore !== a.recoveryAdjustedScore) {
             return b.recoveryAdjustedScore - a.recoveryAdjustedScore;
+          }
+          if (b.phaseAdjustedScore !== a.phaseAdjustedScore) {
+            return b.phaseAdjustedScore - a.phaseAdjustedScore;
           }
           if (b.totalFocusScore !== a.totalFocusScore) {
             return b.totalFocusScore - a.totalFocusScore;
@@ -999,8 +1846,11 @@ export function getSuggestedFocusSession(
 
   const matchedTemplateExercises = dedupedTemplateExercises.filter((exercise) => exercise.totalFocusScore > 0);
   const selectedExercises: FocusExerciseCandidate[] = [];
-  const targetCount = 4;
+  const targetCount = phaseProfile?.currentPhase === "wedding_week" ? 3 : 4;
   const usedMuscleGroups = new Set<MuscleGroup>();
+  const activeCeilingStates = new Map(
+    ceilingStates.filter((state) => state.ceilingDetected).map((state) => [state.muscleGroup, state] as const),
+  );
 
   for (const zoneId of focus.zoneIds) {
     const bestForZone = matchedTemplateExercises.find(
@@ -1029,7 +1879,27 @@ export function getSuggestedFocusSession(
     usedMuscleGroups.add(exercise.muscleGroup);
   }
 
+  if (selectedExercises.length) {
+    selectedExercises.sort((a, b) => {
+      const aResponse = activeCeilingStates.get(a.muscleGroup)?.suggestedResponse;
+      const bResponse = activeCeilingStates.get(b.muscleGroup)?.suggestedResponse;
+      const aRestPenalty = aResponse === "rest" ? 1 : 0;
+      const bRestPenalty = bResponse === "rest" ? 1 : 0;
+      if (aRestPenalty !== bRestPenalty) {
+        return aRestPenalty - bRestPenalty;
+      }
+      return 0;
+    });
+  }
+
   if (selectedExercises.length < targetCount) {
+    if (phaseProfile?.restrictNewExercises || (userId === "joshua" && liftReady?.trend === "slipping")) {
+      // Peak and wedding-week sessions stay inside known exercise patterns.
+      const selectedSlice = selectedExercises.slice(0, targetCount);
+      if (!selectedSlice.length) {
+        return null;
+      }
+    } else {
     const libraryFallbacks = buildCanonicalExerciseLibrary(exerciseLibrary)
       .map((exercise, index) => {
         const contribution = getExerciseMuscleContribution({
@@ -1062,6 +1932,11 @@ export function getSuggestedFocusSession(
           sourceWorkoutName: null,
           preferredWorkout: false,
           favorite: false,
+          phasePriorityScore: getPhasePriorityScore(score.matchedZoneIds, phaseProfile),
+          phaseAdjustedScore:
+            score.totalFocusScore +
+            getPhasePriorityScore(score.matchedZoneIds, phaseProfile) * 0.35 +
+            getLiftReadyPriorityBoost(userId, score.matchedZoneIds, exercise.muscleGroup, liftReady),
           stableOrder: 10000 + index,
         };
       })
@@ -1072,6 +1947,9 @@ export function getSuggestedFocusSession(
         }
         if (b.recoveryAdjustedScore !== a.recoveryAdjustedScore) {
           return b.recoveryAdjustedScore - a.recoveryAdjustedScore;
+        }
+        if (b.phaseAdjustedScore !== a.phaseAdjustedScore) {
+          return b.phaseAdjustedScore - a.phaseAdjustedScore;
         }
         if (b.totalFocusScore !== a.totalFocusScore) {
           return b.totalFocusScore - a.totalFocusScore;
@@ -1095,20 +1973,118 @@ export function getSuggestedFocusSession(
       selectedExercises.push(fallbackExercise);
       usedMuscleGroups.add(fallbackExercise.muscleGroup);
     }
+    }
   }
 
   if (!selectedExercises.length) {
     return null;
   }
 
+  let selectedSlice = selectedExercises.slice(0, targetCount).map((exercise) => ({ ...exercise }));
+  const appliedResponses: Partial<Record<MuscleGroup, MuscleCeilingResponse>> = {};
+  const adjustedMuscleGroups = new Set<MuscleGroup>();
+
+  for (const exercise of selectedSlice) {
+    const ceilingState = activeCeilingStates.get(exercise.muscleGroup);
+    if (!ceilingState?.suggestedResponse || adjustedMuscleGroups.has(exercise.muscleGroup)) {
+      continue;
+    }
+
+    appliedResponses[exercise.muscleGroup] = ceilingState.suggestedResponse;
+    adjustedMuscleGroups.add(exercise.muscleGroup);
+
+    if (ceilingState.suggestedResponse === "rep_range_shift") {
+      exercise.repRange = shiftRepRangeForCeiling(adjustRepRangeForPhase(exercise.repRange, phaseProfile));
+      continue;
+    }
+
+    if (ceilingState.suggestedResponse === "technique_swap") {
+      const swap = getExerciseSwapOptions(userId, exercise.name, exercise.muscleGroup, exerciseLibrary)[0];
+      if (swap) {
+        exercise.exerciseId = swap.id;
+        exercise.name = swap.name;
+        exercise.note = swap.cues[0] ?? exercise.note;
+        exercise.sourceWorkoutId = null;
+        exercise.sourceWorkoutName = null;
+      }
+    }
+
+  }
+
+  if (userId === "joshua" && (liftReady?.readinessLevel === "early" || liftReady?.readinessLevel === "developing")) {
+    const chestExercise = selectedSlice.find((exercise) => exercise.muscleGroup === "Chest" && typeof exercise.sets === "number");
+    if (chestExercise && typeof chestExercise.sets === "number") {
+      chestExercise.sets += 1;
+    }
+  }
+
+  if (userId === "joshua" && liftReady?.trend === "slipping") {
+    selectedSlice.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.stableOrder - b.stableOrder);
+  }
+
+  if (userId === "joshua" && liftReady?.readinessLevel === "building") {
+    selectedSlice.sort((a, b) => {
+      const aShoulders = Number(a.muscleGroup === "Shoulders");
+      const bShoulders = Number(b.muscleGroup === "Shoulders");
+      if (aShoulders !== bShoulders) {
+        return bShoulders - aShoulders;
+      }
+      return a.stableOrder - b.stableOrder;
+    });
+  }
+
+  if (userId === "joshua" && (liftReady?.readinessLevel === "strong" || liftReady?.readinessLevel === "ready")) {
+    for (const exercise of selectedSlice) {
+      if (typeof exercise.sets === "number") {
+        exercise.sets = Math.max(1, exercise.sets - 1);
+      }
+    }
+  }
+
+  if (userId === "natasha") {
+    selectedSlice = enforceNatashaPrioritySessionShape(
+      selectedSlice,
+      dedupedTemplateExercises,
+      natashaPriorityLock,
+      phaseProfile,
+    );
+  }
+
+  if (!selectedSlice.length) {
+    return null;
+  }
+
+  let backRevealAdded = false;
+  if (userId === "natasha") {
+    const wovenBack = weaveNatashaBackRevealIntoSession(
+      selectedSlice,
+      focus,
+      exerciseLibrary,
+      natashaBackReveal,
+    );
+    selectedSlice = wovenBack.exercises;
+    backRevealAdded = wovenBack.added;
+  }
+
+  let waistProtocolAdded = false;
+  if (userId === "natasha") {
+    const woven = weaveNatashaWaistProtocolIntoSession(
+      selectedSlice,
+      exerciseLibrary,
+      natashaWaistProtocol,
+      phaseProfile,
+    );
+    selectedSlice = woven.exercises;
+    waistProtocolAdded = woven.added;
+  }
+
   const sourceWorkoutName =
-    selectedExercises.find((exercise) => exercise.sourceWorkoutId === preferredWorkoutId)?.sourceWorkoutName ??
-    selectedExercises.find((exercise) => exercise.sourceWorkoutName)?.sourceWorkoutName ??
+    selectedSlice.find((exercise) => exercise.sourceWorkoutId === preferredWorkoutId)?.sourceWorkoutName ??
+    selectedSlice.find((exercise) => exercise.sourceWorkoutName)?.sourceWorkoutName ??
     preferredWorkoutName;
-  const canStartDirectly = selectedExercises.every(
+  const canStartDirectly = selectedSlice.every(
     (exercise) => Boolean(exercise.exerciseId) && Boolean(exercise.sets) && Boolean(exercise.repRange),
   );
-  const selectedSlice = selectedExercises.slice(0, targetCount);
   const targetLabels = Array.from(
     new Set([
       ...focus.labels,
@@ -1117,15 +2093,78 @@ export function getSuggestedFocusSession(
   ).slice(0, 3);
   const totalSets = selectedSlice.reduce((sum, exercise) => sum + (exercise.sets ?? 0), 0);
   const estimatedDurationMinutes = estimateSuggestedSessionDuration(selectedSlice, sourceWorkout);
+  const previewMuscleGroup = selectedSlice.find(
+    (exercise) => activeCeilingStates.get(exercise.muscleGroup)?.suggestedResponse,
+  )?.muscleGroup;
+  const previewResponse = previewMuscleGroup ? activeCeilingStates.get(previewMuscleGroup)?.suggestedResponse ?? null : null;
+  const natashaPreviewLine =
+    userId === "natasha" && phaseProfile && natashaPriorityLock
+      ? getNatashaPriorityPreviewLine(
+          phaseProfile.currentPhase,
+          selectedSlice.some((exercise) =>
+            Object.entries(
+              getExerciseMuscleContribution({
+                exerciseName: exercise.name,
+                muscleGroup: exercise.muscleGroup,
+              }),
+            ).some(([zoneId, weight]) => weight > 0 && natashaPriorityLock.lockedPrimary.includes(zoneId)),
+          ),
+        )
+      : null;
+  const backRevealPreviewLine =
+    userId === "natasha" ? getBackRevealPreviewLine(backRevealAdded ? natashaBackReveal : null) : null;
+  const waistProtocolPreviewLine =
+    userId === "natasha" && phaseProfile
+      ? getWaistProtocolPreviewLine(phaseProfile.currentPhase, waistProtocolAdded)
+      : null;
 
   return {
-    focusText: focus.text,
+    focusText: phaseProfile?.currentPhase === "wedding_week" ? "This week." : focus.text,
     exercises: selectedSlice.map((exercise) => ({
       exerciseId: exercise.exerciseId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
-      sets: exercise.sets,
-      repRange: exercise.repRange,
+      sets: adjustSetsForNatashaWaistProtocol(
+        exercise,
+        adjustSetsForNatashaBackReveal(
+          exercise,
+          adjustSetsForPhase(exercise.sets, exercise.name, phaseProfile),
+          natashaBackReveal,
+        ),
+        natashaWaistProtocol,
+      ),
+      repRange: adjustRepRangeForNatashaWaistProtocol(
+        exercise,
+        adjustRepRangeForNatashaBackReveal(
+          exercise,
+          adjustRepRangeForNatashaPriorityLock(
+            exercise,
+            adjustRepRangeForPhase(exercise.repRange, phaseProfile),
+            natashaPriorityLock,
+            phaseProfile,
+          ),
+          natashaBackReveal,
+        ),
+        natashaWaistProtocol,
+        phaseProfile,
+      ),
+      suggestedRepTarget: getSuggestedRepTarget(
+        adjustRepRangeForNatashaWaistProtocol(
+          exercise,
+          adjustRepRangeForNatashaBackReveal(
+            exercise,
+            adjustRepRangeForNatashaPriorityLock(
+              exercise,
+              adjustRepRangeForPhase(exercise.repRange, phaseProfile),
+              natashaPriorityLock,
+              phaseProfile,
+            ),
+            natashaBackReveal,
+          ),
+          natashaWaistProtocol,
+          phaseProfile,
+        ),
+      ),
       note: exercise.note,
       matchedZoneIds: exercise.matchedZoneIds,
       matchedLabels: exercise.matchedZoneIds.map(getZoneLabel),
@@ -1135,7 +2174,20 @@ export function getSuggestedFocusSession(
     sourceWorkoutId: preferredWorkoutId,
     sourceWorkoutName,
     targetLabels,
-    totalSets,
+    totalSets: selectedSlice.reduce(
+      (sum, exercise) =>
+        sum +
+        (adjustSetsForNatashaWaistProtocol(
+          exercise,
+          adjustSetsForNatashaBackReveal(
+            exercise,
+            adjustSetsForPhase(exercise.sets, exercise.name, phaseProfile),
+            natashaBackReveal,
+          ),
+          natashaWaistProtocol,
+        ) ?? 0),
+      0,
+    ),
     estimatedDurationMinutes,
     helperText: sourceWorkoutName
       ? getAveragePenaltyForZones(focus.zoneIds, recentLoad) >= 0.5
@@ -1144,7 +2196,12 @@ export function getSuggestedFocusSession(
       : "Built from your current focus priorities",
     actionLabel: canStartDirectly ? "Start session" : "Open workout",
     canStartDirectly,
-    isFallback: selectedExercises.some((exercise) => exercise.sourceWorkoutId === null),
+    isFallback: selectedSlice.some((exercise) => exercise.sourceWorkoutId === null),
+    ceilingPreviewLine:
+      previewMuscleGroup && previewResponse
+        ? getCeilingPreviewLine(userId, previewMuscleGroup, previewResponse)
+        : backRevealPreviewLine ?? waistProtocolPreviewLine ?? natashaPreviewLine,
+    ceilingAppliedResponses: appliedResponses,
   };
 }
 

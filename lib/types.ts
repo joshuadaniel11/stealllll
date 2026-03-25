@@ -27,6 +27,7 @@ export type ExerciseTemplate = {
   muscleGroup: MuscleGroup;
   sets: number;
   repRange: string;
+  suggestedRepTarget?: number;
   note?: string;
   progressionNote?: string;
   favorite?: boolean;
@@ -49,7 +50,38 @@ export type WorkoutSessionExercise = {
   note?: string;
 };
 
-export type LiveSessionSignalType = "push" | "hold" | "bank" | "pr_close";
+export type LiveSessionSignalType = "push" | "hold" | "bank" | "pr_close" | "strong_day";
+
+export type StrongDayStrengthLevel = "strong" | "very_strong" | "exceptional";
+
+export type MuscleCeilingType = "weight" | "reps" | "both";
+
+export type MuscleCeilingResponse = "technique_swap" | "rest" | "rep_range_shift";
+
+export type MuscleCeilingState = {
+  muscleGroup: MuscleGroup;
+  sessionsSinceProgress: number;
+  ceilingDetected: boolean;
+  ceilingType: MuscleCeilingType | null;
+  lastProgressDate: string | null;
+  suggestedResponse: MuscleCeilingResponse | null;
+};
+
+export type StrongDayState = {
+  strongDayDetected: boolean;
+  detectedAfterSet: number;
+  triggerExercise: string;
+  weightDeltaPercent: number;
+  repsDelta: number;
+  strengthLevel: StrongDayStrengthLevel;
+};
+
+export type HapticEvent =
+  | "pr_approach"
+  | "session_complete"
+  | "rivalry_lead_change"
+  | "week_streak"
+  | "set_saved";
 
 export type LiveSessionSignal = {
   signalType: LiveSessionSignalType;
@@ -57,6 +89,7 @@ export type LiveSessionSignal = {
   message: string;
   firedAt: string;
   copyIndex: number;
+  strongDayState?: StrongDayState | null;
   dismissedAt?: string | null;
 };
 
@@ -184,6 +217,10 @@ export type ActiveWorkout = {
   workoutDayId: string;
   workoutName: string;
   liveSignal?: LiveSessionSignal | null;
+  ceilingResponses?: Partial<Record<MuscleGroup, MuscleCeilingResponse>>;
+  hapticState?: {
+    prApproachSetKeys: string[];
+  };
   exercises: WorkoutSessionExercise[];
   templateExercises?: ExerciseTemplate[];
 };
@@ -207,6 +244,65 @@ export type WeeklyRivalryArchiveEntry = {
   natashaSessions: number;
 };
 
+export type StealArchiveEntry = {
+  date: string;
+  stolenBy: UserId;
+  consecutiveCount: number;
+  weekNumber: number;
+};
+
+export type MonthlyReportProfileData = {
+  sessions: number;
+  totalSets: number;
+  topMuscleGroup: string;
+  signatureLift: string;
+  consistencyScore: number;
+  bestWeek: number;
+  newPRs: number;
+  streakBest: number;
+};
+
+export type MonthlyReportRivalryData = {
+  weekWins: {
+    joshua: number;
+    natasha: number;
+    tied: number;
+  };
+  totalSteals: {
+    joshua: number;
+    natasha: number;
+  };
+  monthWinner: UserId | "tied";
+  goalAdherence?: {
+    joshua: number;
+    natasha: number;
+  };
+};
+
+export type MonthlyReportArchiveEntry = {
+  month: string;
+  year: number;
+  joshuaData: MonthlyReportProfileData;
+  natashaData: MonthlyReportProfileData;
+  rivalryData: MonthlyReportRivalryData;
+  closingLines: {
+    joshua: string;
+    natasha: string;
+  };
+};
+
+export type LiftReadyReadinessLevel = "early" | "developing" | "building" | "strong" | "ready";
+
+export type LiftReadyTrend = "rising" | "steady" | "slipping";
+
+export type LiftReadyHistoryEntry = {
+  weekStart: string;
+  compositeScore: number;
+  readinessLevel: LiftReadyReadinessLevel;
+  trend: LiftReadyTrend;
+  phase: "build" | "define" | "peak" | "wedding_week" | "complete";
+};
+
 export type SessionSignalLogEntry = {
   sessionId: string;
   userId: UserId;
@@ -214,15 +310,45 @@ export type SessionSignalLogEntry = {
   signalType: LiveSessionSignalType;
   firedAt: string;
   copyIndex: number;
+  strongDayState?: StrongDayState | null;
+};
+
+export type MuscleCeilingLogEntry = {
+  profile: UserId;
+  muscleGroup: MuscleGroup;
+  sessionId: string;
+  date: string;
+  ceilingDetected: boolean;
+  ceilingType: MuscleCeilingType | null;
+  responseApplied: MuscleCeilingResponse | null;
+  progressMadeThisSession: boolean;
 };
 
 export type AppState = {
   selectedUserId: UserId;
   profiles: Profile[];
   sessions: WorkoutSession[];
+  isSessionActive: boolean;
+  lastSeenWeddingPhase: Record<UserId, "build" | "define" | "peak" | "wedding_week" | "complete" | null>;
+  profileCreatedAt: Record<UserId, string>;
+  profileActivationDates: Record<UserId, string | null>;
+  hapticPreferences: Record<UserId, boolean>;
+  firedWeekStreakMilestones: Record<UserId, number[]>;
+  trainingAgeState: Record<
+    UserId,
+    {
+      rawSessionCount: number;
+      weightedAge: number;
+      milestonesShown: string[];
+    }
+  >;
   longestStreaks: Record<UserId, number>;
   rivalryArchive: WeeklyRivalryArchiveEntry[];
+  stealArchive: StealArchiveEntry[];
+  monthlyReportArchive: MonthlyReportArchiveEntry[];
   sessionSignalLog: SessionSignalLogEntry[];
+  ceilingLog: MuscleCeilingLogEntry[];
+  liftReadyHistory: LiftReadyHistoryEntry[];
   personalBests: Record<UserId, PersonalBest[]>;
   weeklySummaries: Record<UserId, WeeklySummary>;
   sharedSummary: SharedSummary;

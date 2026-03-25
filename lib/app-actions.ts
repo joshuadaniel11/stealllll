@@ -161,6 +161,32 @@ export function resetProfileProgressState(state: AppState, userId: UserId, seed:
     ...state,
     sessions: state.sessions.filter((session) => session.userId !== userId),
     sessionSignalLog: state.sessionSignalLog.filter((entry) => entry.userId !== userId),
+    ceilingLog: state.ceilingLog.filter((entry) => entry.profile !== userId),
+    liftReadyHistory: userId === "joshua" ? [] : state.liftReadyHistory,
+    lastSeenWeddingPhase: {
+      ...state.lastSeenWeddingPhase,
+      [userId]: seed.lastSeenWeddingPhase[userId],
+    },
+    profileCreatedAt: {
+      ...state.profileCreatedAt,
+      [userId]: seed.profileCreatedAt[userId],
+    },
+    profileActivationDates: {
+      ...state.profileActivationDates,
+      [userId]: seed.profileActivationDates[userId],
+    },
+    trainingAgeState: {
+      ...state.trainingAgeState,
+      [userId]: seed.trainingAgeState[userId],
+    },
+    firedWeekStreakMilestones: {
+      ...state.firedWeekStreakMilestones,
+      [userId]: seed.firedWeekStreakMilestones[userId],
+    },
+    longestStreaks: {
+      ...state.longestStreaks,
+      [userId]: seed.longestStreaks[userId],
+    },
     personalBests: {
       ...state.personalBests,
       [userId]: seed.personalBests[userId],

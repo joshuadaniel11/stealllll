@@ -223,6 +223,17 @@ export function ProgressScreen({
       </ScrollReveal>
 
       <ScrollReveal delay={12}>
+        <Card className="progress-panel tab-fade-enter">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">
+            {trainingState.progressPhaseIndicator.label}
+          </p>
+          <p className="mt-2 text-[12px] font-medium text-white/58">
+            {trainingState.progressPhaseIndicator.description}
+          </p>
+        </Card>
+      </ScrollReveal>
+
+      <ScrollReveal delay={18}>
         <FocusDirectionCard
           focusText={insights.focusDirection}
           progressInsight={insights.progressSignal}
@@ -239,7 +250,7 @@ export function ProgressScreen({
         />
       </ScrollReveal>
 
-      <ScrollReveal delay={24}>
+      <ScrollReveal delay={30}>
         <TrainingLoadCard
           metrics={trainingLoad.metrics}
           groups={trainingLoad.groups}

@@ -6,6 +6,7 @@ type CalendarCell = {
   isToday: boolean;
   joshuaCompleted: boolean;
   natashaCompleted: boolean;
+  stolenBy?: "joshua" | "natasha" | null;
 };
 
 type CalendarRow = {
@@ -79,6 +80,20 @@ export function WeeklyTrainingCalendar({
                     <div className="pointer-events-none absolute inset-x-1.5 bottom-0 h-1/2 rounded-b-[14px] bg-black/10" />
                   </>
                 )}
+                {day.stolenBy ? (
+                  <>
+                    <div
+                      className={`pointer-events-none absolute inset-[5px] rounded-[10px] border ${
+                        day.stolenBy === "joshua" ? "border-emerald-300/45" : "border-sky-300/45"
+                      }`}
+                    />
+                    <div
+                      className={`pointer-events-none absolute left-1/2 top-1/2 h-[18px] w-[2px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full ${
+                        day.stolenBy === "joshua" ? "bg-emerald-300/55" : "bg-sky-300/55"
+                      }`}
+                    />
+                  </>
+                ) : null}
                 {day.isToday ? <div className="calendar-day-today-ring pointer-events-none absolute inset-[2px] rounded-[12px]" /> : null}
                 <span className="relative z-10">{day.dayNumber}</span>
               </div>

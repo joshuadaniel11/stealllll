@@ -523,10 +523,13 @@ const rawExerciseLibrary: ExerciseLibraryItem[] = [
   { id: "abductor-machine", name: "Abductor Machine", muscleGroup: "Glutes", equipment: "Machine", cues: ["Drive knees out under control and hold the outer-glute squeeze.", "Keep torso stable and stay in the glutes."] },
   { id: "leg-press-high-feet", name: "Leg Press High Foot Placement", muscleGroup: "Glutes", equipment: "Machine", cues: ["Place feet high and slightly wider to bias glutes.", "Control the bottom and drive evenly."] },
   { id: "single-arm-lat-pulldown", name: "Single-Arm Lat Pulldown", muscleGroup: "Back", equipment: "Cable", cues: ["Pull elbow into hip for lat focus.", "Stay tall and avoid shrugging."] },
+  { id: "straight-arm-cable-pulldown", name: "Straight-Arm Cable Pulldown", muscleGroup: "Back", equipment: "Cable", cues: ["Keep arms long and sweep through the lats.", "Stay smooth and avoid loading it heavy."] },
   { id: "assisted-pull-up", name: "Assisted Pull-Up", muscleGroup: "Back", equipment: "Machine", cues: ["Use assistance to stay in the target rep range.", "Lead with elbows and chest tall."] },
   { id: "machine-lat-pullover", name: "Machine Lat Pullover", muscleGroup: "Back", equipment: "Machine", cues: ["Drive through the elbows and keep lats loaded.", "Smooth stretch and squeeze."] },
   { id: "machine-row", name: "Machine Row", muscleGroup: "Back", equipment: "Machine", cues: ["Drive elbows back without shrugging.", "Pause the squeeze through the mid-back."] },
   { id: "seated-cable-row", name: "Seated Cable Row", muscleGroup: "Back", equipment: "Cable", cues: ["Pull to lower ribs and keep chest high.", "Pause the squeeze before returning."] },
+  { id: "rear-delt-cable-fly", name: "Rear Delt Cable Fly", muscleGroup: "Back", equipment: "Cable", cues: ["Open wide with light tension.", "Keep the work in rear delts and upper back."] },
+  { id: "band-pull-apart", name: "Band Pull-Apart", muscleGroup: "Back", equipment: "Band", cues: ["Keep arms long and shoulder blades active.", "Stay light and crisp."] },
   { id: "incline-machine-press", name: "Incline Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Stable upper-chest pressing with a controlled path.", "Keep shoulders down and press smoothly."] },
   { id: "flat-machine-press", name: "Flat Machine Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Press through palms and keep tension on the chest.", "Control the negative."] },
   { id: "plate-loaded-chest-press", name: "Plate-Loaded Chest Press", muscleGroup: "Chest", equipment: "Machine", cues: ["Use a stable pressing path and chase a full chest squeeze.", "Control the lowering phase and keep shoulders packed."] },
@@ -548,6 +551,11 @@ const rawExerciseLibrary: ExerciseLibraryItem[] = [
   { id: "cable-curl", name: "Cable Curl", muscleGroup: "Biceps", equipment: "Cable", cues: ["Constant tension through the full range.", "Stand tall and avoid swinging."] },
   { id: "captains-chair-knee-raise", name: "Captain's Chair Knee Raise", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Curl pelvis up, not just knees.", "Move slowly and avoid swinging."] },
   { id: "dead-bug", name: "Dead Bug", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Keep ribs down and lower back flat.", "Slow, controlled limbs."] },
+  { id: "cable-oblique-crunch", name: "Cable Oblique Crunch", muscleGroup: "Core", equipment: "Cable", cues: ["Crunch through the waist, not the hips.", "Keep it controlled and stay out of heavy loading."] },
+  { id: "pallof-press", name: "Pallof Press", muscleGroup: "Core", equipment: "Cable", cues: ["Press out and resist rotation.", "Stay stacked through ribs and pelvis."] },
+  { id: "side-plank-reach", name: "Side Plank Reach", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Stay long through the side body.", "Reach slowly and keep the waist controlled."] },
+  { id: "standing-cable-rotation", name: "Standing Cable Rotation", muscleGroup: "Core", equipment: "Cable", cues: ["Rotate smoothly from the trunk.", "Keep the movement crisp, not heavy."] },
+  { id: "core-vacuum-hold", name: "Core Vacuum Hold", muscleGroup: "Core", equipment: "Bodyweight", cues: ["Exhale fully before the hold.", "Keep the tension light and precise."] },
   { id: "bike-erg-sprint", name: "Bike Erg Sprint", muscleGroup: "Full Body", equipment: "Machine", cues: ["Keep output sharp and short.", "Recover fully between efforts."] },
   { id: "battle-rope-slam", name: "Battle Rope Slam", muscleGroup: "Full Body", equipment: "Cable", cues: ["Stay athletic and slam with intent.", "Keep core braced."] },
   { id: "standing-calf-raise", name: "Standing Calf Raise", muscleGroup: "Legs", equipment: "Machine", cues: ["Pause hard at the top and lower slowly.", "Keep pressure through the big toe and ball of the foot."] },
@@ -622,16 +630,54 @@ const bibleVerses: BibleVerse[] = [
 ];
 
 export function createSeedState(): AppState {
+  const createdAt = new Date().toISOString();
   return {
     selectedUserId: "joshua",
     profiles,
     sessions,
+    isSessionActive: false,
+    lastSeenWeddingPhase: {
+      natasha: null,
+      joshua: null,
+    },
+    profileCreatedAt: {
+      natasha: createdAt,
+      joshua: createdAt,
+    },
+    profileActivationDates: {
+      natasha: null,
+      joshua: null,
+    },
+    hapticPreferences: {
+      natasha: true,
+      joshua: true,
+    },
+    firedWeekStreakMilestones: {
+      natasha: [],
+      joshua: [],
+    },
+    trainingAgeState: {
+      natasha: {
+        rawSessionCount: 0,
+        weightedAge: 0,
+        milestonesShown: [],
+      },
+      joshua: {
+        rawSessionCount: 0,
+        weightedAge: 0,
+        milestonesShown: [],
+      },
+    },
     longestStreaks: {
       natasha: 0,
       joshua: 0,
     },
     rivalryArchive: [],
+    stealArchive: [],
+    monthlyReportArchive: [],
     sessionSignalLog: [],
+    ceilingLog: [],
+    liftReadyHistory: [],
     personalBests: {
       natasha: [],
       joshua: [],

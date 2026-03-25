@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import clsx from "clsx";
 import { Activity, ChartColumn, Dumbbell, Settings } from "lucide-react";
 
@@ -31,21 +31,32 @@ import {
 } from "@/lib/app-actions";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import {
+  buildMuscleCeilingLogEntries,
   getRivalryCardCopy,
   getMomentumPillCopy,
+  getMonthlyReportCard,
   getProfileSessions,
   getProfileTrainingState,
   getQueuedWorkoutForProfile,
   getRestDayRead,
   getRestRecoveryLabel,
+  getStealState,
   getStreakAndMomentum,
+  getWeddingRivalryState,
+  syncLiftReadyHistory,
+  syncTrainingAgeState,
   getWeeklyRivalryState,
+  syncProfileMaturityState,
+  syncStealArchive,
   syncWeeklyRivalryArchive,
+  syncMonthlyReportArchive,
 } from "@/lib/profile-training-state";
 import { getCurrentWeekWindow } from "@/lib/training-load";
+import { getWeekStreakMilestone, HapticService, isPrApproachSet } from "@/lib/haptics";
 import { buildActiveLiveSignal, buildSessionSignalLogEntry, getLiveSessionSignal } from "@/lib/live-session-signal";
 import { getLastExerciseSets, getWorkoutPrSummary } from "@/lib/progression";
 import { createSeedState } from "@/lib/seed-data";
+import { getWeddingPhaseTransitionCopy, WeddingDateService } from "@/lib/wedding-date";
 import {
   deserializeState,
   loadLockedProfile,
@@ -64,7 +75,7 @@ import {
 } from "@/lib/workout-session";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
-import type { ActiveWorkout, AppState, ExerciseLibraryItem, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type { ActiveWorkout, AppState, ExerciseLibraryItem, HapticEvent, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
 
 type TabId = "home" | "workout" | "progress";
 
@@ -80,37 +91,6 @@ const navItems = [
 ];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
-
-function getWeddingCountdown() {
-  const today = new Date();
-  const weddingDate = new Date("2026-11-02T00:00:00");
-
-  if (today >= weddingDate) {
-    return { months: 0, days: 0, label: "The day is here." };
-  }
-
-  const cursor = new Date(today);
-  let months = 0;
-
-  while (true) {
-    const next = new Date(cursor);
-    next.setMonth(next.getMonth() + 1);
-    if (next <= weddingDate) {
-      months += 1;
-      cursor.setMonth(cursor.getMonth() + 1);
-      continue;
-    }
-    break;
-  }
-
-  const days = Math.max(0, Math.floor((weddingDate.getTime() - cursor.getTime()) / 86400000));
-  const label =
-    months === 0 && days <= 14
-      ? "Almost there."
-      : "Counting down to your wedding day together.";
-
-  return { months, days, label };
-}
 
 function isSameLocalDay(a: string, b: Date) {
   return new Date(a).toDateString() === b.toDateString();
@@ -151,6 +131,9 @@ function toActiveWorkout(
     workoutDayId: workout.id,
     workoutName: workout.name,
     liveSignal: null,
+    hapticState: {
+      prApproachSetKeys: [],
+    },
     exercises: workout.exercises.map((exercise) => {
       const rememberedSwapId = exerciseSwapMemory[exercise.id];
       const rememberedSwap = rememberedSwapId
@@ -188,6 +171,7 @@ function toSuggestedFocusActiveWorkout(
       muscleGroup: exercise.muscleGroup,
       sets: exercise.sets,
       repRange: exercise.repRange,
+      suggestedRepTarget: exercise.suggestedRepTarget ?? undefined,
       note: exercise.note,
     }));
 
@@ -198,6 +182,10 @@ function toSuggestedFocusActiveWorkout(
     workoutDayId: session.sourceWorkoutId ?? `focus-session-${userId}`,
     workoutName: `${session.focusText} Focus Session`,
     liveSignal: null,
+    ceilingResponses: session.ceilingAppliedResponses,
+    hapticState: {
+      prApproachSetKeys: [],
+    },
     templateExercises,
     exercises: templateExercises.map((exercise) => ({
       exerciseId: exercise.id,
@@ -237,6 +225,30 @@ function appendSessionSignalLog(currentState: AppState, session: WorkoutSession)
   }
 
   return [signalLogEntry, ...currentState.sessionSignalLog];
+}
+
+function appendCeilingLog(
+  currentState: AppState,
+  profile: Profile,
+  session: WorkoutSession,
+  appliedResponses: ActiveWorkout["ceilingResponses"] = {},
+) {
+  const nextEntries = buildMuscleCeilingLogEntries(
+    profile,
+    session,
+    currentState.sessions.filter((entry) => entry.userId === profile.id),
+    appliedResponses,
+  );
+
+  if (!nextEntries.length) {
+    return currentState.ceilingLog;
+  }
+
+  const existingKeys = new Set(currentState.ceilingLog.map((entry) => `${entry.sessionId}:${entry.muscleGroup}`));
+  return [
+    ...nextEntries.filter((entry) => !existingKeys.has(`${entry.sessionId}:${entry.muscleGroup}`)),
+    ...currentState.ceilingLog,
+  ];
 }
 
 function getInstallCopy(
@@ -301,13 +313,14 @@ export function WorkoutTrackerApp() {
   const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
   const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [weddingDayKey, setWeddingDayKey] = useState(() => new Date().toDateString());
+  const [phaseTransitionLines, setPhaseTransitionLines] = useState<Record<UserId, string | null>>({
+    joshua: null,
+    natasha: null,
+  });
   const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<RecentTrainingUpdate | null>(null);
-
-  const softHaptic = (pattern: number | number[]) => {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(pattern);
-    }
-  };
+  const previousRivalryLeaderRef = useRef<"joshua" | "natasha" | "tied" | null>(null);
+  const weddingDate = useMemo(() => WeddingDateService.getState(new Date()), [weddingDayKey]);
 
   const showToast = (
     message: string,
@@ -350,18 +363,22 @@ export function WorkoutTrackerApp() {
     const launchProfile =
       profileFromQuery === "joshua" || profileFromQuery === "natasha" ? profileFromQuery : null;
     setLockedProfile(deviceLockedProfile);
-    if (localState) {
-      const seed = createSeedState();
-      const mergedState = mergeStateWithSeed(seed, localState);
-      setState((current) => ({
-        ...current,
-        ...mergedState,
-        selectedUserId:
-          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? mergedState.selectedUserId,
-      }));
-      if (deviceLockedProfile || launchProfile || rememberedProfile) {
-        setHasEnteredProfile(true);
-      }
+      if (localState) {
+        const seed = createSeedState();
+        const mergedState = mergeStateWithSeed(seed, localState);
+        const resolvedSelectedUserId =
+          deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? mergedState.selectedUserId;
+        setState((current) => ({
+          ...current,
+          ...mergedState,
+          selectedUserId: resolvedSelectedUserId,
+        }));
+        if (mergedState.isSessionActive && mergedState.activeWorkout?.userId === resolvedSelectedUserId) {
+          setActiveTab("workout");
+        }
+        if (deviceLockedProfile || launchProfile || rememberedProfile) {
+          setHasEnteredProfile(true);
+        }
     } else if (deviceLockedProfile || launchProfile || rememberedProfile) {
       setState((current) =>
         setSelectedUserId(
@@ -369,6 +386,9 @@ export function WorkoutTrackerApp() {
           deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? current.selectedUserId,
         ),
       );
+      if (launchProfile || rememberedProfile || deviceLockedProfile) {
+        setActiveTab("home");
+      }
       setHasEnteredProfile(true);
     }
     if (typeof window !== "undefined" && launchProfile) {
@@ -428,11 +448,74 @@ export function WorkoutTrackerApp() {
   }, [state, hydrated]);
 
   useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const timeout = window.setTimeout(() => {
+      setWeddingDayKey(new Date().toDateString());
+    }, Math.max(1000, nextMidnight.getTime() - now.getTime()));
+
+    return () => window.clearTimeout(timeout);
+  }, [weddingDayKey]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    const currentPhase = weddingDate.currentPhase;
+    const nextLines = {
+      joshua: getWeddingPhaseTransitionCopy("joshua", state.lastSeenWeddingPhase.joshua, currentPhase),
+      natasha: getWeddingPhaseTransitionCopy("natasha", state.lastSeenWeddingPhase.natasha, currentPhase),
+    } satisfies Record<UserId, string | null>;
+
+    if (nextLines.joshua || nextLines.natasha) {
+      setPhaseTransitionLines(nextLines);
+    }
+
+    if (state.lastSeenWeddingPhase.joshua === currentPhase && state.lastSeenWeddingPhase.natasha === currentPhase) {
+      return;
+    }
+
+    setState((current) => ({
+      ...current,
+      lastSeenWeddingPhase: {
+        joshua: currentPhase,
+        natasha: currentPhase,
+      },
+    }));
+  }, [hydrated, state.lastSeenWeddingPhase, weddingDate.currentPhase]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    setState((current) => syncLiftReadyHistory(current, new Date()));
+  }, [hydrated, weddingDayKey]);
+
+  useEffect(() => {
     if (!hydrated) {
       return;
     }
 
     setState((current) => syncWeeklyRivalryArchive(current, new Date()));
+  }, [hydrated, state.sessions]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    setState((current) => syncStealArchive(current, new Date()));
+  }, [hydrated, state.sessions]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    setState((current) => syncMonthlyReportArchive(current, new Date()));
   }, [hydrated, state.sessions]);
 
   useEffect(() => {
@@ -471,10 +554,16 @@ export function WorkoutTrackerApp() {
         state.stretchCompletions[selectedProfile.id],
         state.longestStreaks[selectedProfile.id],
         state.workoutOverrides[selectedProfile.id] ?? null,
+        state.profileCreatedAt[selectedProfile.id],
+        state.profileActivationDates[selectedProfile.id],
+        state.lastSeenWeddingPhase[selectedProfile.id],
       ),
     [
       selectedProfile,
       state.exerciseLibrary,
+      state.profileActivationDates,
+      state.profileCreatedAt,
+      state.lastSeenWeddingPhase,
       state.longestStreaks,
       state.sessions,
       state.stretchCompletions,
@@ -506,15 +595,14 @@ export function WorkoutTrackerApp() {
     () => getStrengthPredictions(selectedProfile.id, userSessions),
     [selectedProfile.id, userSessions],
   );
-  const weddingCountdown = useMemo(() => getWeddingCountdown(), []);
   const dynamicSharedSummary = useMemo(
     () =>
       getCoupleIntelligenceSummary({
         sessions: state.sessions,
         measurements: state.measurements,
-        weddingCountdown,
+        weddingDate,
       }),
-    [state.measurements, state.sessions, weddingCountdown],
+    [state.measurements, state.sessions, weddingDate],
   );
   const installState = useMemo(
     () => ({
@@ -566,6 +654,7 @@ export function WorkoutTrackerApp() {
     selectedProfile.id,
     trainingState.streakAndMomentum,
     trainingState.userSessions.some((session) => !session.partial),
+    trainingState.maturityState.isObserving,
   );
   const rivalryState = useMemo(() => {
     const week = getCurrentWeekWindow(new Date());
@@ -573,12 +662,55 @@ export function WorkoutTrackerApp() {
     const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
     return getWeeklyRivalryState(joshuaHistory, natashaHistory, week.start, new Date());
   }, [state.sessions]);
+  const stealState = useMemo(() => {
+    const week = getCurrentWeekWindow(new Date());
+    const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
+    const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
+    return getStealState(joshuaHistory, natashaHistory, week.start, new Date());
+  }, [state.sessions]);
+  const weddingRivalryState = useMemo(() => {
+    if (weddingDate.isPastWedding) {
+      return null;
+    }
+    const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
+    const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
+    return getWeddingRivalryState(
+      joshuaHistory,
+      natashaHistory,
+      weddingDate.currentPhase,
+      weddingDate.weeksRemaining,
+      new Date(),
+    );
+  }, [state.sessions, weddingDate]);
   const rivalryCopy = useMemo(
-    () => getRivalryCardCopy(selectedProfile.id, rivalryState),
-    [selectedProfile.id, rivalryState],
+    () =>
+      getRivalryCardCopy(
+        selectedProfile.id,
+        rivalryState,
+        stealState,
+        trainingState.maturityState.isObserving,
+        weddingRivalryState,
+      ),
+    [selectedProfile.id, rivalryState, stealState, trainingState.maturityState.isObserving, weddingRivalryState],
   );
+  const hapticsEnabled = state.hapticPreferences[selectedProfile.id] ?? true;
+  const monthlyReport = useMemo(() => {
+    const now = new Date();
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    if (now.getDate() !== lastDayOfMonth) {
+      return null;
+    }
+
+    const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
+    const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
+    return getMonthlyReportCard(joshuaHistory, natashaHistory, now.getMonth(), now.getFullYear());
+  }, [state.sessions]);
   const liveSessionSignal = useMemo(() => {
-    if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
+    if (
+      trainingState.maturityState.isObserving ||
+      !state.activeWorkout ||
+      state.activeWorkout.userId !== selectedProfile.id
+    ) {
       return null;
     }
 
@@ -601,14 +733,34 @@ export function WorkoutTrackerApp() {
       state.sessionSignalLog.filter((entry) => entry.userId === selectedProfile.id),
       new Date(),
     );
-  }, [selectedProfile, state.activeWorkout, state.sessionSignalLog, userSessions]);
-  const restDayRead = getRestDayRead(selectedProfile.id, trainingState.restDayState.restReason);
+  }, [selectedProfile, state.activeWorkout, state.sessionSignalLog, trainingState.maturityState.isObserving, userSessions]);
+  const restDayRead = getRestDayRead(
+    selectedProfile.id,
+    trainingState.restDayState.restReason,
+    trainingState.maturityState.isObserving,
+  );
   const restRecoveryLabel = getRestRecoveryLabel(trainingState.restDayState.recoveryScore);
 
   const editingSession = useMemo(
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
     [editingSessionId, state.sessions],
   );
+
+  const triggerHaptic = useCallback(
+    (event: HapticEvent, userId: UserId = selectedProfile.id) => {
+      HapticService.setEnabled(state.hapticPreferences[userId] ?? true);
+      HapticService.trigger(event);
+    },
+    [selectedProfile.id, state.hapticPreferences],
+  );
+
+  useEffect(() => {
+    setState((current) => syncProfileMaturityState(current, new Date()));
+  }, [state.profileActivationDates, state.profileCreatedAt, state.sessions]);
+
+  useEffect(() => {
+    setState((current) => syncTrainingAgeState(current));
+  }, [state.sessions]);
 
   useEffect(() => {
     if (!liveSessionSignal?.shouldFire || !state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
@@ -628,6 +780,47 @@ export function WorkoutTrackerApp() {
       return next;
     });
   }, [liveSessionSignal, selectedProfile.id, state.activeWorkout]);
+
+  useEffect(() => {
+    HapticService.setEnabled(hapticsEnabled);
+  }, [hapticsEnabled]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const syncVisibility = () => {
+      HapticService.notifyVisibilityChange(document.visibilityState === "visible");
+    };
+
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => document.removeEventListener("visibilitychange", syncVisibility);
+  }, []);
+
+  useEffect(() => {
+    const previousLeader = previousRivalryLeaderRef.current;
+    if (previousLeader === null) {
+      previousRivalryLeaderRef.current = rivalryState.leader;
+      return;
+    }
+
+    const recentTrainingChange =
+      recentTrainingUpdate &&
+      Date.now() - new Date(recentTrainingUpdate.timestamp).getTime() < 5_000;
+
+    if (
+      recentTrainingChange &&
+      previousLeader !== rivalryState.leader &&
+      previousLeader !== "tied" &&
+      rivalryState.leader !== "tied"
+    ) {
+      triggerHaptic("rivalry_lead_change");
+    }
+
+    previousRivalryLeaderRef.current = rivalryState.leader;
+  }, [recentTrainingUpdate, rivalryState.leader, triggerHaptic]);
 
 
   const dailyVerse = useMemo(() => {
@@ -674,19 +867,20 @@ export function WorkoutTrackerApp() {
         return {
           ...current,
           sessions: current.sessions.filter((session) => session.id !== currentPartial.id),
+          isSessionActive: true,
           activeWorkout: buildResumedActiveWorkout(currentPartial, workout),
         };
       });
       setSuggestedSessionPreview(false);
       setWorkoutPreviewId(null);
       showToast(`Resumed your saved ${workout.dayLabel.toLowerCase()} session.`);
-      softHaptic(10);
       startTransition(() => setActiveTab("workout"));
       return;
     }
 
     setState((current) => ({
       ...current,
+      isSessionActive: true,
       activeWorkout: toActiveWorkout(
         selectedProfile.id,
         workout,
@@ -697,7 +891,6 @@ export function WorkoutTrackerApp() {
     }));
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
-    softHaptic(10);
     startTransition(() => setActiveTab("workout"));
   };
 
@@ -744,7 +937,10 @@ export function WorkoutTrackerApp() {
     if (!state.activeWorkout || state.activeWorkout.userId !== selectedProfile.id) {
       return;
     }
-    setState((current) => clearActiveWorkoutForUser(current, selectedProfile.id));
+    setState((current) => ({
+      ...clearActiveWorkoutForUser(current, selectedProfile.id),
+      isSessionActive: false,
+    }));
     setShowWorkoutFeelingPrompt(false);
     setSuggestedSessionPreview(false);
     setWorkoutPreviewId(null);
@@ -781,9 +977,12 @@ export function WorkoutTrackerApp() {
     });
 
     setState((current) =>
-      appendSession(current, completedSession, {
-        clearActiveWorkoutForUser: selectedProfile.id,
-        nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
+      ({
+        ...appendSession(current, completedSession, {
+          clearActiveWorkoutForUser: selectedProfile.id,
+          nextWorkoutId: state.activeWorkout?.workoutDayId ?? null,
+        }),
+        isSessionActive: false,
       }),
     );
       setShowWorkoutFeelingPrompt(false);
@@ -792,7 +991,6 @@ export function WorkoutTrackerApp() {
       setSessionSummary(buildSessionSummary(completedSession, { partial: true }));
       markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "partial");
       showToast("Progress saved. You can resume this workout from the Workout tab.", { title: "Workout saved" });
-    softHaptic([8, 28, 8]);
     startTransition(() => setActiveTab("home"));
   };
 
@@ -821,6 +1019,11 @@ export function WorkoutTrackerApp() {
       feeling,
     });
     const prSummary = getWorkoutPrSummary(completedSession, userSessions);
+    const weekStreakMilestone = getWeekStreakMilestone(
+      [completedSession, ...userSessions],
+      state.firedWeekStreakMilestones[selectedProfile.id] ?? [],
+      new Date(completedSession.performedAt),
+    );
     setState((current) =>
       ({
         ...appendSession(current, completedSession, {
@@ -829,7 +1032,18 @@ export function WorkoutTrackerApp() {
           updateSharedSummary: true,
           sharedSummaryName: selectedProfile.name,
         }),
+        isSessionActive: false,
         sessionSignalLog: appendSessionSignalLog(current, completedSession),
+        ceilingLog: appendCeilingLog(current, selectedProfile, completedSession, current.activeWorkout?.ceilingResponses),
+        firedWeekStreakMilestones: weekStreakMilestone
+          ? {
+              ...current.firedWeekStreakMilestones,
+              [selectedProfile.id]: [
+                ...current.firedWeekStreakMilestones[selectedProfile.id],
+                weekStreakMilestone,
+              ],
+            }
+          : current.firedWeekStreakMilestones,
         longestStreaks: getUpdatedLongestStreaks(
           current,
           selectedProfile.id,
@@ -849,7 +1063,10 @@ export function WorkoutTrackerApp() {
       prHighlights: prSummary.highlights,
     }));
     markTrainingStateUpdated(selectedProfile.id, completedSession.workoutName, "complete");
-    softHaptic([10, 36, 12]);
+    triggerHaptic("session_complete");
+    if (weekStreakMilestone) {
+      triggerHaptic("week_streak");
+    }
     startTransition(() => setActiveTab("home"));
   };
 
@@ -895,6 +1112,7 @@ export function WorkoutTrackerApp() {
     field: "weight" | "reps",
     value: number,
   ) => {
+    let shouldTriggerPrApproach = false;
     setState((current) => {
       if (!current.activeWorkout) {
         return current;
@@ -903,13 +1121,31 @@ export function WorkoutTrackerApp() {
       if (!next.activeWorkout) {
         return current;
       }
-      const targetSet = next.activeWorkout.exercises[exerciseIndex].sets[setIndex];
+      const activeExercise = next.activeWorkout.exercises[exerciseIndex];
+      const targetSet = activeExercise.sets[setIndex];
       targetSet[field] = Number.isNaN(value) ? 0 : value;
+      const prApproachKey = `${activeExercise.exerciseName}:${targetSet.id}`;
+      const prApproachSetKeys = next.activeWorkout.hapticState?.prApproachSetKeys ?? [];
+      const currentUserSessions = current.sessions.filter((session) => session.userId === next.activeWorkout?.userId);
+
+      if (
+        !prApproachSetKeys.includes(prApproachKey) &&
+        isPrApproachSet(activeExercise.exerciseName, targetSet, currentUserSessions)
+      ) {
+        next.activeWorkout.hapticState = {
+          prApproachSetKeys: [...prApproachSetKeys, prApproachKey],
+        };
+        shouldTriggerPrApproach = true;
+      }
       return next;
     });
+    if (shouldTriggerPrApproach) {
+      triggerHaptic("pr_approach");
+    }
   };
 
   const completeSet = (exerciseIndex: number, setIndex: number) => {
+    let didSaveSet = false;
     setState((current) => {
       if (!current.activeWorkout) {
         return current;
@@ -922,9 +1158,16 @@ export function WorkoutTrackerApp() {
       if (targetSet.weight <= 0 && targetSet.reps <= 0) {
         return current;
       }
+      if (targetSet.completed) {
+        return current;
+      }
       targetSet.completed = true;
+      didSaveSet = true;
       return next;
     });
+    if (didSaveSet) {
+      triggerHaptic("set_saved");
+    }
   };
 
   const copyPreviousSet = (exerciseIndex: number, setIndex: number) => {
@@ -1051,7 +1294,7 @@ export function WorkoutTrackerApp() {
   const isJoshuaTheme = selectedProfile.id === "joshua";
   const isNatashaTheme = selectedProfile.id === "natasha";
   const immersiveWorkoutMode = activeTab === "workout" && state.activeWorkout?.userId === selectedProfile.id;
-  const compactHeader = scrollY > 18 && !immersiveWorkoutMode;
+  const compactHeader = scrollY > 18 && !(activeTab === "workout" && state.isSessionActive);
   const handleToastAction = () => {
     if (toastActionKind !== "undo-schedule" || !pendingScheduleUndo) {
       return;
@@ -1063,7 +1306,6 @@ export function WorkoutTrackerApp() {
 
   const enterProfile = (profileId: UserId) => {
     setProfileEntryTransition(profileId);
-    softHaptic(8);
     saveRememberedProfile(profileId);
     window.setTimeout(() => {
       setSelectedExerciseId(null);
@@ -1073,7 +1315,11 @@ export function WorkoutTrackerApp() {
       setState((current) => setSelectedUserId(current, profileId));
       setHasEnteredProfile(true);
       setProfileEntryTransition(null);
-      startTransition(() => setActiveTab("home"));
+      startTransition(() =>
+        setActiveTab(
+          state.isSessionActive && state.activeWorkout?.userId === profileId ? "workout" : "home",
+        ),
+      );
     }, 850);
   };
 
@@ -1101,7 +1347,6 @@ export function WorkoutTrackerApp() {
       return;
     }
     setHasEnteredProfile(false);
-    softHaptic(6);
   };
 
   const promptInstall = async () => {
@@ -1135,7 +1380,62 @@ export function WorkoutTrackerApp() {
     showToast(`This phone is now locked to ${selectedProfile.name}.`, { title: "Phone locked" });
   };
 
+  const toggleHaptics = () => {
+    setState((current) => ({
+      ...current,
+      hapticPreferences: {
+        ...current.hapticPreferences,
+        [selectedProfile.id]: !(current.hapticPreferences[selectedProfile.id] ?? true),
+      },
+    }));
+  };
+
+  const markTrainingAgeMilestoneShown = useCallback(() => {
+    const milestone = trainingState.trainingAge.milestone;
+    if (!milestone) {
+      return;
+    }
+
+    setState((current) => {
+      const existing = current.trainingAgeState[selectedProfile.id].milestonesShown;
+      if (existing.includes(milestone)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        trainingAgeState: {
+          ...current.trainingAgeState,
+          [selectedProfile.id]: {
+            ...current.trainingAgeState[selectedProfile.id],
+            milestonesShown: [...existing, milestone],
+          },
+        },
+      };
+    });
+  }, [selectedProfile.id, trainingState.trainingAge.milestone]);
+
+  useEffect(() => {
+    const milestone = trainingState.trainingAge.milestone;
+    if (
+      !showSettings ||
+      !milestone ||
+      state.trainingAgeState[selectedProfile.id].milestonesShown.includes(milestone)
+    ) {
+      return;
+    }
+
+    markTrainingAgeMilestoneShown();
+  }, [
+    markTrainingAgeMilestoneShown,
+    selectedProfile.id,
+    showSettings,
+    state.trainingAgeState,
+    trainingState.trainingAge.milestone,
+  ]);
+
   const saveEditedSession = (updatedSession: WorkoutSession, options?: { countAsDone?: boolean }) => {
+    let weekStreakMilestone: number | null = null;
     setState((current) => {
       const existingSession = current.sessions.find((session) => session.id === updatedSession.id);
       const shouldAdvanceCycle =
@@ -1144,9 +1444,29 @@ export function WorkoutTrackerApp() {
       if (!shouldAdvanceCycle || updatedSession.partial) {
         return replaced;
       }
+      weekStreakMilestone = getWeekStreakMilestone(
+        replaced.sessions.filter((session) => session.userId === updatedSession.userId),
+        current.firedWeekStreakMilestones[updatedSession.userId] ?? [],
+        new Date(updatedSession.performedAt),
+      );
       return {
         ...replaced,
+        isSessionActive: false,
         sessionSignalLog: appendSessionSignalLog(current, updatedSession),
+        ceilingLog: appendCeilingLog(
+          current,
+          current.profiles.find((profile) => profile.id === updatedSession.userId) ?? selectedProfile,
+          updatedSession,
+        ),
+        firedWeekStreakMilestones: weekStreakMilestone
+          ? {
+              ...current.firedWeekStreakMilestones,
+              [updatedSession.userId]: [
+                ...current.firedWeekStreakMilestones[updatedSession.userId],
+                weekStreakMilestone,
+              ],
+            }
+          : current.firedWeekStreakMilestones,
         longestStreaks: getUpdatedLongestStreaks(
           current,
           updatedSession.userId,
@@ -1161,6 +1481,12 @@ export function WorkoutTrackerApp() {
       updatedSession.workoutName,
       options?.countAsDone ? "complete" : "edit",
     );
+    if (options?.countAsDone) {
+      triggerHaptic("session_complete", updatedSession.userId);
+      if (weekStreakMilestone) {
+        triggerHaptic("week_streak", updatedSession.userId);
+      }
+    }
     showToast(options?.countAsDone ? "Workout marked done. Moving to the next day." : "Workout changes saved to progress.", {
       title: options?.countAsDone ? "Workout complete" : "Workout updated",
     });
@@ -1177,6 +1503,7 @@ export function WorkoutTrackerApp() {
       ? normalizeCompletedWorkoutName(currentTargetSession.workoutName)
       : null;
 
+    let weekStreakMilestone: number | null = null;
     setState((current) => {
       const targetSession = current.sessions.find((session) => session.id === summary.sessionId);
       if (!targetSession) {
@@ -1190,9 +1517,29 @@ export function WorkoutTrackerApp() {
       };
 
       const replaced = replaceSession(current, updatedSession, { advanceWorkoutCycle: true });
+      weekStreakMilestone = getWeekStreakMilestone(
+        replaced.sessions.filter((session) => session.userId === updatedSession.userId),
+        current.firedWeekStreakMilestones[updatedSession.userId] ?? [],
+        new Date(updatedSession.performedAt),
+      );
       return {
         ...replaced,
+        isSessionActive: false,
         sessionSignalLog: appendSessionSignalLog(current, updatedSession),
+        ceilingLog: appendCeilingLog(
+          current,
+          current.profiles.find((profile) => profile.id === updatedSession.userId) ?? selectedProfile,
+          updatedSession,
+        ),
+        firedWeekStreakMilestones: weekStreakMilestone
+          ? {
+              ...current.firedWeekStreakMilestones,
+              [updatedSession.userId]: [
+                ...current.firedWeekStreakMilestones[updatedSession.userId],
+                weekStreakMilestone,
+              ],
+            }
+          : current.firedWeekStreakMilestones,
         longestStreaks: getUpdatedLongestStreaks(
           current,
           updatedSession.userId,
@@ -1205,6 +1552,10 @@ export function WorkoutTrackerApp() {
     setSessionSummary(null);
     if (currentTargetSession && currentUpdatedWorkoutName) {
       markTrainingStateUpdated(currentTargetSession.userId, currentUpdatedWorkoutName, "complete");
+      triggerHaptic("session_complete", currentTargetSession.userId);
+      if (weekStreakMilestone) {
+        triggerHaptic("week_streak", currentTargetSession.userId);
+      }
     }
     showToast("Workout counted as done. Moving to the next day.", { title: "Workout complete" });
   };
@@ -1232,6 +1583,7 @@ export function WorkoutTrackerApp() {
     if (suggestedFocusSession.canStartDirectly) {
       setState((current) => ({
         ...current,
+        isSessionActive: true,
         activeWorkout: toSuggestedFocusActiveWorkout(
           selectedProfile.id,
           suggestedFocusSession,
@@ -1240,7 +1592,6 @@ export function WorkoutTrackerApp() {
       }));
       setSuggestedSessionPreview(false);
       setWorkoutPreviewId(null);
-      softHaptic(10);
       startTransition(() => setActiveTab("workout"));
       return;
     }
@@ -1256,7 +1607,6 @@ export function WorkoutTrackerApp() {
     setSelectedExerciseId(null);
     setSuggestedSessionPreview(true);
     setWorkoutPreviewId(fallbackWorkoutId);
-    softHaptic(8);
     startTransition(() => setActiveTab("workout"));
   };
 
@@ -1328,7 +1678,14 @@ export function WorkoutTrackerApp() {
                 profile={selectedProfile}
                 todaysWorkout={todaysWorkout}
                 activeWorkoutName={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.workoutName : null}
+                isSessionActive={state.isSessionActive}
+                activeSessionSetCount={
+                  state.activeWorkout?.userId === selectedProfile.id
+                    ? countLoggedSets(state.activeWorkout.exercises)
+                    : 0
+                }
                 trainingInsight={trainingState.insights.homeAction}
+                liftReadyLine={trainingState.insights.liftReadyLine}
                 restDayState={trainingState.restDayState}
                 restDayRead={restDayRead}
                 restRecoveryLabel={restRecoveryLabel}
@@ -1341,12 +1698,14 @@ export function WorkoutTrackerApp() {
                 stretchCompletedToday={stretchCompletedToday}
                 sharedSummary={dynamicSharedSummary}
                 recentWorkouts={recentWorkouts}
-                weddingCountdown={weddingCountdown}
+                weddingDate={weddingDate}
+                phaseTransitionLine={phaseTransitionLines[selectedProfile.id]}
                 recentTrainingUpdate={profileRecentTrainingUpdate}
                 calendarRows={trainingState.calendarRows}
                 momentumPillText={trainingState.restDayState.isRest ? null : momentumPillText}
                 rivalryState={rivalryState}
                 rivalryCopy={rivalryCopy}
+                monthlyReport={monthlyReport}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
               onStartWorkout={() => startWorkout(todaysWorkout)}
@@ -1429,7 +1788,15 @@ export function WorkoutTrackerApp() {
         <SettingsModal
           profile={selectedProfile}
           signatureLifts={trainingState.signatureLifts}
+          trainingAge={trainingState.trainingAge}
+          trainingAgeMilestone={
+            trainingState.trainingAge.milestone &&
+            !state.trainingAgeState[selectedProfile.id].milestonesShown.includes(trainingState.trainingAge.milestone)
+              ? trainingState.trainingAge.milestone
+              : null
+          }
           isProfileLocked={lockedProfile === selectedProfile.id}
+          hapticEnabled={hapticsEnabled}
           installState={installState}
           onClose={() => setShowSettings(false)}
           onInstall={promptInstall}
@@ -1438,6 +1805,7 @@ export function WorkoutTrackerApp() {
           onResetProfile={resetProfileData}
           onResetAll={resetAllData}
           onChooseProfile={returnToProfileEntry}
+          onToggleHaptics={toggleHaptics}
           onToggleProfileLock={toggleProfileLock}
         />
       )}
@@ -1463,11 +1831,11 @@ export function WorkoutTrackerApp() {
         onSave={saveEditedSession}
       />
 
-      {!immersiveWorkoutMode ? (
-        <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">
+      <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            const showSessionDot = state.isSessionActive && item.id === "workout";
             return (
               <button
                 key={item.id}
@@ -1476,17 +1844,25 @@ export function WorkoutTrackerApp() {
                   isActive ? "tabbar-button-active text-accent" : "text-muted",
                 )}
                 onClick={() => {
-                  softHaptic(6);
                   setActiveTab(item.id);
                 }}
               >
-                <Icon className="h-5 w-5" />
+                <div className="relative flex flex-col items-center">
+                  <Icon className="h-5 w-5" />
+                  {showSessionDot ? (
+                    <span
+                      className={clsx(
+                        "mt-1 inline-block h-1 w-1 rounded-full",
+                        selectedProfile.id === "joshua" ? "bg-emerald-300/90" : "bg-sky-300/90",
+                      )}
+                    />
+                  ) : null}
+                </div>
                 {item.label}
               </button>
             );
           })}
         </nav>
-      ) : null}
     </main>
   );
 }
