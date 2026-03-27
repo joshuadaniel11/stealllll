@@ -1,0 +1,4 @@
+interface:
+  display_name: "STEAL App Context"
+  short_description: "Permanent STEAL architecture and product context"
+  default_prompt: "Use $steal-app-context to keep STEAL architecture, profile logic, and product constraints aligned."

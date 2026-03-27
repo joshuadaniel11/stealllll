@@ -259,7 +259,7 @@ export function HomeScreen({
               </div>
             </div>
 
-            <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-4">
+            <div className="space-y-2 rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-4">
               <p className="text-[11px] uppercase tracking-[0.22em] text-white/36">Rivalry record this month</p>
               <p className="text-sm text-white/70">
                 Week wins: Joshua {monthlyReport.rivalry.weekWins.joshua} {"\u2014"} Natasha {monthlyReport.rivalry.weekWins.natasha}
@@ -293,7 +293,7 @@ export function HomeScreen({
         {showActiveSessionPulse ? (
           <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
             <div className="space-y-1.5">
-              <h2 className={`text-[2rem] font-semibold tracking-[-0.06em] ${profile.id === "joshua" ? "text-emerald-300/88" : "text-sky-300/88"}`}>
+              <h2 className={`text-[1.9rem] tracking-[-0.06em] ${profile.id === "joshua" ? "text-emerald-300/88" : "text-sky-300/88"}`}>
                 {activeWorkoutName}
               </h2>
               <p className="text-sm text-white/46">In progress</p>
@@ -311,7 +311,7 @@ export function HomeScreen({
           <Card className="home-session-hero tab-fade-enter space-y-5 px-6 py-6">
             <div className="space-y-2">
               <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">Rest read</p>
-              <h2 className="text-[2rem] font-semibold tracking-[-0.06em] text-white">{restDayRead}</h2>
+              <h2 className="text-[1.85rem] tracking-[-0.06em] text-white">{restDayRead}</h2>
             </div>
             <div className="space-y-1">
               <p className="text-[11px] uppercase tracking-[0.22em] text-white/34">Recovery state</p>
@@ -331,12 +331,12 @@ export function HomeScreen({
                 <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
                   {sessionPresentation.splitLabel}
                 </p>
-                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/58">
+                <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-white/54">
                   {homeStateLabel}
                 </span>
               </div>
               <div className="space-y-1.5">
-                <h2 className="text-[2.2rem] font-semibold tracking-[-0.06em] text-white">
+                <h2 className="text-[2rem] tracking-[-0.06em] text-white">
                   {sessionPresentation.title}
                 </h2>
                 <p className="text-sm leading-6 text-white/56">
@@ -351,7 +351,7 @@ export function HomeScreen({
                 onClick={() =>
                   activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
                 }
-                className="rounded-[26px] bg-white px-5 py-4 text-base font-semibold tracking-[-0.02em] text-black transition duration-200 active:scale-[0.99]"
+                className="rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-5 py-4 text-base tracking-[-0.02em] text-[color:var(--accent)] transition duration-200 active:scale-[0.99]"
               >
                 {primaryActionLabel}
               </button>
@@ -374,7 +374,7 @@ export function HomeScreen({
             </div>
 
             {showMoveChoices ? (
-              <div className="space-y-2 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
+              <div className="space-y-2 rounded-[12px] border border-white/8 bg-white/[0.02] p-3">
                 {profile.workoutPlan.map((workout) => (
                   <button
                     key={workout.id}
@@ -383,7 +383,7 @@ export function HomeScreen({
                       onMoveWorkout(workout.id);
                       setShowMoveChoices(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                    className="flex w-full items-center justify-between rounded-[12px] px-3 py-3 text-left transition hover:bg-white/[0.03]"
                   >
                     <span className="text-sm font-medium text-white/86">
                       {workout.dayLabel} {"\u2022"} {workout.name}
@@ -397,7 +397,7 @@ export function HomeScreen({
                     onSkipWorkout();
                     setShowMoveChoices(false);
                   }}
-                  className="w-full rounded-[18px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.05]"
+                  className="w-full rounded-[12px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.03]"
                 >
                   Skip for now
                 </button>
@@ -409,7 +409,7 @@ export function HomeScreen({
 
       {liftReadyLine ? (
         <ScrollReveal delay={34}>
-          <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
+          <p className="px-2 text-[11px] tracking-[-0.01em] text-white/40">
             {liftReadyLine}
           </p>
         </ScrollReveal>
@@ -418,7 +418,7 @@ export function HomeScreen({
       <div className={showActiveSessionPulse ? "opacity-35" : ""}>
         {phaseTransitionLine ? (
           <ScrollReveal delay={34}>
-            <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
+            <p className="px-2 text-[11px] tracking-[-0.01em] text-white/40">
               {phaseTransitionLine}
             </p>
           </ScrollReveal>
@@ -434,7 +434,7 @@ export function HomeScreen({
               ) : (
                 <div className="grid grid-cols-[auto_1fr] items-center gap-5">
                   <div className="min-w-[92px]">
-                    <p className={`text-[3rem] font-semibold leading-none tracking-[-0.08em] ${getWeddingCountdownNumberClass(weddingDate.urgencyLevel)}`}>
+                    <p className={`text-[3.15rem] leading-none tracking-[-0.08em] ${getWeddingCountdownNumberClass(weddingDate.urgencyLevel)}`}>
                       {weddingCountdown.heroValue}
                     </p>
                     <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-white/36">{weddingCountdown.heroUnit}</p>
@@ -461,9 +461,9 @@ export function HomeScreen({
 
         {momentumPillText ? (
           <ScrollReveal delay={36}>
-            <p className="px-2 text-[12px] font-medium tracking-[-0.01em] text-white/46">
-              {momentumPillText}
-            </p>
+          <p className="px-2 text-[11px] tracking-[-0.01em] text-white/34">
+            {momentumPillText}
+          </p>
           </ScrollReveal>
         ) : null}
 
@@ -472,20 +472,20 @@ export function HomeScreen({
           <div className="space-y-3">
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
             <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
-              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3">
+              <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3">
                 <p className="text-sm font-medium text-white/78">
                   <span className="text-emerald-300/80">Joshua</span> {"\u00b7"} {rivalryState.joshuaSessions} sessions
                 </p>
               </div>
               <p className="pt-4 text-[11px] uppercase tracking-[0.2em] text-white/28">vs</p>
-              <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-right">
+              <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3 text-right">
                 <p className="text-sm font-medium text-white/78">
                   <span className="text-sky-300/80">Natasha</span> {"\u00b7"} {rivalryState.natashaSessions} sessions
                 </p>
               </div>
             </div>
             {rivalryCopy.headline ? (
-              <p className="text-[1.12rem] font-semibold tracking-[-0.04em] text-white/92">{renderRivalryHeadline(rivalryCopy)}</p>
+              <p className="text-[1.02rem] tracking-[-0.04em] text-white/9">{renderRivalryHeadline(rivalryCopy)}</p>
             ) : null}
             {rivalryCopy.detail ? (
               <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
@@ -546,7 +546,7 @@ export function HomeScreen({
               <button
                 type="button"
                 onClick={() => setShowExtras((value) => !value)}
-                className="flex w-full items-center justify-between rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                className="flex w-full items-center justify-between rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.03]"
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
@@ -574,7 +574,7 @@ export function HomeScreen({
               <button
                 type="button"
                 onClick={() => setShowUtilityStack((value) => !value)}
-                className="flex w-full items-center justify-between rounded-[20px] border border-white/6 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                className="flex w-full items-center justify-between rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.03]"
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Utility stack</p>
@@ -588,7 +588,7 @@ export function HomeScreen({
               </button>
 
               {showUtilityStack ? (
-                <Card className="space-y-3 border border-white/6 bg-white/[0.03]">
+                <Card className="space-y-3 border border-white/6 bg-white/[0.02]">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
                       Recent
@@ -630,7 +630,7 @@ export function HomeScreen({
                       No sessions yet. Your first workout will show here.
                     </p>
                   )}
-                  <div className="rounded-[20px] border border-white/6 bg-white/[0.02] px-4 py-4">
+                  <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Shared</p>
                       <p className="text-[11px] text-white/42">
@@ -645,7 +645,7 @@ export function HomeScreen({
                     {sharedSummary.recentMilestones.slice(0, 2).map((milestone) => (
                       <div
                         key={milestone}
-                        className="rounded-[18px] border border-white/6 bg-white/[0.03] px-3 py-3 text-sm leading-6 text-white/64"
+                        className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3 text-sm leading-6 text-white/64"
                       >
                         {milestone}
                       </div>

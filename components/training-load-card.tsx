@@ -12,19 +12,18 @@ function DetailLabel({ label }: { label: string }) {
 
 function GroupMetricCard({ metric }: { metric: TrainingLoadGroup }) {
   return (
-    <div className="progress-subcard rounded-[20px] border px-3 py-3">
+    <div className="progress-subcard rounded-[12px] border px-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] font-medium text-white/68">{metric.label}</p>
         <p className="text-[13px] font-semibold text-white/88">{metric.percentage}%</p>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/7">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.05]">
         <div
-          className={metric.overload ? "shadow-[0_0_16px_rgba(255,255,255,0.14)]" : ""}
           style={{
             width: `${metric.percentage}%`,
             height: "100%",
             borderRadius: 999,
-            background: `linear-gradient(90deg, ${metric.color}7a, ${metric.color})`,
+            background: metric.color,
           }}
         />
       </div>
@@ -272,12 +271,14 @@ export function TrainingLoadCard({
                 Tap a lit zone
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-[12px] border border-white/8 bg-white/[0.02] p-1">
               {(["front", "back"] as const).map((nextView) => (
                 <button
                   key={nextView}
                   className={`rounded-full px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] transition ${
-                    view === nextView ? "bg-white text-black" : "text-white/48"
+                    view === nextView
+                      ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+                      : "text-white/48"
                   }`}
                   onClick={() => {
                     setView(nextView);

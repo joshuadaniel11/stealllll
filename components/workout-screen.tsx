@@ -281,9 +281,9 @@ export function WorkoutScreen({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">{heroPresentation.splitLabel}</p>
-                <h3 className="mt-3 text-[1.95rem] font-semibold tracking-[-0.06em] text-white/94">{heroPresentation.title}</h3>
+                <h3 className="mt-3 text-[1.8rem] tracking-[-0.06em] text-white/94">{heroPresentation.title}</h3>
               </div>
-              <span className="rounded-full bg-white/[0.07] px-3 py-1 text-[11px] font-medium text-white/62">
+              <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-white/58">
                 {todaysPartial ? "Resume ready" : "Planned next"}
               </span>
             </div>
@@ -293,7 +293,7 @@ export function WorkoutScreen({
                 : getSessionSupportLine(todaysWorkout)}
             </p>
             {todaysPartial ? (
-              <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-3">
+              <div className="mt-4 rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">Resume state</p>
                 <p className="mt-1 text-sm font-medium text-white/84">
                   {todaysPartial.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets already logged
@@ -302,7 +302,7 @@ export function WorkoutScreen({
             ) : null}
             <div className="mt-4 flex items-center justify-between gap-3">
               <button
-                className="rounded-[24px] bg-white px-4 py-3 text-sm font-semibold text-black"
+                className="rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-4 py-3 text-sm text-[color:var(--accent)]"
                 onClick={() => onStartWorkout(todaysWorkout)}
               >
                 {todaysPartial ? "Resume Session" : "Start Session"}
@@ -370,11 +370,11 @@ export function WorkoutScreen({
                       Open
                     </button>
                     <button
-                      className={`rounded-[20px] px-3 py-2 text-sm font-semibold ${
-                        workout.id === todaysWorkoutId || partialByWorkout[workout.id]
-                          ? "bg-white text-black"
-                          : "bg-white/8 text-white/78"
-                      }`}
+                className={`rounded-[12px] px-3 py-2 text-sm ${
+                  workout.id === todaysWorkoutId || partialByWorkout[workout.id]
+                    ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+                    : "border border-white/8 bg-white/[0.03] text-white/70"
+                }`}
                       onClick={() => onStartWorkout(workout)}
                     >
                       {partialByWorkout[workout.id] ? "Resume" : "Start"}
@@ -393,7 +393,7 @@ export function WorkoutScreen({
               <Card className="sheet-card bg-[var(--surface)]">
                 <div className="sheet-drag-handle" />
                 <p className="text-sm text-muted">Planned session</p>
-                <h3 className="large-title mt-2 font-semibold text-text">{previewWorkout.name}</h3>
+                <h3 className="large-title mt-2 text-text">{previewWorkout.name}</h3>
                 <p className="medium-label mt-2 text-muted">
                   {previewWorkout.exercises.length} exercises - ~{previewWorkout.durationMinutes} min
                 </p>
@@ -402,7 +402,7 @@ export function WorkoutScreen({
                 </p>
 
                 {previewPartialSession ? (
-                  <div className="mt-4 rounded-[24px] bg-white/[0.06] px-4 py-4">
+                  <div className="mt-4 rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                           <p className="text-sm font-medium text-text">Saved partial ready</p>
@@ -410,7 +410,7 @@ export function WorkoutScreen({
                             {previewPartialSession.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} sets are already logged here.
                           </p>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-black">
+                      <span className="rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-[color:var(--accent)]">
                         Resume
                       </span>
                     </div>
@@ -424,7 +424,7 @@ export function WorkoutScreen({
                         <p className="text-sm font-medium text-text">Guided add-on</p>
                         <p className="mt-1 text-sm font-medium text-text">{suggestedFocusSession.focusText}</p>
                       </div>
-                      <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-text">
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-text">
                         Guided
                       </span>
                     </div>
@@ -484,7 +484,7 @@ export function WorkoutScreen({
                     Close
                   </button>
                   <button
-                    className="rounded-[28px] bg-white px-4 py-4 text-sm font-semibold text-black"
+                    className="rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-4 py-4 text-sm text-[color:var(--accent)]"
                     onClick={() => onStartWorkout(previewWorkout)}
                   >
                     {previewPartialSession ? "Resume Session" : "Start Session"}
@@ -582,7 +582,7 @@ export function WorkoutScreen({
     return (
       <>
         <ScrollReveal delay={0} y={12} scale={0.996}>
-          <Card className="tab-fade-enter bg-[rgba(4,5,7,0.96)] px-4 py-4 shadow-[var(--shadow-card)]">
+          <Card className="tab-fade-enter bg-[rgba(13,13,13,0.96)] px-4 py-4">
             <p className="text-sm text-muted">Workout mode</p>
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-[1.02] tracking-[-0.06em] text-text">
               {activeWorkout.workoutName}
@@ -609,7 +609,7 @@ export function WorkoutScreen({
                     </p>
                   </div>
                   <button
-                    className="quiet-chip-strong rounded-[18px] px-3 py-2 text-sm font-semibold"
+                    className="quiet-chip-strong rounded-[12px] px-3 py-2 text-sm"
                     onClick={() => {
                       setCurrentExerciseIndex(recommendedExercise.index);
                       setShowExercisePicker(false);
@@ -636,10 +636,10 @@ export function WorkoutScreen({
                     key={exercise.exerciseId}
                     className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
                       done
-                        ? "bg-white text-black"
+                        ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
                         : selected
-                          ? "bg-accentSoft text-text"
-                          : "bg-[var(--card-strong)] text-text"
+                          ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-text"
+                          : "border border-white/8 bg-[var(--card-strong)] text-text"
                     }`}
                     onClick={() => {
                       setCurrentExerciseIndex(index);
@@ -734,14 +734,14 @@ export function WorkoutScreen({
   return (
     <div className="space-y-2.5">
       <ScrollReveal delay={0} y={12} scale={0.996}>
-      <Card className="tab-fade-enter bg-[rgba(4,5,7,0.94)] px-4 py-4 shadow-[var(--shadow-card)]">
+          <Card className="tab-fade-enter bg-[rgba(13,13,13,0.94)] px-4 py-4">
         <p className="text-sm text-muted">Live</p>
-        <h1 className="mt-1.5 text-[1.95rem] font-semibold leading-[0.98] tracking-[-0.07em] text-text">{currentExercise.exerciseName}</h1>
+        <h1 className="mt-1.5 text-[1.95rem] leading-[0.98] tracking-[-0.07em] text-text">{currentExercise.exerciseName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-black">
+          <span className="rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-[color:var(--accent)]">
             Live session
           </span>
-          <span className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/70">
+          <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/62">
             Exercise {currentExerciseIndex + 1} of {activeWorkout.exercises.length}
           </span>
         </div>
@@ -758,7 +758,7 @@ export function WorkoutScreen({
 
         {liveSignal && !liveSignal.dismissedAt ? (
           <div
-            className={`mt-3 rounded-[20px] bg-white/[0.06] px-4 py-3 text-[13px] leading-6 text-white/62 transition-all duration-500 ${
+            className={`mt-3 rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-3 text-[13px] leading-6 text-white/58 transition-all duration-500 ${
               showLiveSignalBanner ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
             }`}
           >
@@ -784,7 +784,7 @@ export function WorkoutScreen({
                 </p>
             </div>
             <button
-              className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-2 text-sm text-text"
+              className="inline-flex items-center gap-2 rounded-[12px] border border-white/8 bg-white/[0.03] px-3 py-2 text-sm text-text"
               onClick={() => setShowExercisePicker(true)}
             >
               Exercises
@@ -796,13 +796,13 @@ export function WorkoutScreen({
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="field-shell rounded-[24px] px-4 py-2.5">
             <p className="text-sm text-muted">Set</p>
-            <p className="mt-1 text-[1.8rem] font-semibold text-text">
+            <p className="mt-1 text-[1.8rem] text-text">
               {Math.min(currentSetIndex + 1, currentExercise.sets.length)} of {currentExercise.sets.length}
             </p>
           </div>
           <div className="field-shell rounded-[24px] px-4 py-2.5">
             <p className="text-sm text-muted">Target</p>
-            <p className="mt-1 text-[1.8rem] font-semibold text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
+            <p className="mt-1 text-[1.8rem] text-text">{currentTemplate?.repRange ?? "Track reps"}</p>
             <p className="mt-1 text-sm text-muted">{loadCue}</p>
           </div>
         </div>
@@ -828,7 +828,7 @@ export function WorkoutScreen({
             <span className="text-sm text-muted">Weight</span>
             <input
               ref={weightInputRef}
-              className="mt-1 w-full bg-transparent text-[2.2rem] font-semibold tracking-[-0.06em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[2.2rem] tracking-[-0.06em] text-text outline-none"
               inputMode="decimal"
               type="number"
               value={currentSet?.weight || ""}
@@ -848,7 +848,7 @@ export function WorkoutScreen({
             <span className="text-sm text-muted">Reps</span>
             <input
               ref={repsInputRef}
-              className="mt-1 w-full bg-transparent text-[2.2rem] font-semibold tracking-[-0.06em] text-text outline-none"
+              className="mt-1 w-full bg-transparent text-[2.2rem] tracking-[-0.06em] text-text outline-none"
               inputMode="numeric"
               type="number"
               value={currentSet?.reps || ""}
@@ -923,7 +923,7 @@ export function WorkoutScreen({
           ) : null}
 
           {substitutions.length ? (
-          <div className="mt-2.5 rounded-[22px] border border-white/6 bg-white/[0.025] px-3 py-3">
+          <div className="mt-2.5 rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3">
             <button
               type="button"
               onClick={() => setShowSwapOptions((value) => !value)}
@@ -962,10 +962,10 @@ export function WorkoutScreen({
                 key={set.id}
                 className={`min-w-[84px] rounded-[20px] px-3 py-2.5 text-sm ${
                   set.completed
-                    ? "bg-white text-black"
+                    ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
                     : index === currentSetIndex
-                      ? "bg-accentSoft text-text"
-                      : "bg-[var(--card-strong)] text-muted"
+                      ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-text"
+                      : "border border-white/8 bg-[var(--card-strong)] text-muted"
                 }`}
               >
                 <p className="font-medium">Set {index + 1}</p>
@@ -983,8 +983,10 @@ export function WorkoutScreen({
         </div>
 
         <button
-          className={`mt-3 w-full rounded-[28px] px-5 py-4 text-base font-semibold ${
-            canCompleteSet ? "bg-white text-black shadow-[var(--shadow-soft)]" : "bg-[var(--card-strong)] text-muted"
+          className={`mt-3 w-full rounded-[12px] px-5 py-4 text-base ${
+            canCompleteSet
+              ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+              : "border border-white/8 bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canCompleteSet}
           onClick={handleCompleteSet}
@@ -1018,8 +1020,10 @@ export function WorkoutScreen({
           </p>
         </button>
         <button
-          className={`rounded-[22px] px-3 py-2.5 text-sm font-semibold ${
-            canFinishWorkout ? "bg-white text-black" : "bg-[var(--card-strong)] text-muted"
+          className={`rounded-[12px] px-3 py-2.5 text-sm ${
+            canFinishWorkout
+              ? "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+              : "border border-white/8 bg-[var(--card-strong)] text-muted"
           }`}
           disabled={!canFinishWorkout}
           onClick={onCompleteWorkout}

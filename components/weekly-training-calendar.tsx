@@ -36,7 +36,7 @@ export function WeeklyTrainingCalendar({
   };
 
   return (
-    <div className="calendar-shell rounded-[28px] p-4 sm:p-4.5">
+    <div className="calendar-shell rounded-[12px] p-4 sm:p-4.5">
       <div className="mb-3 flex items-center justify-end gap-3 text-[10px] uppercase tracking-[0.16em] text-white/38">
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
@@ -60,7 +60,7 @@ export function WeeklyTrainingCalendar({
         {rows.map((row) => (
           <div
             key={row.label}
-            className={`calendar-week-row grid grid-cols-[28px_repeat(7,minmax(0,1fr))] gap-2.5 rounded-[22px] px-2.5 py-2.5 transition ${
+            className={`calendar-week-row grid grid-cols-[28px_repeat(7,minmax(0,1fr))] gap-2.5 rounded-[12px] px-2.5 py-2.5 transition ${
               row.isCurrentWeek ? "calendar-week-row-current" : ""
             }`}
           >
@@ -70,20 +70,14 @@ export function WeeklyTrainingCalendar({
             {row.days.map((day) => (
               <div
                 key={day.key}
-                className={`calendar-day-cell relative flex aspect-square min-h-[38px] items-center justify-center overflow-hidden rounded-[14px] text-[11px] font-semibold transition ${
+                className={`calendar-day-cell relative flex aspect-square min-h-[38px] items-center justify-center overflow-hidden rounded-[10px] text-[11px] transition ${
                   getDayToneClass(day)
                 } ${day.isToday ? "calendar-day-cell-today" : ""}`}
               >
-                {day.completed && (
-                  <>
-                    <div className="pointer-events-none absolute inset-x-2 top-1 h-4 rounded-full bg-white/15 blur-md" />
-                    <div className="pointer-events-none absolute inset-x-1.5 bottom-0 h-1/2 rounded-b-[14px] bg-black/10" />
-                  </>
-                )}
                 {day.stolenBy ? (
                   <>
                     <div
-                      className={`pointer-events-none absolute inset-[5px] rounded-[10px] border ${
+                      className={`pointer-events-none absolute inset-[5px] rounded-[8px] border ${
                         day.stolenBy === "joshua" ? "border-emerald-300/45" : "border-sky-300/45"
                       }`}
                     />
@@ -94,7 +88,7 @@ export function WeeklyTrainingCalendar({
                     />
                   </>
                 ) : null}
-                {day.isToday ? <div className="calendar-day-today-ring pointer-events-none absolute inset-[2px] rounded-[12px]" /> : null}
+                {day.isToday ? <div className="calendar-day-today-ring pointer-events-none absolute inset-[2px] rounded-[8px]" /> : null}
                 <span className="relative z-10">{day.dayNumber}</span>
               </div>
             ))}

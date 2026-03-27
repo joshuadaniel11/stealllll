@@ -132,20 +132,19 @@ function withAlpha(color: string, alpha: number) {
 function getZoneStyle(metric?: TrainingLoadMetric) {
   if (!metric || metric.percentage <= 0) {
     return {
-      fill: "rgba(128,132,144,0.012)",
-      stroke: "rgba(255,255,255,0.016)",
+      fill: "rgba(255,255,255,0.008)",
+      stroke: "rgba(255,255,255,0.02)",
       filter: "none",
     };
   }
 
-  const fillAlpha = Math.max(0.22, Math.min(0.7, metric.percentage / 135));
-  const strokeAlpha = metric.overload ? 0.88 : 0.66;
-  const glow = metric.overload ? 18 : 10;
+  const fillAlpha = Math.max(0.18, Math.min(0.46, metric.percentage / 180));
+  const strokeAlpha = metric.overload ? 0.6 : 0.42;
 
   return {
     fill: withAlpha(metric.color, fillAlpha),
     stroke: withAlpha(metric.color, strokeAlpha),
-    filter: `drop-shadow(0 0 ${glow}px ${withAlpha(metric.color, metric.overload ? 0.5 : 0.28)})`,
+    filter: "none",
   };
 }
 
@@ -167,10 +166,10 @@ function Shape({
       d={shape.d}
       fill={selected ? style.fill : subdued ? "rgba(104,110,124,0.008)" : style.fill}
       stroke={selected ? "rgba(255,255,255,0.92)" : subdued ? "rgba(255,255,255,0.012)" : style.stroke}
-      strokeWidth={selected ? 1.55 : 0.86}
+      strokeWidth={selected ? 1.2 : 0.8}
       style={{
-        filter: selected ? `${style.filter} drop-shadow(0 0 10px rgba(255,255,255,0.12))` : style.filter,
-        opacity: subdued ? 0.24 : 1,
+        filter: style.filter,
+        opacity: subdued ? 0.18 : 1,
       }}
       className={onClick ? "cursor-pointer transition" : undefined}
       onClick={onClick}
@@ -263,8 +262,7 @@ export function BodyActivationVisual({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-white/7 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.028),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.016),rgba(255,255,255,0.004))] px-5 py-5">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_center,rgba(110,120,255,0.055),transparent_72%)]" />
+    <div className="relative overflow-hidden rounded-[12px] border border-white/8 bg-[#111111] px-5 py-5">
       <div className="relative mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-white/34">
         <span>{selectedMetric ? selectedMetric.label : "Weekly activation"}</span>
         <span>{selectedMetric ? `${selectedMetric.percentage}%` : `${activeMetricCount} active`}</span>
@@ -285,7 +283,7 @@ export function BodyActivationVisual({
               <stop offset="100%" stopColor="rgba(18,19,28,0)" />
             </linearGradient>
           </defs>
-          <ellipse cx="60" cy="132" rx="36" ry="112" fill="rgba(255,255,255,0.012)" />
+          <ellipse cx="60" cy="132" rx="36" ry="112" fill="rgba(255,255,255,0.008)" />
           <BodyBaseArt variant={variant} view={view} />
           <rect x="0" y="0" width="18" height="260" fill="url(#body-fade-left)" />
           <rect x="102" y="0" width="18" height="260" fill="url(#body-fade-right)" />

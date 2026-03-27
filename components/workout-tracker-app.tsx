@@ -1531,7 +1531,11 @@ export function WorkoutTrackerApp() {
   const promptInstall = async () => {
     if (deferredInstallPrompt) {
       await deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice.catch(() => null);
+      try {
+        await deferredInstallPrompt.userChoice;
+      } catch {
+        // Ignore rejected prompt-choice reads and continue clearing the prompt.
+      }
       setDeferredInstallPrompt(null);
       return;
     }
@@ -1780,24 +1784,24 @@ export function WorkoutTrackerApp() {
     >
       <div className="mx-auto flex max-w-md flex-col gap-5">
         {!immersiveWorkoutMode ? (
-          <Card className={clsx("hero-shell animate-fade-up px-5 py-5", compactHeader ? "py-3.5" : "py-5")}>
+          <Card className={clsx("hero-shell animate-fade-up px-5 py-4", compactHeader ? "py-3.5" : "py-4")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className={clsx("hero-subtle text-sm font-semibold text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEAL</p>
+                <p className={clsx("hero-subtle text-[11px] uppercase tracking-[0.22em] text-muted", compactHeader ? "hero-subtle-compact" : "")}>STEAL</p>
                 <h1
                   className={clsx(
-                    "hero-title mt-2 text-[32px] font-semibold tracking-[-0.06em] text-text",
+                    "hero-title mt-2 text-[30px] tracking-[-0.06em] text-text",
                     compactHeader ? "hero-title-compact" : "",
                   )}
                 >
                   {selectedProfile.name}
                 </h1>
                 {selectedProfile.id === "natasha" ? (
-                  <p className={clsx("hero-subtle mt-2 text-sm font-medium text-accent", compactHeader ? "hero-subtle-compact" : "")}>For Natasha by Joshua</p>
+                  <p className={clsx("hero-subtle mt-2 text-[12px] text-accent", compactHeader ? "hero-subtle-compact" : "")}>For Natasha by Joshua</p>
                 ) : null}
               </div>
               <button
-                className="rounded-[28px] bg-[var(--card-strong)] p-3 text-muted"
+                className="rounded-[12px] border border-white/8 bg-[var(--surface-raised)] p-3 text-muted"
                 aria-label="Settings"
                 onClick={() => setShowSettings(true)}
               >
@@ -1966,7 +1970,7 @@ export function WorkoutTrackerApp() {
         onSave={saveEditedSession}
       />
 
-      <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[30px] px-3.5 py-3.5 shadow-[var(--shadow-card)]">
+      <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[12px] px-3.5 py-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
