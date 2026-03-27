@@ -205,6 +205,18 @@ function normalizeCompletedWorkoutName(workoutName: string) {
   return workoutName.replace(/\s*\(Partial\)$/i, "");
 }
 
+function sanitizeSetInput(field: "weight" | "reps", value: number) {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+
+  if (field === "reps") {
+    return Math.floor(value);
+  }
+
+  return Number(value.toFixed(2));
+}
+
 function toComparableTimestamp(value: string | null | undefined) {
   if (!value) {
     return 0;
@@ -1258,7 +1270,7 @@ export function WorkoutTrackerApp() {
       }
       const activeExercise = next.activeWorkout.exercises[exerciseIndex];
       const targetSet = activeExercise.sets[setIndex];
-      targetSet[field] = Number.isNaN(value) ? 0 : value;
+      targetSet[field] = sanitizeSetInput(field, value);
       const prApproachKey = `${activeExercise.exerciseName}:${targetSet.id}`;
       const prApproachSetKeys = next.activeWorkout.hapticState?.prApproachSetKeys ?? [];
       const currentUserSessions = current.sessions.filter((session) => session.userId === next.activeWorkout?.userId);

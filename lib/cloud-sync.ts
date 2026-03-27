@@ -1,5 +1,6 @@
 import type { AppState } from "@/lib/types";
 import { getSupabaseBrowserClient, getSupabaseConfig } from "@/lib/supabase";
+import { isValidImportedState } from "@/lib/app-state";
 
 const TABLE_NAME = "app_state_snapshots";
 
@@ -61,6 +62,11 @@ export async function loadCloudSnapshot(): Promise<CloudSnapshot | null> {
     return null;
   }
 
+  if (data?.state && !isValidImportedState(data.state)) {
+    console.error("Supabase sync load rejected invalid payload.");
+    return null;
+  }
+
   return {
     state: data?.state ?? null,
     updatedAt: data?.updated_at ?? null,
@@ -75,9 +81,16 @@ export async function saveCloudSnapshot(state: AppState) {
   }
 
   const updatedAt = new Date().toISOString();
+  const syncedState = getSyncedAppState(state);
+
+  if (!isValidImportedState(syncedState)) {
+    console.error("Supabase sync save rejected invalid payload.");
+    return null;
+  }
+
   const payload = {
     id: config.syncId,
-    state: getSyncedAppState(state),
+    state: syncedState,
     updated_at: updatedAt,
   };
 

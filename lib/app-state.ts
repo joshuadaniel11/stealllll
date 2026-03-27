@@ -45,9 +45,13 @@ function isValidSetLog(value: unknown): value is SetLog {
     isRecord(value) &&
     typeof value.id === "string" &&
     typeof value.weight === "number" &&
+    Number.isFinite(value.weight) &&
+    value.weight >= 0 &&
     typeof value.reps === "number" &&
+    Number.isFinite(value.reps) &&
+    value.reps >= 0 &&
     typeof value.completed === "boolean" &&
-    (typeof value.rir === "undefined" || typeof value.rir === "number")
+    (typeof value.rir === "undefined" || (typeof value.rir === "number" && Number.isFinite(value.rir)))
   );
 }
 
@@ -104,7 +108,12 @@ function isValidMeasurementEntry(value: unknown): value is MeasurementEntry {
     typeof value.id === "string" &&
     typeof value.date === "string" &&
     typeof value.bodyweightKg === "number" &&
-    (typeof value.bodyFatPercent === "undefined" || typeof value.bodyFatPercent === "number")
+    Number.isFinite(value.bodyweightKg) &&
+    value.bodyweightKg > 0 &&
+    (typeof value.bodyFatPercent === "undefined" ||
+      (typeof value.bodyFatPercent === "number" &&
+        Number.isFinite(value.bodyFatPercent) &&
+        value.bodyFatPercent >= 0))
   );
 }
 
