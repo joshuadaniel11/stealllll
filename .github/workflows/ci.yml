@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_SYNC_ID: ${{ secrets.NEXT_PUBLIC_SUPABASE_SYNC_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Detect ESLint config
+        id: eslint
+        shell: bash
+        run: |
+          if compgen -G ".eslintrc*" > /dev/null || compgen -G "eslint.config.*" > /dev/null; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        if: steps.eslint.outputs.configured == 'true'
+        run: npm run lint
+
+      - name: Skip lint
+        if: steps.eslint.outputs.configured != 'true'
+        run: echo "No ESLint config found. Skipping lint."
+
+      - name: Build
+        run: npm run build
