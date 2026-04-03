@@ -687,6 +687,16 @@ function WorkoutTrackerAppInner() {
     const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
     return getWeeklyRivalryState(joshuaHistory, natashaHistory, week.start, new Date());
   }, [state.sessions]);
+  const rivalSessions = useMemo(() => {
+    const week = getCurrentWeekWindow(new Date());
+    const rivalId = selectedProfile.id === "joshua" ? "natasha" : "joshua";
+    return state.sessions.filter(
+      (session) =>
+        session.userId === rivalId &&
+        !session.partial &&
+        new Date(session.performedAt) >= week.start,
+    );
+  }, [selectedProfile.id, state.sessions]);
   const stealState = useMemo(() => {
     const week = getCurrentWeekWindow(new Date());
     const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
@@ -1728,7 +1738,7 @@ function WorkoutTrackerAppInner() {
                 restRecoveryLabel={restRecoveryLabel}
                 weeklyCount={weeklyCount}
                 streak={streak}
-                pbCount={state.personalBests[selectedProfile.id].length}
+                pbCount={(state.personalBests[selectedProfile.id] ?? []).length}
                 strengthPredictions={strengthPredictions}
                 dailyVerse={dailyVerse}
                 dailyMobilityPrompt={todaysMobilityPrompt}
@@ -1742,6 +1752,7 @@ function WorkoutTrackerAppInner() {
                 momentumPillText={trainingState.restDayState.isRest ? null : momentumPillText}
                 rivalryState={rivalryState}
                 rivalryCopy={rivalryCopy}
+                rivalSessions={rivalSessions}
                 monthlyReport={monthlyReport}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}

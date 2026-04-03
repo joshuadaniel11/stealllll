@@ -122,6 +122,7 @@ type HomeScreenProps = {
   momentumPillText: string | null;
   rivalryState: WeeklyRivalryState;
   rivalryCopy: RivalryCardCopy;
+  rivalSessions: WorkoutSession[];
   monthlyReport: MonthlyReportCard | null;
   calendarRows: Array<{
     label: string;
@@ -161,20 +162,21 @@ export function HomeScreen({
   weeklyCount,
   streak,
   pbCount,
-  strengthPredictions,
+  strengthPredictions = [],
   dailyVerse,
   dailyMobilityPrompt,
   stretchCompletedToday,
   sharedSummary,
-  recentWorkouts,
+  recentWorkouts = [],
   weddingDate,
   phaseTransitionLine,
   recentTrainingUpdate,
   momentumPillText,
   rivalryState,
   rivalryCopy,
+  rivalSessions = [],
   monthlyReport,
-  calendarRows,
+  calendarRows = [],
   onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
@@ -482,6 +484,15 @@ export function HomeScreen({
                 <p className="text-sm font-medium text-white/78">
                   <span className="text-sky-300/80">Natasha</span> {"\u00b7"} {rivalryState.natashaSessions} sessions
                 </p>
+                {rivalSessions.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {rivalSessions.map((session) => (
+                      <p key={session.id} className="text-[11px] leading-4 text-white/40">
+                        {session.workoutName.replace(/\s*\(Partial\)$/i, "")}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             {rivalryCopy.headline ? (
@@ -615,7 +626,7 @@ export function HomeScreen({
                               {workout.exercises.reduce(
                                 (total, exercise) =>
                                   total +
-                                  exercise.sets.filter((set) => set.completed).length,
+                                  (exercise.sets ?? []).filter((set) => set.completed).length,
                                 0,
                               )}{" "}
                               sets
