@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { startTransition } from "react";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { CardHelpButton } from "@/components/card-help-button";
 import { Card } from "@/components/ui";
@@ -63,7 +64,7 @@ function useCountUp(target: number, duration = 800, enabled = true) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!enabled) {
-      setValue(target);
+      startTransition(() => setValue(target));
       return;
     }
     let start: number | null = null;

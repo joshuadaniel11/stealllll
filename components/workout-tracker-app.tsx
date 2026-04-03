@@ -370,7 +370,7 @@ function WorkoutTrackerAppInner() {
   // Cloud sync (debounced push + visibility-triggered pull) — extracted into a hook
   const cloudSync = useCloudSync({ hydrated, state, setState });
 
-  const weddingDate = useMemo(() => WeddingDateService.getState(new Date()), [weddingDayKey]);
+  const weddingDate = useMemo(() => WeddingDateService.getState(new Date(weddingDayKey)), [weddingDayKey]);
 
   const markTrainingStateUpdated = (
     userId: UserId,
@@ -467,6 +467,7 @@ function WorkoutTrackerAppInner() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Install prompt logic is handled by useInstallPrompt above.

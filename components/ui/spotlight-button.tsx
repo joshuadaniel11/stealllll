@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType } from "react";
+import { startTransition, useEffect, useRef, useState, type ElementType } from "react";
 import clsx from "clsx";
 import { Bookmark, Home, PlusCircle, Settings, User } from "lucide-react";
 
@@ -27,7 +27,7 @@ export function SpotlightNav({
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    setMounted(true);
+    startTransition(() => setMounted(true));
   }, []);
 
   useEffect(() => {

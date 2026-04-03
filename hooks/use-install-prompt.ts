@@ -15,7 +15,9 @@ export function useInstallPrompt(onInstalled?: () => void) {
 
   // Callback ref — always holds the latest onInstalled without re-running the effect
   const onInstalledRef = useRef(onInstalled);
-  onInstalledRef.current = onInstalled;
+  useEffect(() => {
+    onInstalledRef.current = onInstalled;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
