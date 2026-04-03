@@ -84,7 +84,8 @@ import {
 } from "@/lib/workout-session";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
-import type { ActiveWorkout, AppState, ExerciseLibraryItem, HapticEvent, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type { ActiveWorkout, AppState, ExerciseLibraryItem, HapticEvent, MuscleKey, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import { buildCoachReadModel, buildWorkoutViewModel, buildProgressViewModel } from "@/lib/view-models";
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
 
@@ -142,6 +143,8 @@ function toActiveWorkout(
         exerciseId: rememberedSwap?.id ?? exercise.id,
         exerciseName: activeExerciseName,
         muscleGroup: activeMuscleGroup,
+        primaryMuscles: rememberedSwap?.primaryMuscles ?? exercise.primaryMuscles,
+        secondaryMuscles: rememberedSwap?.secondaryMuscles ?? exercise.secondaryMuscles,
         note: rememberedSwap?.cues[0] ?? "",
         sets: buildEmptySets(exercise, getLastExerciseSets(activeExerciseName, sessions)),
       };
@@ -165,6 +168,8 @@ function toSuggestedFocusActiveWorkout(
       id: exercise.exerciseId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
+      primaryMuscles: [] as MuscleKey[],
+      secondaryMuscles: [] as MuscleKey[],
       sets: exercise.sets,
       repRange: exercise.repRange,
       suggestedRepTarget: exercise.suggestedRepTarget ?? undefined,
@@ -187,6 +192,8 @@ function toSuggestedFocusActiveWorkout(
       exerciseId: exercise.id,
       exerciseName: exercise.name,
       muscleGroup: exercise.muscleGroup,
+      primaryMuscles: exercise.primaryMuscles,
+      secondaryMuscles: exercise.secondaryMuscles,
       note: exercise.note ?? "",
       sets: buildEmptySets(exercise, getLastExerciseSets(exercise.name, sessions)),
     })),
@@ -781,6 +788,20 @@ function WorkoutTrackerAppInner() {
   const restRecoveryLabel = useMemo(
     () => getRestRecoveryLabel(trainingState.restDayState.recoveryScore),
     [trainingState.restDayState.recoveryScore],
+  );
+
+  const coach = useMemo(
+    () =>
+      buildCoachReadModel({
+        profile: selectedProfile,
+        trainingState,
+        todaysWorkout,
+        activeWorkout: state.activeWorkout ?? null,
+        suggestedFocusSession,
+        restDayRead,
+        syncStatus: "local_only",
+      }),
+    [selectedProfile, trainingState, todaysWorkout, state.activeWorkout, suggestedFocusSession, restDayRead],
   );
 
   const editingSession = useMemo(
@@ -1785,24 +1806,27 @@ function WorkoutTrackerAppInner() {
           {activeTab === "workout" && (
             <SectionErrorBoundary>
             <WorkoutScreen
-              profile={selectedProfile}
-              todaysWorkoutId={todaysWorkout.id}
-              previewWorkoutId={workoutPreviewId}
-              suggestedFocusSession={suggestedFocusSession}
-              suggestedSessionPreview={suggestedSessionPreview}
-              signatureLifts={trainingState.signatureLifts}
-              activeWorkout={state.activeWorkout}
-              activeWorkoutTemplate={activeWorkoutTemplate}
-              liveSignal={state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.liveSignal ?? null : null}
-              userSessions={userSessions}
-                exerciseLibrary={state.exerciseLibrary}
-                onStartWorkout={startWorkout}
-                onUpdateSet={updateSet}
-                onCopyPreviousSet={copyPreviousSet}
-                onCompleteSet={completeSet}
-                onSwapExercise={swapExercise}
-                onCompleteWorkout={openWorkoutCompletionPrompt}
-                onSaveAndExitWorkout={savePartialWorkout}
+              viewModel={buildWorkoutViewModel({
+                profile: selectedProfile,
+                todaysWorkoutId: todaysWorkout.id,
+                previewWorkoutId: workoutPreviewId,
+                suggestedFocusSession,
+                suggestedSessionPreview,
+                signatureLifts: trainingState.signatureLifts,
+                activeWorkout: state.activeWorkout ?? null,
+                activeWorkoutTemplate,
+                liveSignal: state.activeWorkout?.userId === selectedProfile.id ? state.activeWorkout.liveSignal ?? null : null,
+                userSessions,
+                exerciseLibrary: state.exerciseLibrary,
+                coach,
+              })}
+              onStartWorkout={startWorkout}
+              onUpdateSet={updateSet}
+              onCopyPreviousSet={copyPreviousSet}
+              onCompleteSet={completeSet}
+              onSwapExercise={swapExercise}
+              onCompleteWorkout={openWorkoutCompletionPrompt}
+              onSaveAndExitWorkout={savePartialWorkout}
               onDismissLiveSignal={dismissLiveSessionSignal}
               onCancelWorkout={cancelWorkout}
             />
@@ -1812,13 +1836,12 @@ function WorkoutTrackerAppInner() {
           {activeTab === "progress" && (
             <SectionErrorBoundary>
             <ProgressScreen
-              profile={selectedProfile}
-              trainingState={trainingState}
-              measurements={state.measurements[selectedProfile.id]}
-              stretchCompletions={state.stretchCompletions[selectedProfile.id]}
-              recentTrainingUpdate={profileRecentTrainingUpdate}
-              onOpenSuggestedSession={openSuggestedFocusSession}
-              onSaveMeasurement={saveMeasurement}
+              viewModel={buildProgressViewModel({
+                profile: selectedProfile,
+                trainingState,
+                measurements: state.measurements[selectedProfile.id],
+                coach,
+              })}
               onEditSession={setEditingSessionId}
             />
             </SectionErrorBoundary>

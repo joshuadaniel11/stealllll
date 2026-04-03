@@ -109,7 +109,7 @@ export function SessionSummaryModal({
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet-panel sheet-detent-medium animate-sheet-up" onClick={(event) => event.stopPropagation()}>
-        <Card className="sheet-card bg-[var(--surface)]" style={{ position: "relative", overflow: "hidden" }}>
+        <Card className="sheet-card bg-[var(--surface)] relative overflow-hidden">
           {/* Top glow for completed sessions */}
           {isComplete ? (
             <div

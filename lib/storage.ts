@@ -250,3 +250,37 @@ export function saveSyncedStateUpdatedAt(updatedAt: string | null) {
 
   window.localStorage.setItem(SYNC_STATE_UPDATED_AT_KEY, updatedAt);
 }
+
+// Compatibility aliases so existing callers don't need to be renamed
+export const loadLockedProfile = loadLegacyLockedProfile;
+export const loadRememberedProfile = loadLegacyRememberedProfile;
+
+export function saveLockedProfile(profile: UserId | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (profile) {
+    window.localStorage.setItem(PROFILE_LOCK_KEY, profile);
+  } else {
+    window.localStorage.removeItem(PROFILE_LOCK_KEY);
+  }
+}
+
+export function saveRememberedProfile(profile: UserId): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(LAST_PROFILE_KEY, profile);
+}
+
+export function saveState(state: AppState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const envelope = { version: STORAGE_VERSION, savedAt: new Date().toISOString(), state };
+    window.localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(envelope));
+  } catch {
+    // Ignore storage quota failures.
+  }
+}

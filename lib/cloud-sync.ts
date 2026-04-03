@@ -14,7 +14,7 @@ import type {
   SyncedDomainState,
   WorkoutOverrideRecord,
 } from "@/lib/types";
-import { combinePersistedState, getSyncedDomainStateHash, migrateV1StateToV2 } from "@/lib/v2-state";
+import { combinePersistedState, getSyncedDomainStateHash, migrateV1StateToV2, splitRuntimeStateToPersisted } from "@/lib/v2-state";
 
 const LEGACY_TABLE_NAME = "app_state_snapshots";
 const TABLES = {
@@ -335,3 +335,50 @@ export async function saveCloudSyncedDomainState(syncedDomainState: SyncedDomain
 }
 
 export { getSyncedDomainStateHash };
+
+// Legacy compatibility shims — keep old call-sites working without mass rename
+
+export async function loadCloudSnapshot(): Promise<{ state: AppState; updatedAt: string | null } | null> {
+  const snapshot = await loadCloudSyncedDomainState();
+  if (!snapshot) {
+    return null;
+  }
+  const seed = createSeedState();
+  if (!snapshot.syncedDomainState) {
+    return { state: seed, updatedAt: snapshot.updatedAt };
+  }
+  const state = combinePersistedState(seed, getDefaultDeviceState(seed), snapshot.syncedDomainState);
+  return { state, updatedAt: snapshot.updatedAt };
+}
+
+export async function saveCloudSnapshot(state: AppState): Promise<{ updatedAt: string } | null> {
+  const persisted = splitRuntimeStateToPersisted(state, {
+    previousSyncedDomainState: null,
+    lockedProfile: null,
+    rememberedProfile: state.selectedUserId,
+    onboardingSeen: false,
+  });
+  const result = await saveCloudSyncedDomainState(persisted.syncedDomainState);
+  return result ? { updatedAt: result.updatedAt } : null;
+}
+
+export function applyCloudState(current: AppState, cloudState: Partial<AppState>): AppState {
+  return { ...current, ...cloudState };
+}
+
+export function getSyncedAppState(state: AppState): AppState {
+  return state;
+}
+
+export function getSyncedStateHash(state: AppState | Partial<AppState>): string {
+  try {
+    const str = JSON.stringify(state) ?? "";
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return h.toString(36);
+  } catch {
+    return "0";
+  }
+}
