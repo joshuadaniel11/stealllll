@@ -227,7 +227,7 @@ export function getWeddingPhaseProfile(profileId: Profile["id"], weddingDate: We
     case "build":
       return {
         currentPhase: "build",
-        priorityMuscles: ["gluteMax", "upperGlutes", "lats", "upperBack", "obliques"],
+        priorityMuscles: ["gluteMax", "upperGlutes", "lats", "midBack", "obliques"],
         volumeModifier: 1,
         intensityBias: "volume",
         restrictNewExercises: false,
@@ -235,7 +235,7 @@ export function getWeddingPhaseProfile(profileId: Profile["id"], weddingDate: We
     case "define":
       return {
         currentPhase: "define",
-        priorityMuscles: ["gluteMax", "sideGlutes", "obliques", "lats", "upperBack"],
+        priorityMuscles: ["gluteMax", "sideGlutes", "obliques", "lats", "midBack"],
         volumeModifier: 0.9,
         intensityBias: "definition",
         restrictNewExercises: false,
@@ -251,7 +251,7 @@ export function getWeddingPhaseProfile(profileId: Profile["id"], weddingDate: We
     case "wedding_week":
       return {
         currentPhase: "wedding_week",
-        priorityMuscles: ["gluteMax", "upperBack", "lats", "sideGlutes"],
+        priorityMuscles: ["gluteMax", "midBack", "lats", "sideGlutes"],
         volumeModifier: 0.55,
         intensityBias: "maintenance",
         restrictNewExercises: true,

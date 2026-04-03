@@ -8,7 +8,13 @@ import type {
   WorkoutPlanDay,
   WorkoutSession,
 } from "@/lib/types";
-import { buildCanonicalExerciseLibrary } from "@/lib/exercise-data";
+import { buildCanonicalExerciseLibrary, hydrateExerciseTemplate } from "@/lib/exercise-data";
+
+type RawExerciseTemplate = Omit<ExerciseTemplate, "primaryMuscles" | "secondaryMuscles">;
+type RawExerciseLibraryItem = Omit<ExerciseLibraryItem, "primaryMuscles" | "secondaryMuscles">;
+type RawWorkoutPlanDay = Omit<WorkoutPlanDay, "exercises"> & {
+  exercises: RawExerciseTemplate[];
+};
 
 const targetLabels: Record<string, string> = {
   Chest: "Targets: Chest",
@@ -24,105 +30,102 @@ const targetLabels: Record<string, string> = {
   "Full Body": "Targets: Full body",
 };
 
-function withTargetNotes(exercises: ExerciseTemplate[]) {
+function withTargetNotes(exercises: RawExerciseTemplate[]) {
   return exercises.map((exercise) => ({
-    ...exercise,
-    note: targetLabels[exercise.muscleGroup] ?? `Targets: ${exercise.muscleGroup}`,
+    ...hydrateExerciseTemplate(exercise),
+    note: exercise.note ?? targetLabels[exercise.muscleGroup] ?? `Targets: ${exercise.muscleGroup}`,
   }));
 }
 
-function withWorkoutNotes(plan: WorkoutPlanDay[]) {
+function withWorkoutNotes(plan: RawWorkoutPlanDay[]) {
   return plan.map((day) => ({
     ...day,
     exercises: withTargetNotes(day.exercises),
   }));
 }
 
-const natashaPlan: WorkoutPlanDay[] = [
+const natashaPlan: RawWorkoutPlanDay[] = [
   {
     id: "natasha-glutes-hams",
     name: "Glutes + Hamstrings",
-    focus: "Glute growth with hip thrusts, hinge work, calf work, and a little power",
+    focus: "Heavy hip thrust and hinge work with curls and glute finishers for lower-body growth",
     dayLabel: "Day 1",
     durationMinutes: 60,
     exercises: [
-      { id: "machine-hip-thrust-day1", name: "Machine Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8", note: "Pause at the top for a full second.", progressionNote: "Add weight when all four sets hit 8 clean reps.", favorite: true },
-      { id: "romanian-dumbbell-deadlift", name: "Dumbbell Romanian Deadlift", muscleGroup: "Hamstrings", sets: 3, repRange: "8", note: "Soft knees, long hamstring stretch." },
-      { id: "reverse-lunge-day1-nat", name: "Reverse Lunge", muscleGroup: "Glutes", sets: 3, repRange: "8", note: "Stay balanced and drive through the front glute." },
-      { id: "hamstring-curl-day1-nat", name: "Hamstring Curl", muscleGroup: "Hamstrings", sets: 3, repRange: "10", note: "Control the stretch and squeeze the curl hard." },
-      { id: "cable-glute-kickback", name: "Cable Glute Kickback", muscleGroup: "Glutes", sets: 3, repRange: "10", note: "Keep the hips square and finish with a full glute squeeze." },
-      { id: "kettlebell-swing-day1-nat", name: "Kettlebell Swing", muscleGroup: "Full Body", sets: 3, repRange: "12-15", note: "Explode through the hips and keep the reps crisp." },
-      { id: "standing-calf-raise-day1-nat", name: "Standing Calf Raise", muscleGroup: "Legs", sets: 3, repRange: "12-15", note: "Pause at the top and lower under control." },
+      { id: "machine-hip-thrust-day1", name: "Machine Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8", note: "Pause at lockout and keep ribs down so the glutes stay loaded.", progressionNote: "Add weight when all four sets hit 8 clean reps.", favorite: true },
+      { id: "romanian-dumbbell-deadlift", name: "Dumbbell Romanian Deadlift", muscleGroup: "Hamstrings", sets: 3, repRange: "8-10", note: "Long hamstring stretch, soft knees, and hips back." },
+      { id: "hamstring-curl-day1-nat", name: "Hamstring Curl", muscleGroup: "Hamstrings", sets: 3, repRange: "10-12", note: "Control the lowering and finish each curl hard." },
+      { id: "reverse-lunge-day1-nat", name: "Reverse Lunge", muscleGroup: "Glutes", sets: 2, repRange: "8-10", note: "Take a longer stride and drive through the front heel." },
+      { id: "cable-glute-kickback-day1-nat", name: "Cable Glute Kickback", muscleGroup: "Glutes", sets: 3, repRange: "12-15", note: "Keep hips square and finish with a full glute squeeze." },
+      { id: "abductor-machine-day1-nat", name: "Abductor Machine", muscleGroup: "Glutes", sets: 2, repRange: "15-20", note: "Open from the side glutes and hold the outer squeeze." },
     ],
   },
   {
     id: "natasha-back-arms",
-    name: "Back + Biceps",
-    focus: "Lat width, back detail, and direct biceps work for a sharper V-taper look",
+    name: "Push",
+    focus: "Upper-chest, shoulder, and triceps work for shape without a lot of fussy setup",
     dayLabel: "Day 2",
     durationMinutes: 60,
     exercises: [
-      { id: "lat-pulldown-day2-nat", name: "Lat Pulldown", muscleGroup: "Back", sets: 3, repRange: "10", favorite: true, note: "Drive elbows down and keep the chest tall." },
-      { id: "lat-pullover-day2-nat", name: "Lat Pullover", muscleGroup: "Back", sets: 3, repRange: "12", note: "Stay long through the lats and squeeze through the bottom." },
-      { id: "barbell-row-day2-nat", name: "Barbell Row", muscleGroup: "Back", sets: 4, repRange: "10", note: "Pull to the lower ribs and keep the torso steady." },
-      { id: "single-arm-seated-row-day2-nat", name: "Single-Arm Seated Row", muscleGroup: "Back", sets: 3, repRange: "10", note: "Work each side evenly and pause at the squeeze." },
-      { id: "face-pull-backday", name: "Face Pull", muscleGroup: "Back", sets: 3, repRange: "10", note: "Pull high and wide for upper-back detail and posture." },
-      { id: "dumbbell-bicep-curl-day2-nat", name: "Dumbbell Bicep Curl", muscleGroup: "Biceps", sets: 3, repRange: "10", note: "Keep elbows tucked and lower slowly." },
-      { id: "hammer-curl-day2-nat", name: "Hammer Curl", muscleGroup: "Biceps", sets: 3, repRange: "10", note: "Stay neutral through the wrist and squeeze through the top." },
-      { id: "hyperextensions-day2-nat", name: "Hyperextensions", muscleGroup: "Back", sets: 3, repRange: "10-15", note: "Move under control and keep tension through the lower back and glutes." },
+      { id: "incline-machine-press-day2-nat", name: "Incline Machine Press", muscleGroup: "Chest", sets: 3, repRange: "8-10", favorite: true, note: "Press through the upper chest and stop before the shoulders roll forward." },
+      { id: "machine-chest-press-day2-nat", name: "Machine Chest Press", muscleGroup: "Chest", sets: 3, repRange: "10-12", note: "Use the stable path and keep tension through the chest." },
+      { id: "machine-shoulder-press-day2-nat", name: "Machine Shoulder Press", muscleGroup: "Shoulders", sets: 3, repRange: "8-10", note: "Keep ribs stacked and press cleanly through the delts." },
+      { id: "cable-lateral-raise-day2-nat", name: "Cable Lateral Raise", muscleGroup: "Shoulders", sets: 3, repRange: "12-15", note: "Lead with the elbow and stay in the side delts." },
+      { id: "machine-chest-fly-day2-nat", name: "Machine Chest Fly", muscleGroup: "Chest", sets: 2, repRange: "12-15", note: "Stretch the chest and squeeze in without shrugging." },
+      { id: "cable-tricep-pushdown-day2-nat", name: "Cable Tricep Pushdown", muscleGroup: "Triceps", sets: 3, repRange: "10-12", note: "Pin elbows in and finish every lockout." },
+      { id: "overhead-cable-tricep-extension-day2-nat", name: "Overhead Cable Tricep Extension", muscleGroup: "Triceps", sets: 2, repRange: "12-15", note: "Use the stretch and keep the upper arm quiet." },
     ],
   },
   {
     id: "natasha-glutes-quads",
     name: "Glutes + Quads",
-    focus: "Glute and quad work with simple staples, calf work, and a power finisher",
+    focus: "Glute-biased quad work for fullness, leg shape, and a rounder lower body",
     dayLabel: "Day 3",
     durationMinutes: 60,
     exercises: [
-      { id: "machine-hip-thrust-day3", name: "Machine Hip Thrust", muscleGroup: "Glutes", sets: 4, repRange: "8-10", note: "Pause at the top and keep the glutes loaded." },
-      { id: "walking-lunge-day3-nat", name: "Walking Lunge", muscleGroup: "Glutes", sets: 3, repRange: "10", note: "Take long steps and drive through the front leg." },
-      { id: "leg-press-day3-nat", name: "Leg Press", muscleGroup: "Quads", sets: 3, repRange: "10", note: "Stay controlled through the bottom and push evenly." },
-      { id: "bulgarian-split-squat-day3-nat", name: "Bulgarian Split Squat", muscleGroup: "Glutes", sets: 3, repRange: "10", note: "Keep the front foot planted and stay balanced through the glute." },
-      { id: "leg-extension", name: "Leg Extension", muscleGroup: "Quads", sets: 3, repRange: "10", note: "Control the squeeze and lower slowly." },
-      { id: "kettlebell-swing-day3-nat", name: "Kettlebell Swing", muscleGroup: "Full Body", sets: 3, repRange: "12-15", note: "Drive hard through the hips and stay sharp." },
-      { id: "standing-calf-raise-day3-nat", name: "Standing Calf Raise", muscleGroup: "Legs", sets: 3, repRange: "12-15", note: "Use a full stretch and pause at the top." },
+      { id: "machine-hip-thrust-day3", name: "Machine Hip Thrust", muscleGroup: "Glutes", sets: 3, repRange: "8-10", note: "Drive hard through the heels and pause at the top." },
+      { id: "leg-press-high-foot-day3-nat", name: "Leg Press High Foot Placement", muscleGroup: "Glutes", sets: 3, repRange: "10-12", note: "Feet high, control the bottom, and push through the full foot." },
+      { id: "bulgarian-split-squat-day3-nat", name: "Bulgarian Split Squat", muscleGroup: "Glutes", sets: 3, repRange: "8-10", note: "Slight forward lean and keep the front glute loaded." },
+      { id: "leg-extension-day3-nat", name: "Leg Extension", muscleGroup: "Quads", sets: 3, repRange: "12-15", note: "Smooth squeeze at the top and a slow return." },
+      { id: "step-up-day3-nat", name: "Dumbbell Step-Up", muscleGroup: "Glutes", sets: 2, repRange: "10-12", note: "Drive through the working leg and stand tall at the top." },
+      { id: "cable-hip-abduction-day3-nat", name: "Cable Hip Abduction", muscleGroup: "Glutes", sets: 2, repRange: "15-20", note: "Stay tall and let the side glute do the work." },
     ],
   },
   {
     id: "natasha-upper-core",
-    name: "Upper Body + Shape",
-    focus: "Shoulder cap, posture, and extra back definition for hourglass shape",
+    name: "Pull",
+    focus: "Lat width, upper-back detail, and arm work for a cleaner back line and toned arms",
     dayLabel: "Day 4",
     durationMinutes: 55,
     exercises: [
-      { id: "seated-dumbbell-press", name: "Seated Dumbbell Shoulder Press", muscleGroup: "Shoulders", sets: 3, repRange: "8-10" },
-      { id: "cable-lateral-raise", name: "Cable Lateral Raise", muscleGroup: "Shoulders", sets: 3, repRange: "12-15" },
-      { id: "reverse-pec-deck", name: "Reverse Pec Deck", muscleGroup: "Back", sets: 3, repRange: "12-15" },
-      { id: "single-arm-lat-prayer", name: "Single-Arm Cable Lat Pull-In", muscleGroup: "Back", sets: 2, repRange: "12-15", note: "A lighter finisher to keep building lat shape." },
-      { id: "machine-chest-press", name: "Machine Chest Press", muscleGroup: "Chest", sets: 2, repRange: "10-12" },
-      { id: "face-pull", name: "Face Pull", muscleGroup: "Back", sets: 2, repRange: "12-15", note: "Keep the upper back tall and elbows high." },
-      { id: "rope-hammer-curl", name: "Rope Hammer Curl", muscleGroup: "Biceps", sets: 2, repRange: "12-15" },
+      { id: "lat-pulldown-day4-nat", name: "Lat Pulldown", muscleGroup: "Back", sets: 4, repRange: "8-10", favorite: true, note: "Drive elbows into hips and keep the chest tall." },
+      { id: "seated-cable-row-day4-nat", name: "Seated Cable Row", muscleGroup: "Back", sets: 3, repRange: "10-12", note: "Pause at the squeeze and control the reach." },
+      { id: "single-arm-lat-pull-in-day4-nat", name: "Single-Arm Cable Lat Pull-In", muscleGroup: "Back", sets: 3, repRange: "12-15", note: "Stay long through the lat and pull elbow into hip." },
+      { id: "reverse-pec-deck-day4-nat", name: "Reverse Pec Deck", muscleGroup: "Back", sets: 3, repRange: "12-15", note: "Open wide and keep the work in rear delts and upper back." },
+      { id: "face-pull-day4-nat", name: "Face Pull", muscleGroup: "Back", sets: 2, repRange: "12-15", note: "Pull high and wide for posture and back detail." },
+      { id: "cable-bicep-curl-day4-nat", name: "Cable Bicep Curl", muscleGroup: "Biceps", sets: 3, repRange: "10-12", note: "Keep constant tension and lower slowly." },
+      { id: "hammer-curl-day4-nat", name: "Hammer Curl", muscleGroup: "Biceps", sets: 2, repRange: "12-15", note: "Neutral grip, no swing, clean squeeze." },
     ],
   },
   {
     id: "natasha-core-explosive",
-    name: "Core + Full Body Power",
-    focus: "Simple explosive training with a focused 10 minute core finish",
+    name: "Shape + Waist",
+    focus: "A lighter accessory day for side-glute shape, shoulder cap, and waist control",
     dayLabel: "Day 5",
-    durationMinutes: 55,
+    durationMinutes: 50,
     exercises: [
-      { id: "kettlebell-swing", name: "Kettlebell Swing", muscleGroup: "Full Body", sets: 4, repRange: "12-15", note: "Explode through the hips and stay crisp." },
-      { id: "med-ball-wall-throw", name: "Medicine Ball Wall Throw", muscleGroup: "Full Body", sets: 4, repRange: "8-10", note: "Throw hard, catch softly, and reset each rep." },
-      { id: "box-step-up-drive", name: "Box Step-Up with Knee Drive", muscleGroup: "Legs", sets: 3, repRange: "8-10", note: "Drive up quickly, control the way down." },
-      { id: "med-ball-slam", name: "Medicine Ball Slam", muscleGroup: "Full Body", sets: 3, repRange: "10-12", note: "Keep reps sharp and powerful." },
-      { id: "goblet-squat-to-press", name: "Goblet Squat to Press", muscleGroup: "Full Body", sets: 3, repRange: "10-12", note: "Smooth full-body effort without rushing." },
-      { id: "walking-sled-push", name: "Sled Push", muscleGroup: "Legs", sets: 3, repRange: "20-30", note: "Meters or seconds, smooth effort with intent." },
-      { id: "cable-woodchop", name: "Cable Woodchop", muscleGroup: "Core", sets: 3, repRange: "10-12", note: "Reps per side. Finish with 10 calm minutes of core." },
+      { id: "abductor-machine-day5-nat", name: "Abductor Machine", muscleGroup: "Glutes", sets: 2, repRange: "15-20", note: "Stay in the outer glutes and hold the squeeze." },
+      { id: "cable-hip-abduction-day5-nat", name: "Cable Hip Abduction", muscleGroup: "Glutes", sets: 2, repRange: "15-20", note: "Move slow and clean so the side glute stays on." },
+      { id: "cable-lateral-raise-day5-nat", name: "Cable Lateral Raise", muscleGroup: "Shoulders", sets: 3, repRange: "12-15", note: "Keep the line long and stay in the side delts." },
+      { id: "reverse-pec-deck-day5-nat", name: "Reverse Pec Deck", muscleGroup: "Back", sets: 2, repRange: "12-15", note: "Open wide and keep the traps out of it." },
+      { id: "cable-oblique-crunch-day5-nat", name: "Cable Oblique Crunch", muscleGroup: "Core", sets: 3, repRange: "12-15", note: "Crunch through the waist and stay controlled." },
+      { id: "pallof-press-day5-nat", name: "Pallof Press", muscleGroup: "Core", sets: 2, repRange: "12-15", note: "Brace hard and resist the pull." },
+      { id: "cable-woodchop-day5-nat", name: "Cable Woodchop", muscleGroup: "Core", sets: 2, repRange: "12-15", note: "Rotate smoothly from the trunk, not the hips." },
     ],
   },
 ];
 
-const joshuaPlan: WorkoutPlanDay[] = [
+const joshuaPlan: RawWorkoutPlanDay[] = [
   {
     id: "joshua-chest-triceps",
     name: "Chest + Triceps A",
@@ -344,7 +347,7 @@ const profiles: Profile[] = [
         note: "Keep it unhurried and let that easy flexibility feel a little bit unfair.",
       },
     ],
-    favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown-day2-nat", "abductor-machine"],
+    favoriteExerciseIds: ["machine-hip-thrust-day1", "lat-pulldown-day4-nat", "abductor-machine-day5-nat"],
   },
   {
     id: "joshua",
@@ -499,7 +502,7 @@ const weeklySummaries: Record<"natasha" | "joshua", WeeklySummary> = {
   joshua: { userId: "joshua", workoutsCompleted: 0, totalSets: 0, totalVolume: 0, personalBests: 0, mostTrainedMuscleGroup: "Chest", consistencyLabel: "Building rhythm with a clean start" },
 };
 
-const rawExerciseLibrary: ExerciseLibraryItem[] = [
+const rawExerciseLibrary: RawExerciseLibraryItem[] = [
   ...profiles.flatMap((profile) =>
     profile.workoutPlan.flatMap((day) =>
       day.exercises.map((exercise) => ({

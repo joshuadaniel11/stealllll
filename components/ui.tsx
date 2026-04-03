@@ -11,7 +11,7 @@ export function Card({
   return (
     <section
       className={clsx(
-        "glass hairline relative rounded-[12px] px-5 py-5",
+        "surface-card relative overflow-hidden rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)] px-5 py-5",
         className,
       )}
     >
@@ -22,9 +22,9 @@ export function Card({
 
 export function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="progress-mini-metric rounded-[12px] border border-stroke px-4 py-3.5">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-white/40">{label}</p>
-      <p className="mt-2 text-[1rem] tracking-[-0.03em] text-white/88">{value}</p>
+    <div className="surface-card rounded-[20px] border border-white/[0.07] px-5 py-5">
+      <p className="label-eyebrow">{label}</p>
+      <p className="mt-2 text-[22px] font-semibold tracking-[-0.02em] text-white/92">{value}</p>
     </div>
   );
 }

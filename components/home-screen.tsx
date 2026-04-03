@@ -327,7 +327,7 @@ export function HomeScreen({
             </div>
           </Card>
         ) : (
-          <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
+          <Card className="home-hero-card home-session-hero tab-fade-enter space-y-4 px-6 py-6">
             <div className="space-y-2.5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
@@ -338,7 +338,7 @@ export function HomeScreen({
                 </span>
               </div>
               <div className="space-y-1.5">
-                <h2 className="text-[2rem] tracking-[-0.06em] text-white">
+                <h2 className="font-editorial text-[2.1rem] tracking-[-0.03em] text-white" style={{ fontFamily: "var(--font-editorial)" }}>
                   {sessionPresentation.title}
                 </h2>
                 <p className="text-sm leading-6 text-white/56">
@@ -353,7 +353,7 @@ export function HomeScreen({
                 onClick={() =>
                   activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
                 }
-                className="rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-5 py-4 text-base tracking-[-0.02em] text-[color:var(--accent)] transition duration-200 active:scale-[0.99]"
+                className="hero-cta-shimmer rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-5 py-4 text-base tracking-[-0.02em] text-[color:var(--accent)] transition duration-200 active:scale-[0.99]"
               >
                 {primaryActionLabel}
               </button>
@@ -470,33 +470,71 @@ export function HomeScreen({
         ) : null}
 
         <ScrollReveal delay={44}>
-          <Card className="space-y-4 px-4 py-4">
-          <div className="space-y-3">
+          <Card className="space-y-4 px-4 py-5">
+            {/* Score header */}
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
-              <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3">
-                <p className="text-sm font-medium text-white/78">
-                  <span className="text-emerald-300/80">Joshua</span> {"\u00b7"} {rivalryState.joshuaSessions} sessions
+
+            {/* Score row */}
+            <div className="flex items-end justify-between gap-2">
+              <div className="flex-1 text-left">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-400/60">Joshua</p>
+                <p className="mt-1 text-[3rem] font-bold leading-none tracking-[-0.06em] text-emerald-300/90">
+                  {rivalryState.joshuaSessions}
                 </p>
-              </div>
-              <p className="pt-4 text-[11px] uppercase tracking-[0.2em] text-white/28">vs</p>
-              <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3 text-right">
-                <p className="text-sm font-medium text-white/78">
-                  <span className="text-sky-300/80">Natasha</span> {"\u00b7"} {rivalryState.natashaSessions} sessions
-                </p>
-                {rivalSessions.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                {rivalSessions.length > 0 && profile.id !== "joshua" ? (
+                  <div className="mt-1.5 space-y-0.5">
                     {rivalSessions.map((session) => (
-                      <p key={session.id} className="text-[11px] leading-4 text-white/40">
+                      <p key={session.id} className="text-[11px] leading-4 text-white/36">
                         {session.workoutName.replace(/\s*\(Partial\)$/i, "")}
                       </p>
                     ))}
                   </div>
-                )}
+                ) : null}
+              </div>
+
+              <div className="flex flex-col items-center gap-1 pb-2">
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/22">vs</p>
+              </div>
+
+              <div className="flex-1 text-right">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-400/60">Natasha</p>
+                <p className="mt-1 text-[3rem] font-bold leading-none tracking-[-0.06em] text-sky-300/90">
+                  {rivalryState.natashaSessions}
+                </p>
+                {rivalSessions.length > 0 && profile.id === "joshua" ? (
+                  <div className="mt-1.5 space-y-0.5">
+                    {rivalSessions.map((session) => (
+                      <p key={session.id} className="text-[11px] leading-4 text-white/36">
+                        {session.workoutName.replace(/\s*\(Partial\)$/i, "")}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
+
+            {/* Leader bar */}
+            {(() => {
+              const j = rivalryState.joshuaSessions;
+              const n = rivalryState.natashaSessions;
+              const total = j + n;
+              if (total === 0) return null;
+              const jPct = Math.round((j / total) * 100);
+              return (
+                <div className="flex h-[3px] overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className="h-full rounded-full bg-emerald-400/70 transition-all duration-700"
+                    style={{ width: `${jPct}%` }}
+                  />
+                  <div
+                    className="h-full flex-1 rounded-full bg-sky-400/70 transition-all duration-700"
+                  />
+                </div>
+              );
+            })()}
+
             {rivalryCopy.headline ? (
-              <p className="text-[1.02rem] tracking-[-0.04em] text-white/9">{renderRivalryHeadline(rivalryCopy)}</p>
+              <p className="text-[1.02rem] tracking-[-0.04em] text-white/86">{renderRivalryHeadline(rivalryCopy)}</p>
             ) : null}
             {rivalryCopy.detail ? (
               <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
@@ -513,7 +551,7 @@ export function HomeScreen({
                 </div>
               </>
             ) : null}
-          </div>
+
           <WeeklyTrainingCalendar rows={calendarRows} />
           </Card>
         </ScrollReveal>

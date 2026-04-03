@@ -13,6 +13,36 @@ export type MuscleGroup =
   | "Core"
   | "Full Body";
 
+export type MuscleKey =
+  | "upperChest"
+  | "midChest"
+  | "frontDelts"
+  | "sideDelts"
+  | "triceps"
+  | "upperTraps"
+  | "midBack"
+  | "lats"
+  | "rearDelts"
+  | "biceps"
+  | "forearms"
+  | "upperAbs"
+  | "lowerAbs"
+  | "obliques"
+  | "lowerBack"
+  | "quads"
+  | "hamstrings"
+  | "gluteMax"
+  | "upperGlutes"
+  | "sideGlutes"
+  | "hipFlexors"
+  | "calves"
+  | "adductors";
+
+export type ExerciseMuscleProfile = {
+  primaryMuscles: MuscleKey[];
+  secondaryMuscles: MuscleKey[];
+};
+
 export type SetLog = {
   id: string;
   weight: number;
@@ -25,6 +55,8 @@ export type ExerciseTemplate = {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
+  primaryMuscles: MuscleKey[];
+  secondaryMuscles: MuscleKey[];
   sets: number;
   repRange: string;
   suggestedRepTarget?: number;
@@ -46,6 +78,8 @@ export type WorkoutSessionExercise = {
   exerciseId: string;
   exerciseName: string;
   muscleGroup: MuscleGroup;
+  primaryMuscles: MuscleKey[];
+  secondaryMuscles: MuscleKey[];
   sets: SetLog[];
   note?: string;
 };
@@ -120,11 +154,41 @@ export type PersonalBest = {
   value: string;
 };
 
+export type RecommendationConfidence = "low" | "medium" | "high";
+
 export type StrengthPrediction = {
   exerciseName: string;
   currentBest: string;
   projectedPerformance: string;
   note: string;
+  confidence: RecommendationConfidence;
+  confidenceLabel: string;
+  trendLabel: string;
+};
+
+export type IntelligenceCardTone = "positive" | "neutral" | "attention";
+
+export type PostWorkoutRecapCard = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: IntelligenceCardTone;
+};
+
+export type PlateauIntervention = {
+  title: string;
+  label: string;
+  confidenceLabel: string;
+  detail: string;
+  intervention: string;
+};
+
+export type PostWorkoutIntelligenceRecap = {
+  headline: string;
+  summary: string;
+  cards: PostWorkoutRecapCard[];
+  nextMove: string;
+  plateauIntervention: PlateauIntervention | null;
 };
 
 export type MobilityStretch = {
@@ -147,6 +211,15 @@ export type DailyMobilityPrompt = Omit<MobilityPromptTemplate, "secondaryStretch
   rotationDay: number;
 };
 
+export type DailyCardioPrompt = {
+  key: string;
+  workoutDayId: string;
+  title: string;
+  duration: string;
+  intensity: string;
+  why: string;
+};
+
 export type Profile = {
   id: UserId;
   name: string;
@@ -165,6 +238,8 @@ export type ExerciseLibraryItem = {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
+  primaryMuscles: MuscleKey[];
+  secondaryMuscles: MuscleKey[];
   equipment: string;
   cues: string[];
   isCustom?: boolean;
@@ -209,6 +284,140 @@ export type StretchCompletion = {
   date: string;
   stretchTitle: string;
 };
+
+export type SyncRecordBase = {
+  id: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+};
+
+export type SessionRecord = WorkoutSession & SyncRecordBase;
+
+export type MeasurementRecord = MeasurementEntry &
+  SyncRecordBase & {
+    userId: UserId;
+  };
+
+export type CompletionRecord = StretchCompletion &
+  SyncRecordBase & {
+    completionType: "mobility";
+  };
+
+export type WorkoutOverrideRecord = WorkoutOverride &
+  SyncRecordBase & {
+    userId: UserId;
+  };
+
+export type ExerciseSwapMemoryRecord = SyncRecordBase & {
+  userId: UserId;
+  sourceExerciseId: string;
+  swapExerciseId: string;
+};
+
+export type SharedFactRecord =
+  | (SyncRecordBase & {
+      factType: "profile_created_at";
+      userId: UserId;
+      value: string;
+    })
+  | (SyncRecordBase & {
+      factType: "profile_activation_date";
+      userId: UserId;
+      value: string | null;
+    })
+  | (SyncRecordBase & {
+      factType: "last_seen_wedding_phase";
+      userId: UserId;
+      value: "build" | "define" | "peak" | "wedding_week" | "complete" | null;
+    })
+  | (SyncRecordBase & {
+      factType: "fired_week_streak_milestones";
+      userId: UserId;
+      value: number[];
+    })
+  | (SyncRecordBase & {
+      factType: "training_age_state";
+      userId: UserId;
+      value: {
+        rawSessionCount: number;
+        weightedAge: number;
+        milestonesShown: string[];
+      };
+    })
+  | (SyncRecordBase & {
+      factType: "longest_streak";
+      userId: UserId;
+      value: number;
+    })
+  | (SyncRecordBase & {
+      factType: "personal_bests";
+      userId: UserId;
+      value: PersonalBest[];
+    })
+  | (SyncRecordBase & {
+      factType: "shared_summary";
+      value: SharedSummary;
+    })
+  | (SyncRecordBase & {
+      factType: "weekly_rivalry_archive";
+      value: WeeklyRivalryArchiveEntry;
+    })
+  | (SyncRecordBase & {
+      factType: "steal_archive";
+      value: StealArchiveEntry;
+    })
+  | (SyncRecordBase & {
+      factType: "monthly_report_archive";
+      value: MonthlyReportArchiveEntry;
+    })
+  | (SyncRecordBase & {
+      factType: "session_signal_log";
+      value: SessionSignalLogEntry;
+    })
+  | (SyncRecordBase & {
+      factType: "ceiling_log";
+      value: MuscleCeilingLogEntry;
+    })
+  | (SyncRecordBase & {
+      factType: "lift_ready_history";
+      value: LiftReadyHistoryEntry;
+    });
+
+export type DeviceState = {
+  version: 2;
+  selectedUserId: UserId;
+  lockedProfile: UserId | null;
+  rememberedProfile: UserId | null;
+  onboardingSeen: boolean;
+  hapticPreferences: Record<UserId, boolean>;
+  isSessionActive: boolean;
+  activeWorkout: ActiveWorkout | null;
+};
+
+export type SyncedDomainState = {
+  version: 2;
+  sessionRecords: SessionRecord[];
+  measurementRecords: MeasurementRecord[];
+  mobilityCompletionRecords: CompletionRecord[];
+  workoutOverrideRecords: WorkoutOverrideRecord[];
+  exerciseSwapMemoryRecords: ExerciseSwapMemoryRecord[];
+  sharedFactRecords: SharedFactRecord[];
+};
+
+export type PersistedAppStateV2 = {
+  version: 2;
+  savedAt: string;
+  deviceState: DeviceState;
+  syncedDomainState: SyncedDomainState;
+};
+
+export type V2MigrationResult = {
+  deviceState: DeviceState;
+  syncedDomainState: SyncedDomainState;
+  backupKey: string;
+};
+
+export type SyncStatus = "local_only" | "syncing" | "synced" | "sync_issue";
 
 export type ActiveWorkout = {
   id: string;

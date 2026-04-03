@@ -349,7 +349,7 @@ const PROFILE_PRIORITY_MULTIPLIERS: Record<string, Partial<Record<TrainingLoadZo
     gluteMax: 1.25,
     sideGlutes: 1.2,
     lats: 1.1,
-    upperBack: 1.15,
+    midBack: 1.15,
     lowerAbs: 1.05,
     obliques: 1.05,
     sideDelts: 1.05,
@@ -366,14 +366,13 @@ const REP_RANGE_BUCKET_MIDPOINTS: Record<RepRangeBucket, number> = {
 };
 const PHASE3_SPILLOVER_MATRIX: Partial<Record<TrainingLoadZone, Partial<Record<TrainingLoadZone, number>>>> = {
   upperChest: { frontDelts: 0.35, triceps: 0.28, sideDelts: 0.08 },
-  midChest: { frontDelts: 0.3, triceps: 0.24, sideDelts: 0.06 },
-  lowerChest: { triceps: 0.18, frontDelts: 0.14 },
+  midChest: { frontDelts: 0.32, triceps: 0.26, sideDelts: 0.06 },
   frontDelts: { triceps: 0.14, sideDelts: 0.16, upperChest: 0.08 },
-  sideDelts: { frontDelts: 0.16, rearDelts: 0.18, upperBack: 0.12 },
-  rearDelts: { sideDelts: 0.18, upperBack: 0.24, lats: 0.12 },
-  upperBack: { rearDelts: 0.2, lats: 0.18, midBack: 0.16, lowerBack: 0.08 },
-  lats: { upperBack: 0.2, midBack: 0.22, biceps: 0.28, rearDelts: 0.12 },
-  midBack: { lats: 0.2, upperBack: 0.16, lowerBack: 0.12, biceps: 0.08 },
+  sideDelts: { frontDelts: 0.16, rearDelts: 0.18, upperTraps: 0.12 },
+  rearDelts: { sideDelts: 0.18, upperTraps: 0.24, lats: 0.12 },
+  upperTraps: { rearDelts: 0.2, lats: 0.18, midBack: 0.16, lowerBack: 0.08 },
+  lats: { upperTraps: 0.16, midBack: 0.22, biceps: 0.28, rearDelts: 0.12 },
+  midBack: { lats: 0.2, upperTraps: 0.16, lowerBack: 0.12, biceps: 0.08 },
   lowerBack: { gluteMax: 0.18, hamstrings: 0.2, midBack: 0.12 },
   upperAbs: { lowerAbs: 0.16, obliques: 0.14 },
   lowerAbs: { upperAbs: 0.14, obliques: 0.12, upperGlutes: 0.08 },
@@ -951,7 +950,7 @@ function getProfileSymmetryZones(profile: Profile) {
     return ["upperChest", "sideDelts", "rearDelts", "lats", "biceps", "triceps", "upperAbs", "lowerAbs"] as const;
   }
 
-  return ["upperGlutes", "gluteMax", "sideGlutes", "lats", "upperBack", "lowerAbs", "obliques", "sideDelts"] as const;
+  return ["upperGlutes", "gluteMax", "sideGlutes", "lats", "midBack", "lowerAbs", "obliques", "sideDelts"] as const;
 }
 
 function buildSymmetryScore(profile: Profile, coverageByRegion: Record<TrainingLoadZone, number>): SymmetryScoreMetric {

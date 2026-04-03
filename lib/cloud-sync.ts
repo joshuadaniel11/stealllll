@@ -1,50 +1,129 @@
-import type { AppState } from "@/lib/types";
-import { getSupabaseBrowserClient, getSupabaseConfig } from "@/lib/supabase";
+import type { PostgrestError } from "@supabase/supabase-js";
+
 import { isValidImportedState } from "@/lib/app-state";
+import { createSeedState } from "@/lib/seed-data";
+import { getSupabaseBrowserClient, getSupabaseConfig } from "@/lib/supabase";
+import type {
+  AppState,
+  CompletionRecord,
+  DeviceState,
+  ExerciseSwapMemoryRecord,
+  MeasurementRecord,
+  SessionRecord,
+  SharedFactRecord,
+  SyncedDomainState,
+  WorkoutOverrideRecord,
+} from "@/lib/types";
+import { combinePersistedState, getSyncedDomainStateHash, migrateV1StateToV2 } from "@/lib/v2-state";
 
-const TABLE_NAME = "app_state_snapshots";
+const LEGACY_TABLE_NAME = "app_state_snapshots";
+const TABLES = {
+  sessionRecords: "session_records",
+  measurementRecords: "measurement_records",
+  mobilityCompletionRecords: "mobility_completion_records",
+  workoutOverrideRecords: "workout_override_records",
+  exerciseSwapMemoryRecords: "exercise_swap_memory_records",
+  sharedFactRecords: "shared_fact_records",
+} as const;
 
-type SyncedAppState = Omit<AppState, "selectedUserId" | "isSessionActive" | "activeWorkout" | "lastSeenWeddingPhase">;
+type RecordTableKey = keyof typeof TABLES;
 
-type CloudSnapshotRow = {
+type CloudCollectionRow<T> = {
   id: string;
-  state: Partial<SyncedAppState>;
+  state: T;
   updated_at: string;
 };
 
-export type CloudSnapshot = {
-  state: Partial<SyncedAppState> | null;
-  updatedAt: string | null;
+type LegacyCloudSnapshotRow = {
+  id: string;
+  state: Partial<AppState>;
+  updated_at: string;
 };
 
-export function isCloudSyncConfigured() {
-  return getSupabaseConfig().configured;
+export type CloudSyncedDomainSnapshot = {
+  syncedDomainState: SyncedDomainState | null;
+  updatedAt: string | null;
+  mode: "records" | "snapshot" | null;
+};
+
+function toComparableTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function getSyncedAppState(state: AppState): SyncedAppState {
+function isMissingTableError(error: PostgrestError | null) {
+  if (!error) {
+    return false;
+  }
+
+  return error.code === "42P01" || /does not exist/i.test(error.message);
+}
+
+function getLegacySyncedPayload(state: AppState) {
   const {
     selectedUserId: _selectedUserId,
     isSessionActive: _isSessionActive,
     activeWorkout: _activeWorkout,
-    lastSeenWeddingPhase: _lastSeenWeddingPhase,
-    ...syncedState
+    ...syncedPayload
   } = state;
 
-  return syncedState;
+  return syncedPayload;
 }
 
-export function applyCloudState(baseState: AppState, cloudState: Partial<SyncedAppState>): AppState {
+function getDefaultDeviceState(seed: AppState): DeviceState {
   return {
-    ...baseState,
-    ...cloudState,
+    version: 2,
+    selectedUserId: seed.selectedUserId,
+    lockedProfile: null,
+    rememberedProfile: seed.selectedUserId,
+    onboardingSeen: false,
+    hapticPreferences: seed.hapticPreferences,
+    isSessionActive: false,
+    activeWorkout: null,
   };
 }
 
-export function getSyncedStateHash(state: AppState | Partial<SyncedAppState>) {
-  return JSON.stringify(state);
+async function loadRecordTable<T>(tableName: string) {
+  const client = getSupabaseBrowserClient();
+  const config = getSupabaseConfig();
+  if (!client || !config.configured) {
+    return { records: [] as T[], updatedAt: null, missing: false };
+  }
+
+  const { data, error } = await client
+    .from(tableName)
+    .select("id, state, updated_at")
+    .eq("sync_id", config.syncId)
+    .returns<Array<CloudCollectionRow<T>>>();
+
+  if (isMissingTableError(error)) {
+    return { records: [] as T[], updatedAt: null, missing: true };
+  }
+
+  if (error) {
+    console.error(`Supabase record sync load failed for ${tableName}.`, error);
+    return { records: [] as T[], updatedAt: null, missing: false };
+  }
+
+  const updatedAt = (data ?? []).reduce<string | null>((latest, row) => {
+    if (!latest || toComparableTimestamp(row.updated_at) > toComparableTimestamp(latest)) {
+      return row.updated_at;
+    }
+    return latest;
+  }, null);
+
+  return {
+    records: (data ?? []).map((row) => row.state),
+    updatedAt,
+    missing: false,
+  };
 }
 
-export async function loadCloudSnapshot(): Promise<CloudSnapshot | null> {
+async function loadLegacySnapshotFallback(): Promise<CloudSyncedDomainSnapshot | null> {
   const client = getSupabaseBrowserClient();
   const config = getSupabaseConfig();
   if (!client || !config.configured) {
@@ -52,59 +131,207 @@ export async function loadCloudSnapshot(): Promise<CloudSnapshot | null> {
   }
 
   const { data, error } = await client
-    .from(TABLE_NAME)
+    .from(LEGACY_TABLE_NAME)
     .select("state, updated_at")
     .eq("id", config.syncId)
-    .maybeSingle<CloudSnapshotRow>();
+    .maybeSingle<LegacyCloudSnapshotRow>();
 
   if (error) {
-    console.error("Supabase sync load failed.", error);
+    console.error("Supabase legacy snapshot load failed.", error);
     return null;
   }
 
   if (data?.state && !isValidImportedState(data.state)) {
-    console.error("Supabase sync load rejected invalid payload.");
+    console.error("Supabase legacy snapshot load rejected invalid payload.");
     return null;
   }
 
+  if (!data?.state) {
+    return {
+      syncedDomainState: null,
+      updatedAt: data?.updated_at ?? null,
+      mode: "snapshot",
+    };
+  }
+
+  const seed = createSeedState();
+  const migrated = migrateV1StateToV2(seed, data.state, {
+    lockedProfile: null,
+    rememberedProfile: seed.selectedUserId,
+    onboardingSeen: false,
+  });
+
   return {
-    state: data?.state ?? null,
-    updatedAt: data?.updated_at ?? null,
+    syncedDomainState: migrated.syncedDomainState,
+    updatedAt: data.updated_at ?? null,
+    mode: "snapshot",
   };
 }
 
-export async function saveCloudSnapshot(state: AppState) {
+export function isCloudSyncConfigured() {
+  return getSupabaseConfig().configured;
+}
+
+export async function loadCloudSyncedDomainState(): Promise<CloudSyncedDomainSnapshot | null> {
   const client = getSupabaseBrowserClient();
   const config = getSupabaseConfig();
   if (!client || !config.configured) {
     return null;
   }
 
-  const updatedAt = new Date().toISOString();
-  const syncedState = getSyncedAppState(state);
+  const [
+    sessionRecords,
+    measurementRecords,
+    mobilityCompletionRecords,
+    workoutOverrideRecords,
+    exerciseSwapMemoryRecords,
+    sharedFactRecords,
+  ] = await Promise.all([
+    loadRecordTable<SessionRecord>(TABLES.sessionRecords),
+    loadRecordTable<MeasurementRecord>(TABLES.measurementRecords),
+    loadRecordTable<CompletionRecord>(TABLES.mobilityCompletionRecords),
+    loadRecordTable<WorkoutOverrideRecord>(TABLES.workoutOverrideRecords),
+    loadRecordTable<ExerciseSwapMemoryRecord>(TABLES.exerciseSwapMemoryRecords),
+    loadRecordTable<SharedFactRecord>(TABLES.sharedFactRecords),
+  ]);
 
-  if (!isValidImportedState(syncedState)) {
-    console.error("Supabase sync save rejected invalid payload.");
+  const anyMissing =
+    sessionRecords.missing ||
+    measurementRecords.missing ||
+    mobilityCompletionRecords.missing ||
+    workoutOverrideRecords.missing ||
+    exerciseSwapMemoryRecords.missing ||
+    sharedFactRecords.missing;
+
+  if (anyMissing) {
+    return loadLegacySnapshotFallback();
+  }
+
+  const syncedDomainState: SyncedDomainState = {
+    version: 2,
+    sessionRecords: sessionRecords.records,
+    measurementRecords: measurementRecords.records,
+    mobilityCompletionRecords: mobilityCompletionRecords.records,
+    workoutOverrideRecords: workoutOverrideRecords.records,
+    exerciseSwapMemoryRecords: exerciseSwapMemoryRecords.records,
+    sharedFactRecords: sharedFactRecords.records,
+  };
+
+  const updatedAt = [
+    sessionRecords.updatedAt,
+    measurementRecords.updatedAt,
+    mobilityCompletionRecords.updatedAt,
+    workoutOverrideRecords.updatedAt,
+    exerciseSwapMemoryRecords.updatedAt,
+    sharedFactRecords.updatedAt,
+  ].reduce<string | null>((latest, value) => {
+    if (!value) {
+      return latest;
+    }
+    if (!latest || toComparableTimestamp(value) > toComparableTimestamp(latest)) {
+      return value;
+    }
+    return latest;
+  }, null);
+
+  return {
+    syncedDomainState,
+    updatedAt,
+    mode: "records",
+  };
+}
+
+async function upsertRecordTable<T extends { id: string; updatedAt: string }>(tableName: string, records: T[]) {
+  const client = getSupabaseBrowserClient();
+  const config = getSupabaseConfig();
+  if (!client || !config.configured || !records.length) {
+    return { ok: true, missing: false };
+  }
+
+  const payload = records.map((record) => ({
+    sync_id: config.syncId,
+    id: record.id,
+    updated_at: record.updatedAt,
+    state: record,
+  }));
+
+  const { error } = await client.from(tableName).upsert(payload, {
+    onConflict: "sync_id,id",
+  });
+
+  if (isMissingTableError(error)) {
+    return { ok: false, missing: true };
+  }
+
+  if (error) {
+    console.error(`Supabase record sync save failed for ${tableName}.`, error);
+    return { ok: false, missing: false };
+  }
+
+  return { ok: true, missing: false };
+}
+
+async function saveLegacySnapshotFallback(syncedDomainState: SyncedDomainState) {
+  const client = getSupabaseBrowserClient();
+  const config = getSupabaseConfig();
+  if (!client || !config.configured) {
     return null;
   }
 
+  const seed = createSeedState();
+  const runtimeState = combinePersistedState(seed, getDefaultDeviceState(seed), syncedDomainState);
+  const updatedAt = new Date().toISOString();
   const payload = {
     id: config.syncId,
-    state: syncedState,
+    state: getLegacySyncedPayload(runtimeState),
     updated_at: updatedAt,
   };
 
-  const { error } = await client.from(TABLE_NAME).upsert(payload, {
+  const { error } = await client.from(LEGACY_TABLE_NAME).upsert(payload, {
     onConflict: "id",
   });
 
   if (error) {
-    console.error("Supabase sync save failed.", error);
+    console.error("Supabase legacy snapshot save failed.", error);
     return null;
   }
 
   return {
     updatedAt,
-    state: payload.state,
+    syncedDomainState,
+    mode: "snapshot" as const,
   };
 }
+
+export async function saveCloudSyncedDomainState(syncedDomainState: SyncedDomainState) {
+  const client = getSupabaseBrowserClient();
+  const config = getSupabaseConfig();
+  if (!client || !config.configured) {
+    return null;
+  }
+
+  const results = await Promise.all([
+    upsertRecordTable(TABLES.sessionRecords, syncedDomainState.sessionRecords),
+    upsertRecordTable(TABLES.measurementRecords, syncedDomainState.measurementRecords),
+    upsertRecordTable(TABLES.mobilityCompletionRecords, syncedDomainState.mobilityCompletionRecords),
+    upsertRecordTable(TABLES.workoutOverrideRecords, syncedDomainState.workoutOverrideRecords),
+    upsertRecordTable(TABLES.exerciseSwapMemoryRecords, syncedDomainState.exerciseSwapMemoryRecords),
+    upsertRecordTable(TABLES.sharedFactRecords, syncedDomainState.sharedFactRecords),
+  ]);
+
+  if (results.some((result) => result.missing)) {
+    return saveLegacySnapshotFallback(syncedDomainState);
+  }
+
+  if (results.some((result) => !result.ok)) {
+    return null;
+  }
+
+  return {
+    updatedAt: new Date().toISOString(),
+    syncedDomainState,
+    mode: "records" as const,
+  };
+}
+
+export { getSyncedDomainStateHash };

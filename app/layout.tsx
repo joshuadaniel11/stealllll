@@ -4,7 +4,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   applicationName: "STEAL",
   title: "STEAL",
-  description: "A premium workout tracker for Joshua and Natasha.",
+  description: "Private shared training app for Joshua and Natasha.",
+  metadataBase: new URL("https://stealllll.vercel.app"),
   manifest: "/manifest.webmanifest",
   category: "health",
   appleWebApp: {
@@ -15,10 +16,20 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050507",
+  themeColor: "#090a0d",
   colorScheme: "dark",
   viewportFit: "cover",
 };
@@ -30,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="apple-fonts">{children}</body>
     </html>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Card } from "@/components/ui";
 import type { WorkoutSession } from "@/lib/types";
@@ -40,19 +40,15 @@ export function EditWorkoutModal({
   onClose: () => void;
   onSave: (session: WorkoutSession, options?: { countAsDone?: boolean }) => void;
 }) {
-  const [draft, setDraft] = useState<WorkoutSession | null>(session ? cloneSession(session) : null);
+  const [draft, setDraft] = useState<WorkoutSession | null>(() => (session ? cloneSession(session) : null));
 
-  useEffect(() => {
-    setDraft(session ? cloneSession(session) : null);
-  }, [session]);
-
-  if (!draft) {
+  if (!session || !draft) {
     return null;
   }
 
   return (
-    <div className="sheet-backdrop">
-      <div className="sheet-panel sheet-detent-large animate-sheet-up">
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet-panel sheet-detent-large animate-sheet-up" onClick={(event) => event.stopPropagation()}>
         <Card className="sheet-card bg-[var(--surface)]">
           <div className="sheet-drag-handle" />
           <div className="flex items-start justify-between gap-4">
@@ -66,7 +62,7 @@ export function EditWorkoutModal({
             <span
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 draft.partial
-                  ? "bg-accentSoft text-accent"
+                  ? "border border-white/[0.10] bg-white/[0.04] text-white/70"
                   : "bg-black/10 text-text dark:bg-white/10"
               }`}
             >
@@ -114,7 +110,7 @@ export function EditWorkoutModal({
                       Mark this as a full workout
                     </button>
                     <button
-                      className="rounded-[18px] bg-[var(--accentSoft)] px-4 py-3 text-sm font-semibold text-accent"
+                      className="rounded-[18px] border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white/88"
                       onClick={() =>
                         onSave(
                           {

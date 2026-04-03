@@ -1,12 +1,16 @@
-import type { AppState } from "@/lib/types";
+import type { AppState, DeviceState, PersistedAppStateV2, SyncedDomainState, UserId } from "@/lib/types";
 
-const STORAGE_KEY = "workout-together-state-v2-clean-start";
-const STORAGE_VERSION = 1;
+const LEGACY_STORAGE_KEY = "workout-together-state-v2-clean-start";
+const DEVICE_STORAGE_KEY = "steal-device-state-v2";
+const SYNCED_STORAGE_KEY = "steal-synced-domain-state-v2";
+const STORAGE_VERSION = 2;
 const PROFILE_LOCK_KEY = "workout-together-profile-lock";
 const LAST_PROFILE_KEY = "workout-together-last-profile";
-const SYNC_STATE_UPDATED_AT_KEY = "workout-together-synced-state-updated-at";
+const LEGACY_ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
+const SYNC_STATE_UPDATED_AT_KEY = "steal-synced-state-updated-at-v2";
+const LEGACY_BACKUP_KEY = "steal-v1-state-backup";
 
-type StoredStateEnvelope = {
+type StoredLegacyStateEnvelope = {
   version: number;
   savedAt: string;
   state: AppState;
@@ -14,6 +18,39 @@ type StoredStateEnvelope = {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isUserId(value: unknown): value is UserId {
+  return value === "joshua" || value === "natasha";
+}
+
+function isDeviceState(value: unknown): value is DeviceState {
+  return (
+    isObject(value) &&
+    value.version === 2 &&
+    isUserId(value.selectedUserId) &&
+    (value.lockedProfile === null || isUserId(value.lockedProfile)) &&
+    (value.rememberedProfile === null || isUserId(value.rememberedProfile)) &&
+    typeof value.onboardingSeen === "boolean" &&
+    isObject(value.hapticPreferences) &&
+    typeof value.hapticPreferences.joshua === "boolean" &&
+    typeof value.hapticPreferences.natasha === "boolean" &&
+    typeof value.isSessionActive === "boolean" &&
+    ("activeWorkout" in value)
+  );
+}
+
+function isSyncedDomainState(value: unknown): value is SyncedDomainState {
+  return (
+    isObject(value) &&
+    value.version === 2 &&
+    Array.isArray(value.sessionRecords) &&
+    Array.isArray(value.measurementRecords) &&
+    Array.isArray(value.mobilityCompletionRecords) &&
+    Array.isArray(value.workoutOverrideRecords) &&
+    Array.isArray(value.exerciseSwapMemoryRecords) &&
+    Array.isArray(value.sharedFactRecords)
+  );
 }
 
 export function deserializeState(raw: string): Partial<AppState> | null {
@@ -26,9 +63,6 @@ export function deserializeState(raw: string): Partial<AppState> | null {
       "state" in parsed &&
       isObject(parsed.state)
     ) {
-      if (parsed.version > STORAGE_VERSION) {
-        return null;
-      }
       return parsed.state as Partial<AppState>;
     }
 
@@ -38,12 +72,12 @@ export function deserializeState(raw: string): Partial<AppState> | null {
   }
 }
 
-export function loadStateEnvelope(): StoredStateEnvelope | null {
+export function loadStateEnvelope(): StoredLegacyStateEnvelope | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!raw) {
     return null;
   }
@@ -55,10 +89,9 @@ export function loadStateEnvelope(): StoredStateEnvelope | null {
       typeof parsed.version === "number" &&
       typeof parsed.savedAt === "string" &&
       "state" in parsed &&
-      isObject(parsed.state) &&
-      parsed.version <= STORAGE_VERSION
+      isObject(parsed.state)
     ) {
-      return parsed as StoredStateEnvelope;
+      return parsed as StoredLegacyStateEnvelope;
     }
   } catch {
     return null;
@@ -73,31 +106,127 @@ export function loadState(): Partial<AppState> | null {
   }
 
   const envelope = loadStateEnvelope();
-  const parsed = envelope?.state ?? deserializeState(window.localStorage.getItem(STORAGE_KEY) ?? "");
+  const parsed = envelope?.state ?? deserializeState(window.localStorage.getItem(LEGACY_STORAGE_KEY) ?? "");
   if (!parsed) {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     return null;
   }
 
   return parsed;
 }
 
-export function saveState(state: AppState) {
+function readJson<T>(storageKey: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(storageKey);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function loadPersistedAppStateV2(): PersistedAppStateV2 | null {
+  const deviceState = readJson<DeviceState>(DEVICE_STORAGE_KEY);
+  const syncedDomainState = readJson<SyncedDomainState>(SYNCED_STORAGE_KEY);
+
+  if (!deviceState || !syncedDomainState || !isDeviceState(deviceState) || !isSyncedDomainState(syncedDomainState)) {
+    return null;
+  }
+
+  return {
+    version: STORAGE_VERSION,
+    savedAt: new Date().toISOString(),
+    deviceState,
+    syncedDomainState,
+  };
+}
+
+export function savePersistedAppStateV2({
+  deviceState,
+  syncedDomainState,
+}: {
+  deviceState: DeviceState;
+  syncedDomainState: SyncedDomainState;
+}) {
   if (typeof window === "undefined") {
     return;
   }
 
-  const payload: StoredStateEnvelope = {
-    version: STORAGE_VERSION,
-    savedAt: new Date().toISOString(),
-    state,
-  };
+  try {
+    window.localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(deviceState));
+    window.localStorage.setItem(SYNCED_STORAGE_KEY, JSON.stringify(syncedDomainState));
+  } catch {
+    // Ignore storage quota failures so the app keeps running.
+  }
+}
+
+export function saveLegacyBackup(raw: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
 
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    window.localStorage.setItem(LEGACY_BACKUP_KEY, raw);
   } catch {
-    // Storage can fail in private mode or when quota is exceeded. Ignore so the app keeps running.
+    // Ignore backup failures.
   }
+}
+
+export function loadLegacyBackup() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(LEGACY_BACKUP_KEY);
+}
+
+export function loadLegacyRawState() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(LEGACY_STORAGE_KEY);
+}
+
+export function loadLegacyLockedProfile(): UserId | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(PROFILE_LOCK_KEY);
+  return isUserId(value) ? value : null;
+}
+
+export function loadLegacyRememberedProfile(): UserId | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(LAST_PROFILE_KEY);
+  return isUserId(value) ? value : null;
+}
+
+export function loadLegacyOnboardingSeen() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(LEGACY_ONBOARDING_KEY) === "true";
+}
+
+export function removeLegacyStateKeys() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
 }
 
 export function loadSyncedStateUpdatedAt(): string | null {
@@ -120,48 +249,4 @@ export function saveSyncedStateUpdatedAt(updatedAt: string | null) {
   }
 
   window.localStorage.setItem(SYNC_STATE_UPDATED_AT_KEY, updatedAt);
-}
-
-export function loadLockedProfile(): AppState["selectedUserId"] | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const value = window.localStorage.getItem(PROFILE_LOCK_KEY);
-  return value === "joshua" || value === "natasha" ? value : null;
-}
-
-export function saveLockedProfile(userId: AppState["selectedUserId"] | null) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (!userId) {
-    window.localStorage.removeItem(PROFILE_LOCK_KEY);
-    return;
-  }
-
-  window.localStorage.setItem(PROFILE_LOCK_KEY, userId);
-}
-
-export function loadRememberedProfile(): AppState["selectedUserId"] | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const value = window.localStorage.getItem(LAST_PROFILE_KEY);
-  return value === "joshua" || value === "natasha" ? value : null;
-}
-
-export function saveRememberedProfile(userId: AppState["selectedUserId"] | null) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (!userId) {
-    window.localStorage.removeItem(LAST_PROFILE_KEY);
-    return;
-  }
-
-  window.localStorage.setItem(LAST_PROFILE_KEY, userId);
 }

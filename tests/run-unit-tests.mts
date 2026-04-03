@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 
 import { addStretchCompletion, appendSession, replaceSession } from "@/lib/app-actions";
+import { selectDailyCardioPrompt } from "@/lib/daily-cardio";
 import { isValidImportedState, mergeStateWithSeed } from "@/lib/app-state";
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import { buildCanonicalExerciseLibrary, findExerciseLibraryItemByName } from "@/lib/exercise-data";
 import { getWeekStreakMilestone, isPrApproachSet, shouldTriggerHaptic } from "@/lib/haptics";
 import { buildSessionSignalLogEntry, getLiveSessionSignal, getStrongDayState } from "@/lib/live-session-signal";
-import { getExerciseMuscleContribution, getSuggestedFocusSession } from "@/lib/training-load";
+import { buildPostWorkoutIntelligenceRecap } from "@/lib/post-workout-intelligence";
+import { getSuggestedStartingWeight } from "@/lib/progression";
+import { buildSessionAutoregulationRead } from "@/lib/session-autoregulation";
+import { getExerciseMuscleContribution, getSuggestedFocusSession, getWeeklyCalendarRows, getWeeklyTrainingLoad } from "@/lib/training-load";
+import { buildCoachReadModel, buildHomeViewModel, buildProgressViewModel, buildWorkoutViewModel } from "@/lib/view-models";
+import { combinePersistedState, mergeSyncedDomainStates, migrateV1StateToV2 } from "@/lib/v2-state";
+import { getWorkoutPreviewMuscleProfile } from "@/lib/workout-preview";
 import {
   buildMuscleCeilingLogEntries,
   getBackRevealState,
@@ -16,6 +23,7 @@ import {
   getNatashaPriorityLock,
   getMonthlyReportCard,
   getProfileMaturityState,
+  getQueuedWorkoutForProfile,
   getProfileTrainingState,
   getRivalryCardCopy,
   getSignatureLifts,
@@ -34,6 +42,7 @@ import {
   getRestDayRead,
 } from "@/lib/profile-training-state";
 import { createSeedState } from "@/lib/seed-data";
+import { getStrengthPredictions } from "@/lib/strength-prediction";
 import { getWeddingCountdownCardState, getWeddingPhaseProfile, getWeddingPhaseTransitionCopy, WeddingDateService } from "@/lib/wedding-date";
 
 const referenceDate = new Date("2026-03-23T12:00:00.000Z");
@@ -103,6 +112,246 @@ function testSafeStateMerge() {
   assert.equal(merged.sessions[0]?.id, "valid-session");
   assert.equal(merged.activeWorkout, null);
   assert.deepEqual(merged.longestStreaks, seed.longestStreaks);
+}
+
+function testV2MigrationRoundTripPreservesCoreState() {
+  const seed = createSeedState();
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(natasha);
+
+  const workout = natasha.workoutPlan[0];
+  const firstExercise = workout.exercises[0];
+  const legacyState = mergeStateWithSeed(seed, {
+    selectedUserId: "natasha",
+    measurements: {
+      ...seed.measurements,
+      natasha: [
+        {
+          id: "measure-1",
+          date: "2026-03-24T08:00:00.000Z",
+          bodyweightKg: 62.4,
+          bodyFatPercent: 24.2,
+        },
+      ],
+    },
+    stretchCompletions: {
+      ...seed.stretchCompletions,
+      natasha: [
+        {
+          id: "stretch-1",
+          userId: "natasha",
+          date: "2026-03-24T08:30:00.000Z",
+          stretchTitle: "Couch stretch",
+        },
+      ],
+    },
+    workoutOverrides: {
+      ...seed.workoutOverrides,
+      natasha: {
+        nextWorkoutId: natasha.workoutPlan[1]?.id ?? null,
+        updatedAt: "2026-03-24T09:00:00.000Z",
+      },
+    },
+    sessions: [
+      {
+        id: "natasha-v2-session",
+        userId: "natasha",
+        workoutDayId: workout.id,
+        workoutName: workout.name,
+        performedAt: "2026-03-24T07:00:00.000Z",
+        durationMinutes: 46,
+        feeling: "Solid",
+        exercises: [
+          {
+            exerciseId: firstExercise.id,
+            exerciseName: firstExercise.name,
+            muscleGroup: firstExercise.muscleGroup,
+            primaryMuscles: firstExercise.primaryMuscles,
+            secondaryMuscles: firstExercise.secondaryMuscles,
+            sets: [{ id: "legacy-set", weight: 72.5, reps: 10, completed: true }],
+          },
+        ],
+      },
+    ],
+    activeWorkout: {
+      id: "natasha-active",
+      userId: "natasha",
+      startedAt: "2026-03-24T10:00:00.000Z",
+      workoutDayId: workout.id,
+      workoutName: workout.name,
+      exercises: [
+        {
+          exerciseId: firstExercise.id,
+          exerciseName: firstExercise.name,
+          muscleGroup: firstExercise.muscleGroup,
+          primaryMuscles: firstExercise.primaryMuscles,
+          secondaryMuscles: firstExercise.secondaryMuscles,
+          note: firstExercise.note,
+          sets: [{ id: "active-set", weight: 75, reps: 8, completed: false }],
+        },
+      ],
+      templateExercises: workout.exercises,
+    },
+  });
+
+  const migrated = migrateV1StateToV2(seed, legacyState, {
+    lockedProfile: "natasha",
+    rememberedProfile: "natasha",
+    onboardingSeen: true,
+  });
+  const roundTripped = combinePersistedState(seed, migrated.deviceState, migrated.syncedDomainState);
+
+  assert.equal(migrated.deviceState.version, 2);
+  assert.equal(migrated.syncedDomainState.version, 2);
+  assert.equal(roundTripped.selectedUserId, "natasha");
+  assert.equal(roundTripped.activeWorkout?.workoutName, workout.name);
+  assert.equal(roundTripped.sessions.length, 1);
+  assert.equal(roundTripped.measurements.natasha[0]?.bodyweightKg, 62.4);
+  assert.equal(roundTripped.stretchCompletions.natasha[0]?.stretchTitle, "Couch stretch");
+  assert.equal(roundTripped.workoutOverrides.natasha.nextWorkoutId, natasha.workoutPlan[1]?.id ?? null);
+}
+
+function testV2RecordMergePrefersNewerSyncFacts() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const migrated = migrateV1StateToV2(seed, seed, {
+    lockedProfile: null,
+    rememberedProfile: "joshua",
+    onboardingSeen: false,
+  });
+
+  const sessionId = migrated.syncedDomainState.sessionRecords[0]?.id ?? "remote-session";
+  const local = {
+    ...migrated.syncedDomainState,
+    sessionRecords: [
+      {
+        id: sessionId,
+        userId: "joshua" as const,
+        workoutDayId: joshua.workoutPlan[0].id,
+        workoutName: joshua.workoutPlan[0].name,
+        performedAt: "2026-03-20T08:00:00.000Z",
+        durationMinutes: 42,
+        feeling: "Solid" as const,
+        exercises: [],
+        updatedAt: "2026-03-20T09:00:00.000Z",
+        deletedAt: null,
+      },
+    ],
+  };
+  const remote = {
+    ...migrated.syncedDomainState,
+    sessionRecords: [
+      {
+        id: sessionId,
+        userId: "joshua" as const,
+        workoutDayId: joshua.workoutPlan[1].id,
+        workoutName: joshua.workoutPlan[1].name,
+        performedAt: "2026-03-21T08:00:00.000Z",
+        durationMinutes: 51,
+        feeling: "Strong" as const,
+        exercises: [],
+        updatedAt: "2026-03-21T10:00:00.000Z",
+        deletedAt: null,
+      },
+    ],
+  };
+
+  const merged = mergeSyncedDomainStates(local, remote);
+
+  assert.ok(merged);
+  assert.equal(merged?.sessionRecords[0]?.workoutDayId, joshua.workoutPlan[1].id);
+  assert.equal(merged?.sessionRecords[0]?.feeling, "Strong");
+}
+
+function testUnifiedCoachAndViewModelsStayCoherent() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const trainingState = getProfileTrainingState(
+    joshua,
+    seed.sessions,
+    seed.exerciseLibrary,
+    referenceDate,
+    seed.stretchCompletions.joshua,
+    seed.longestStreaks.joshua,
+    seed.workoutOverrides.joshua,
+    seed.profileCreatedAt.joshua,
+    seed.profileActivationDates.joshua,
+    seed.lastSeenWeddingPhase.joshua,
+  );
+  const todaysWorkout = getQueuedWorkoutForProfile(joshua, trainingState.userSessions, seed.workoutOverrides.joshua?.nextWorkoutId ?? null);
+  const coach = buildCoachReadModel({
+    profile: joshua,
+    trainingState,
+    todaysWorkout,
+    activeWorkout: null,
+    suggestedFocusSession: trainingState.suggestedFocusSession,
+    restDayRead: getRestDayRead("joshua", trainingState.restDayState.restReason, trainingState.maturityState.isObserving),
+    syncStatus: "synced",
+  });
+  const homeViewModel = buildHomeViewModel({
+    profile: joshua,
+    todaysWorkout,
+    activeWorkoutName: null,
+    isSessionActive: false,
+    activeSessionSetCount: 0,
+    weeklyCount: trainingState.weeklyCount,
+    dailyVerse: seed.bibleVerses[0],
+    dailyMobilityPrompt: selectDailyMobilityPrompt("joshua"),
+    dailyCardioPrompt: selectDailyCardioPrompt("joshua", todaysWorkout.id),
+    stretchCompletedToday: false,
+    recentWorkouts: trainingState.recentWorkouts,
+    weddingDate: trainingState.weddingDate,
+    recentTrainingUpdate: null,
+    momentumPillText: getMomentumPillCopy("joshua", trainingState.streakAndMomentum, false, trainingState.maturityState.isObserving),
+    rivalryState: getWeeklyRivalryState([], [], new Date("2026-03-23T00:00:00+13:00"), referenceDate),
+    rivalryCopy: getRivalryCardCopy("joshua", {
+      joshuaSessions: 0,
+      natashaSessions: 0,
+      joshuaVolume: 0,
+      natashaVolume: 0,
+      joshuaConsistency: 0,
+      natashaConsistency: 0,
+      leader: "tied",
+      leaderBy: null,
+      margin: "close",
+      weekComplete: false,
+    }),
+    trainingState,
+    coach,
+  });
+  const workoutViewModel = buildWorkoutViewModel({
+    profile: joshua,
+    todaysWorkoutId: todaysWorkout.id,
+    previewWorkoutId: todaysWorkout.id,
+    suggestedFocusSession: trainingState.suggestedFocusSession,
+    suggestedSessionPreview: false,
+    signatureLifts: trainingState.signatureLifts,
+    activeWorkout: null,
+    activeWorkoutTemplate: todaysWorkout,
+    liveSignal: null,
+    userSessions: trainingState.userSessions,
+    exerciseLibrary: seed.exerciseLibrary,
+    coach,
+  });
+  const progressViewModel = buildProgressViewModel({
+    profile: joshua,
+    trainingState,
+    measurements: seed.measurements.joshua,
+    coach,
+  });
+
+  assert.ok(coach.homeHeadline.length > 0);
+  assert.ok(coach.homeAction.length > 0);
+  assert.equal(homeViewModel.coach.profileId, "joshua");
+  assert.equal(workoutViewModel.coach.completionNext, coach.completionNext);
+  assert.equal(progressViewModel.coach.progressFocusLine, coach.progressFocusLine);
 }
 
 function testStreakAndMomentumSelector() {
@@ -731,7 +980,15 @@ function testNatashaBackRevealDoesNotDoubleAddOnBackDaysAndStaysLightAtPeak() {
   assert.ok(peakGluteSession);
   assert.notEqual(backDaySession.ceilingPreviewLine, "Back included today. Building the sweep.");
   assert.ok((backDaySession.exercises.filter((exercise) => exercise.muscleGroup === "Back").length) <= 4);
-  const peakBack = peakGluteSession.exercises.find((exercise) => exercise.muscleGroup === "Back");
+  const peakBack = peakGluteSession.exercises.find((exercise) => {
+    const contribution = getExerciseMuscleContribution({
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      primaryMuscles: exercise.primaryMuscles,
+      secondaryMuscles: exercise.secondaryMuscles,
+    });
+    return (contribution.lats ?? 0) > 0 || (contribution.midBack ?? 0) > 0 || (contribution.rearDelts ?? 0) > 0;
+  });
   assert.ok(peakBack);
   assert.equal(peakGluteSession.ceilingPreviewLine, "Light back work. The sweep is already there.");
   assert.equal(peakBack?.repRange, "15-25");
@@ -1468,10 +1725,10 @@ function testWeeklyRivalryCardCopyHandlesTiesAndWeekComplete() {
     weekComplete: true,
   });
 
-  assert.equal(tiedCopy.headline, "Dead even. Someone's got to move.");
+  assert.equal(tiedCopy.headline, "Dead even. Keep the pressure healthy.");
   assert.ok(tiedCopy.detail.includes("4 sessions"));
   assert.equal(tiedCopy.stealDetail, null);
-  assert.equal(settledCopy.headline, "Natasha took this week.");
+  assert.equal(settledCopy.headline, "Natasha edged this week.");
   assert.ok(settledCopy.detail.includes("Natasha"));
   assert.equal(settledCopy.stealDetail, null);
   assert.equal(settledCopy.weddingGoalDetail, null);
@@ -1592,7 +1849,7 @@ function testRivalryCardCopyAddsWeddingGoalLayerBeforeWeddingOnly() {
     },
   );
 
-  assert.equal(rivalryCopy.weddingGoalDetail, "He's more consistent. Take it back.");
+  assert.equal(rivalryCopy.weddingGoalDetail, "He's more consistent right now. Close the gap.");
 }
 
 function testStealStateTracksLatestStealAndRunLength() {
@@ -1672,8 +1929,8 @@ function testRivalryCopyAddsStealDetailFromViewerPerspective() {
     },
   );
 
-  assert.equal(copy.headline, "Joshua's got it. Take it back.");
-  assert.equal(copy.stealDetail, "Two days. He's taking ground.");
+  assert.equal(copy.headline, "Joshua has a slight edge. Stay with him.");
+  assert.equal(copy.stealDetail, "Two days. He's building a little edge.");
 }
 
 function testWeeklyRivalryArchiveStoresPreviousWeekOnce() {
@@ -2195,16 +2452,22 @@ function testLowActivityFocusStillAvoidsJustTrainedPriority() {
   assert.notEqual(trainingState.trainingLoad.summary.suggestedNextFocus.labels[0], "Glute max");
 }
 
-function testSuggestedSessionSpreadsFocusAcrossPatterns() {
+function testSuggestedSessionStaysLockedToTheRightTargetMuscles() {
   const seed = createSeedState();
   const joshua = seed.profiles.find((profile) => profile.id === "joshua");
 
   assert.ok(joshua);
 
   const trainingState = getProfileTrainingState(joshua, [], seed.exerciseLibrary, referenceDate);
-  const exerciseGroups = trainingState.suggestedFocusSession?.exercises.map((exercise) => exercise.muscleGroup) ?? [];
+  const suggestedExercises = trainingState.suggestedFocusSession?.exercises ?? [];
 
-  assert.ok(new Set(exerciseGroups).size >= 2);
+  assert.ok(suggestedExercises.length > 0);
+  assert.ok(
+    suggestedExercises.every(
+      (exercise) =>
+        exercise.primaryMuscles.includes("upperChest") || exercise.primaryMuscles.includes("midChest"),
+    ),
+  );
 }
 
 function testMetricsLayerBuildsEffectiveVolumeCoverage() {
@@ -2952,20 +3215,10 @@ function testPhase1MevTrackerReflectsBelowAtAndAboveStates() {
   const emptyState = getProfileTrainingState(natasha, [], seed.exerciseLibrary, referenceDate);
   assert.equal(emptyState.metrics.mevTracker.byRegion.gluteMax.status, "below");
   const gluteMaxMev = emptyState.metrics.mevTracker.byRegion.gluteMax.mevEstimate;
-  const hipThrustGluteMaxPerSet = 0.625;
-  const lowerAtBound = gluteMaxMev * 0.9;
-  const upperAtBound = gluteMaxMev * 1.15;
-  const atSetCount =
-    Array.from({ length: 40 }, (_, index) => index + 1).find((count) => {
-      const currentEvs = count * hipThrustGluteMaxPerSet;
-      return currentEvs >= lowerAtBound && currentEvs <= upperAtBound;
-    }) ?? 1;
-  const aboveSetCount = Math.ceil((gluteMaxMev * 1.2) / hipThrustGluteMaxPerSet);
-
-  const atSessions = [
+  const buildHipThrustSessions = (setCount: number) => [
     {
-      id: "phase1-mev-at",
-      userId: "natasha",
+      id: `phase1-mev-${setCount}`,
+      userId: "natasha" as const,
       workoutDayId: "natasha-glutes-hams",
       workoutName: "Glutes + Hamstrings",
       performedAt: "2026-03-23T09:00:00.000Z",
@@ -2976,38 +3229,32 @@ function testPhase1MevTrackerReflectsBelowAtAndAboveStates() {
           exerciseId: "machine-hip-thrust-day1",
           exerciseName: "Machine Hip Thrust",
           muscleGroup: "Glutes" as const,
-            sets: Array.from({ length: atSetCount }, (_, index) => ({
-              id: `at-${index}`,
-              weight: 55,
-              reps: 8,
-              completed: true,
-              rir: 1,
+          primaryMuscles: ["gluteMax", "upperGlutes"] as const,
+          secondaryMuscles: ["hamstrings", "sideGlutes"] as const,
+          sets: Array.from({ length: setCount }, (_, index) => ({
+            id: `set-${setCount}-${index}`,
+            weight: 55,
+            reps: 8,
+            completed: true,
+            rir: 1,
           })),
         },
       ],
     },
   ];
+  const atSetCount =
+    Array.from({ length: 40 }, (_, index) => index + 1).find(
+      (count) => getProfileTrainingState(natasha, buildHipThrustSessions(count), seed.exerciseLibrary, referenceDate).metrics.mevTracker.byRegion.gluteMax.status === "at",
+    ) ?? 1;
+  const aboveSetCount =
+    Array.from({ length: 40 }, (_, index) => index + atSetCount + 1).find(
+      (count) => getProfileTrainingState(natasha, buildHipThrustSessions(count), seed.exerciseLibrary, referenceDate).metrics.mevTracker.byRegion.gluteMax.status === "above",
+    ) ?? (atSetCount + 2);
+  const atSessions = buildHipThrustSessions(atSetCount);
   const atState = getProfileTrainingState(natasha, atSessions, seed.exerciseLibrary, referenceDate);
   assert.equal(atState.metrics.mevTracker.byRegion.gluteMax.status, "at");
 
-  const aboveSessions = [
-    {
-      ...atSessions[0],
-      id: "phase1-mev-above",
-      exercises: [
-        {
-          ...atSessions[0].exercises[0],
-            sets: Array.from({ length: aboveSetCount }, (_, index) => ({
-              id: `above-${index}`,
-              weight: 55,
-              reps: 8,
-              completed: true,
-              rir: 1,
-          })),
-        },
-      ],
-    },
-  ];
+  const aboveSessions = buildHipThrustSessions(aboveSetCount);
   const aboveState = getProfileTrainingState(natasha, aboveSessions, seed.exerciseLibrary, referenceDate);
   assert.equal(aboveState.metrics.mevTracker.byRegion.gluteMax.status, "above");
 }
@@ -3421,6 +3668,198 @@ function testExerciseLibraryCanonicalization() {
   assert.ok(findExerciseLibraryItemByName(seed.exerciseLibrary, "Machine Row"));
 }
 
+function testCanonicalMuscleMappingsStayExactForPriorityLifts() {
+  const seed = createSeedState();
+  const flatBench = findExerciseLibraryItemByName(seed.exerciseLibrary, "Flat Dumbbell Press");
+  const hipThrust = findExerciseLibraryItemByName(seed.exerciseLibrary, "Machine Hip Thrust");
+  const lateralRaise = findExerciseLibraryItemByName(seed.exerciseLibrary, "Cable Lateral Raise");
+  const deadlift = findExerciseLibraryItemByName(seed.exerciseLibrary, "Deadlift");
+
+  assert.ok(flatBench);
+  assert.ok(hipThrust);
+  assert.ok(lateralRaise);
+  assert.ok(deadlift);
+
+  assert.deepEqual(flatBench.primaryMuscles, ["midChest", "upperChest"]);
+  assert.deepEqual(flatBench.secondaryMuscles, ["frontDelts", "triceps"]);
+
+  assert.deepEqual(hipThrust.primaryMuscles, ["gluteMax", "upperGlutes"]);
+  assert.deepEqual(hipThrust.secondaryMuscles, ["hamstrings", "sideGlutes"]);
+
+  assert.deepEqual(lateralRaise.primaryMuscles, ["sideDelts"]);
+  assert.deepEqual(lateralRaise.secondaryMuscles, ["frontDelts", "upperTraps"]);
+
+  assert.deepEqual(deadlift.primaryMuscles, ["lowerBack", "hamstrings", "gluteMax"]);
+  assert.deepEqual(deadlift.secondaryMuscles, ["midBack", "upperTraps", "quads", "forearms", "upperGlutes"]);
+}
+
+function testPromptExerciseMappingsStayExactAcrossTheFullLibrary() {
+  const seed = createSeedState();
+  const expectedMappings = {
+    "Barbell Bench Press": { primary: ["midChest", "upperChest"], secondary: ["frontDelts", "triceps"] },
+    "Incline Barbell Bench Press": { primary: ["upperChest"], secondary: ["frontDelts", "triceps", "midChest"] },
+    "Decline Barbell Bench Press": { primary: ["midChest"], secondary: ["triceps", "frontDelts"] },
+    "Dumbbell Bench Press": { primary: ["midChest", "upperChest"], secondary: ["frontDelts", "triceps"] },
+    "Incline Dumbbell Press": { primary: ["upperChest"], secondary: ["frontDelts", "triceps"] },
+    "Incline Dumbbell Fly": { primary: ["upperChest"], secondary: ["frontDelts", "midChest"] },
+    "Cable Fly (Low to High)": { primary: ["upperChest"], secondary: ["frontDelts", "midChest"] },
+    "Cable Fly (High to Low)": { primary: ["midChest"], secondary: ["frontDelts"] },
+    "Chest Dips": { primary: ["midChest", "upperChest"], secondary: ["triceps", "frontDelts"] },
+    "Push Up": { primary: ["midChest", "upperChest"], secondary: ["triceps", "frontDelts", "sideDelts"] },
+    "Machine Chest Press": { primary: ["midChest", "upperChest"], secondary: ["frontDelts", "triceps"] },
+    "Pec Deck / Machine Fly": { primary: ["midChest", "upperChest"], secondary: ["frontDelts"] },
+    "Overhead Press (Barbell)": { primary: ["frontDelts", "sideDelts"], secondary: ["upperTraps", "triceps", "upperChest"] },
+    "Overhead Press (Dumbbell)": { primary: ["frontDelts", "sideDelts"], secondary: ["upperTraps", "triceps"] },
+    "Arnold Press": { primary: ["frontDelts", "sideDelts"], secondary: ["upperTraps", "triceps", "rearDelts"] },
+    "Lateral Raise (Dumbbell)": { primary: ["sideDelts"], secondary: ["frontDelts", "upperTraps"] },
+    "Lateral Raise (Cable)": { primary: ["sideDelts"], secondary: ["frontDelts", "upperTraps"] },
+    "Front Raise": { primary: ["frontDelts"], secondary: ["sideDelts", "upperChest"] },
+    "Face Pull": { primary: ["rearDelts"], secondary: ["midBack", "upperTraps", "biceps"] },
+    "Rear Delt Fly (Dumbbell)": { primary: ["rearDelts"], secondary: ["midBack", "upperTraps"] },
+    "Rear Delt Fly (Cable)": { primary: ["rearDelts"], secondary: ["midBack"] },
+    "Upright Row": { primary: ["sideDelts", "upperTraps"], secondary: ["frontDelts", "biceps"] },
+    Shrugs: { primary: ["upperTraps"], secondary: ["midBack"] },
+    "Pull Up / Chin Up": { primary: ["lats", "midBack"], secondary: ["biceps", "rearDelts", "upperTraps"] },
+    "Lat Pulldown (Wide Grip)": { primary: ["lats"], secondary: ["midBack", "biceps", "rearDelts"] },
+    "Lat Pulldown (Close Grip)": { primary: ["lats", "midBack"], secondary: ["biceps"] },
+    "Straight Arm Pulldown": { primary: ["lats"], secondary: ["triceps", "midBack"] },
+    "Barbell Row": { primary: ["midBack", "lats"], secondary: ["rearDelts", "biceps", "upperTraps"] },
+    "Dumbbell Row (Single Arm)": { primary: ["lats", "midBack"], secondary: ["rearDelts", "biceps"] },
+    "Seated Cable Row": { primary: ["midBack", "lats"], secondary: ["rearDelts", "biceps"] },
+    "T-Bar Row": { primary: ["midBack", "lats"], secondary: ["rearDelts", "biceps", "upperTraps"] },
+    "Cable Pullover": { primary: ["lats"], secondary: ["midBack", "triceps"] },
+    Deadlift: { primary: ["lowerBack", "hamstrings", "gluteMax"], secondary: ["midBack", "upperTraps", "quads", "forearms", "upperGlutes"] },
+    "Romanian Deadlift": { primary: ["hamstrings", "gluteMax"], secondary: ["lowerBack", "upperGlutes", "midBack"] },
+    "Barbell Curl": { primary: ["biceps"], secondary: ["forearms", "frontDelts"] },
+    "Dumbbell Curl": { primary: ["biceps"], secondary: ["forearms"] },
+    "Hammer Curl": { primary: ["biceps", "forearms"], secondary: [] },
+    "Incline Dumbbell Curl": { primary: ["biceps"], secondary: ["forearms"] },
+    "Cable Curl": { primary: ["biceps"], secondary: ["forearms"] },
+    "Preacher Curl": { primary: ["biceps"], secondary: [] },
+    "Tricep Pushdown (Cable)": { primary: ["triceps"], secondary: [] },
+    "Skull Crusher": { primary: ["triceps"], secondary: ["frontDelts"] },
+    "Overhead Tricep Extension": { primary: ["triceps"], secondary: [] },
+    "Close Grip Bench Press": { primary: ["triceps"], secondary: ["midChest", "frontDelts"] },
+    "Tricep Dips": { primary: ["triceps"], secondary: ["frontDelts", "midChest"] },
+    "Diamond Push Up": { primary: ["triceps"], secondary: ["midChest", "frontDelts"] },
+    "Hip Thrust (Barbell)": { primary: ["gluteMax", "upperGlutes"], secondary: ["hamstrings", "sideGlutes", "lowerBack"] },
+    "Hip Thrust (Machine)": { primary: ["gluteMax", "upperGlutes"], secondary: ["hamstrings", "sideGlutes"] },
+    "Glute Bridge": { primary: ["gluteMax"], secondary: ["hamstrings", "lowerBack"] },
+    "Cable Kickback": { primary: ["gluteMax", "upperGlutes"], secondary: ["hamstrings", "sideGlutes"] },
+    "Donkey Kickback": { primary: ["gluteMax", "upperGlutes"], secondary: ["sideGlutes"] },
+    "Abduction Machine": { primary: ["sideGlutes"], secondary: ["gluteMax"] },
+    "Cable Hip Abduction": { primary: ["sideGlutes"], secondary: ["gluteMax"] },
+    "Sumo Deadlift": { primary: ["gluteMax", "adductors"], secondary: ["hamstrings", "quads", "lowerBack", "upperGlutes"] },
+    "Bulgarian Split Squat": { primary: ["quads", "gluteMax"], secondary: ["hamstrings", "upperGlutes", "sideGlutes", "hipFlexors"] },
+    "Step Up": { primary: ["gluteMax", "quads"], secondary: ["hamstrings", "upperGlutes", "sideGlutes"] },
+    "Reverse Lunge": { primary: ["gluteMax", "quads"], secondary: ["hamstrings", "sideGlutes"] },
+    "Good Morning": { primary: ["hamstrings", "lowerBack"], secondary: ["gluteMax", "upperGlutes"] },
+    "Barbell Squat": { primary: ["quads", "gluteMax"], secondary: ["hamstrings", "lowerBack", "upperGlutes", "adductors"] },
+    "Front Squat": { primary: ["quads"], secondary: ["gluteMax", "upperAbs", "lowerBack"] },
+    "Goblet Squat": { primary: ["quads", "gluteMax"], secondary: ["adductors", "upperAbs"] },
+    "Leg Press": { primary: ["quads", "gluteMax"], secondary: ["hamstrings", "adductors"] },
+    "Hack Squat": { primary: ["quads"], secondary: ["gluteMax", "hamstrings"] },
+    "Leg Extension": { primary: ["quads"], secondary: [] },
+    "Leg Curl (Lying)": { primary: ["hamstrings"], secondary: ["calves", "gluteMax"] },
+    "Leg Curl (Seated)": { primary: ["hamstrings"], secondary: ["calves"] },
+    "Nordic Curl": { primary: ["hamstrings"], secondary: ["gluteMax", "calves"] },
+    "Calf Raise (Standing)": { primary: ["calves"], secondary: [] },
+    "Calf Raise (Seated)": { primary: ["calves"], secondary: [] },
+    "Walking Lunge": { primary: ["quads", "gluteMax"], secondary: ["hamstrings", "sideGlutes", "upperGlutes", "hipFlexors"] },
+    Crunch: { primary: ["upperAbs"], secondary: ["lowerAbs"] },
+    "Reverse Crunch": { primary: ["lowerAbs"], secondary: ["upperAbs", "hipFlexors"] },
+    "Leg Raise": { primary: ["lowerAbs"], secondary: ["hipFlexors", "upperAbs"] },
+    "Cable Crunch": { primary: ["upperAbs"], secondary: ["lowerAbs", "obliques"] },
+    Plank: { primary: ["upperAbs", "lowerAbs"], secondary: ["obliques", "lowerBack", "sideDelts"] },
+    "Side Plank": { primary: ["obliques"], secondary: ["sideDelts", "lowerAbs"] },
+    "Russian Twist": { primary: ["obliques"], secondary: ["upperAbs", "lowerAbs"] },
+    "Cable Oblique Crunch": { primary: ["obliques"], secondary: ["upperAbs", "lowerAbs"] },
+    "Pallof Press": { primary: ["obliques"], secondary: ["upperAbs", "lowerAbs"] },
+    "Ab Wheel Rollout": { primary: ["upperAbs", "lowerAbs"], secondary: ["obliques", "lowerBack", "lats"] },
+    "Hanging Leg Raise": { primary: ["lowerAbs"], secondary: ["upperAbs", "hipFlexors"] },
+    Hyperextension: { primary: ["lowerBack"], secondary: ["gluteMax", "hamstrings"] },
+  } as const;
+
+  for (const [exerciseName, expected] of Object.entries(expectedMappings)) {
+    const exercise = findExerciseLibraryItemByName(seed.exerciseLibrary, exerciseName);
+    assert.ok(exercise, `${exerciseName} should exist in the canonical exercise library.`);
+    assert.deepEqual(exercise.primaryMuscles, expected.primary, `${exerciseName} primary muscles drifted.`);
+    assert.deepEqual(exercise.secondaryMuscles, expected.secondary, `${exerciseName} secondary muscles drifted.`);
+  }
+}
+
+function testWeeklyLoadKeepsSecondaryMusclesBelowPrimaryZones() {
+  const seed = createSeedState();
+  const bench = findExerciseLibraryItemByName(seed.exerciseLibrary, "Barbell Bench Press");
+  const hipThrust = findExerciseLibraryItemByName(seed.exerciseLibrary, "Machine Hip Thrust");
+  assert.ok(bench);
+  assert.ok(hipThrust);
+
+  const sessions = [
+    {
+      id: "bench-secondary-weighting",
+      userId: "joshua" as const,
+      workoutDayId: "verify-bench",
+      workoutName: "Verify Bench",
+      performedAt: referenceDate.toISOString(),
+      durationMinutes: 30,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: bench.id,
+          exerciseName: bench.name,
+          muscleGroup: bench.muscleGroup,
+          primaryMuscles: bench.primaryMuscles,
+          secondaryMuscles: bench.secondaryMuscles,
+          sets: Array.from({ length: 4 }, (_, index) => ({
+            id: `bench-set-${index + 1}`,
+            weight: 80,
+            reps: 6,
+            completed: true,
+          })),
+        },
+      ],
+    },
+    {
+      id: "hip-thrust-secondary-weighting",
+      userId: "natasha" as const,
+      workoutDayId: "verify-hip-thrust",
+      workoutName: "Verify Hip Thrust",
+      performedAt: referenceDate.toISOString(),
+      durationMinutes: 30,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: hipThrust.id,
+          exerciseName: hipThrust.name,
+          muscleGroup: hipThrust.muscleGroup,
+          primaryMuscles: hipThrust.primaryMuscles,
+          secondaryMuscles: hipThrust.secondaryMuscles,
+          sets: Array.from({ length: 4 }, (_, index) => ({
+            id: `hip-thrust-set-${index + 1}`,
+            weight: 120,
+            reps: 8,
+            completed: true,
+          })),
+        },
+      ],
+    },
+  ];
+
+  const joshuaLoad = getWeeklyTrainingLoad(sessions.filter((session) => session.userId === "joshua"), "joshua", referenceDate);
+  const natashaLoad = getWeeklyTrainingLoad(sessions.filter((session) => session.userId === "natasha"), "natasha", referenceDate);
+
+  const upperChest = joshuaLoad.metrics.find((metric) => metric.id === "upperChest");
+  const frontDelts = joshuaLoad.metrics.find((metric) => metric.id === "frontDelts");
+  const gluteMax = natashaLoad.metrics.find((metric) => metric.id === "gluteMax");
+  const hamstrings = natashaLoad.metrics.find((metric) => metric.id === "hamstrings");
+
+  assert.ok(upperChest && frontDelts);
+  assert.ok(gluteMax && hamstrings);
+  assert.ok(upperChest.effectiveSets > frontDelts.effectiveSets);
+  assert.ok(gluteMax.effectiveSets > hamstrings.effectiveSets);
+}
+
 function testFavoriteIdsStayResolvable() {
   const seed = createSeedState();
   const natasha = seed.profiles.find((profile) => profile.id === "natasha");
@@ -3439,7 +3878,7 @@ function testFavoriteIdsStayResolvable() {
 function testDailyMobilityPromptSelection() {
   const prompt = selectDailyMobilityPrompt("joshua", new Date("2026-01-01T12:00:00+13:00"));
 
-  assert.deepEqual(prompt.focusRegions, ["Hips", "Control"]);
+  assert.deepEqual(prompt.focusRegions, ["Hips", "Hip Flexors", "Lower Back"]);
   assert.equal(prompt.primaryStretch.name, "Deep hip flexor stretch");
   assert.equal(prompt.ctaLabel, "Start 30s");
   assert.equal(prompt.rotationDay, 1);
@@ -3455,6 +3894,241 @@ function testMobilityRotationAvoidsLongRepeats() {
     streak = focusKeys[index] === focusKeys[index - 1] ? streak + 1 : 1;
     assert.ok(streak <= 2);
   }
+}
+
+function testWorkoutPreviewStaysOnDominantBackTargets() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const backDay = joshua.workoutPlan.find((workout) => workout.id === "joshua-back-biceps");
+  assert.ok(backDay);
+
+  const preview = getWorkoutPreviewMuscleProfile(backDay);
+
+  assert.deepEqual(preview.primary, ["lats", "biceps", "midBack"]);
+  assert.ok(!preview.primary.includes("lowerBack"));
+}
+
+function testDailyCardioPromptMatchesNatashaFatLossCutPlan() {
+  const prompt = selectDailyCardioPrompt("natasha", "natasha-upper-core");
+
+  assert.ok(prompt);
+  assert.equal(prompt?.title, "Stairmaster climb");
+  assert.equal(prompt?.duration, "20 min");
+  assert.match(prompt?.intensity ?? "", /Level 6/);
+}
+
+function testDailyCardioPromptKeepsJoshuaOffTheStairmaster() {
+  const prompt = selectDailyCardioPrompt("joshua", "joshua-upper-strength");
+
+  assert.ok(prompt);
+  assert.equal(prompt?.duration, "40 min");
+  assert.ok(!(prompt?.title.toLowerCase().includes("stairmaster") ?? false));
+  assert.match(prompt?.why ?? "", /tummy fat|sexual function|blood-flow|stamina/i);
+}
+
+function testQueuedWorkoutResetsToMondayDayOneAtFreshWeekStart() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+  const natasha = seed.profiles.find((profile) => profile.id === "natasha");
+
+  assert.ok(joshua);
+  assert.ok(natasha);
+
+  const priorWeekSessions = [
+    {
+      id: "joshua-friday-finish",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-upper-strength",
+      workoutName: "Back + Biceps B",
+      performedAt: "2026-03-27T18:00:00+13:00",
+      durationMinutes: 56,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "neutral-grip-lat-pulldown-day5",
+          exerciseName: "Neutral-Grip Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [{ id: "j-set", weight: 70, reps: 8, completed: true }],
+        },
+      ],
+    },
+    {
+      id: "natasha-friday-finish",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-core-explosive",
+      workoutName: "Shape + Waist",
+      performedAt: "2026-03-27T18:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "abductor-machine-day5-nat",
+          exerciseName: "Abductor Machine",
+          muscleGroup: "Glutes" as const,
+          sets: [{ id: "n-set", weight: 45, reps: 18, completed: true }],
+        },
+      ],
+    },
+  ];
+
+  const monday = new Date("2026-03-30T12:00:00+13:00");
+  const joshuaQueued = getQueuedWorkoutForProfile(joshua, priorWeekSessions.filter((session) => session.userId === "joshua"), null, monday);
+  const natashaQueued = getQueuedWorkoutForProfile(natasha, priorWeekSessions.filter((session) => session.userId === "natasha"), null, monday);
+
+  assert.equal(joshuaQueued.id, "joshua-chest-triceps");
+  assert.equal(natashaQueued.id, "natasha-glutes-hams");
+}
+
+function testProgressionReadAddsLoadWhenRepRangeIsOwned() {
+  const suggestion = getSuggestedStartingWeight(
+    {
+      id: "machine-hip-thrust-day1",
+      name: "Machine Hip Thrust",
+      muscleGroup: "Glutes",
+      sets: 4,
+      repRange: "8",
+      progressionNote: "Add weight when all four sets hit 8 clean reps.",
+    },
+    [
+      {
+        id: "progression-1",
+        userId: "natasha",
+        workoutDayId: "natasha-glutes-hams",
+        workoutName: "Glutes + Hamstrings",
+        performedAt: "2026-01-03T08:00:00+13:00",
+        durationMinutes: 54,
+        feeling: "Strong",
+        exercises: [
+          {
+            exerciseId: "machine-hip-thrust-day1",
+            exerciseName: "Machine Hip Thrust",
+            muscleGroup: "Glutes",
+            sets: [
+              { id: "p1a", weight: 55, reps: 8, completed: true },
+              { id: "p1b", weight: 55, reps: 8, completed: true },
+            ],
+          },
+        ],
+      },
+      {
+        id: "progression-2",
+        userId: "natasha",
+        workoutDayId: "natasha-glutes-hams",
+        workoutName: "Glutes + Hamstrings",
+        performedAt: "2026-01-10T08:00:00+13:00",
+        durationMinutes: 55,
+        feeling: "Strong",
+        exercises: [
+          {
+            exerciseId: "machine-hip-thrust-day1",
+            exerciseName: "Machine Hip Thrust",
+            muscleGroup: "Glutes",
+            sets: [
+              { id: "p2a", weight: 57.5, reps: 8, completed: true },
+              { id: "p2b", weight: 57.5, reps: 8, completed: true },
+            ],
+          },
+        ],
+      },
+      {
+        id: "progression-3",
+        userId: "natasha",
+        workoutDayId: "natasha-glutes-hams",
+        workoutName: "Glutes + Hamstrings",
+        performedAt: "2026-01-17T08:00:00+13:00",
+        durationMinutes: 57,
+        feeling: "Strong",
+        exercises: [
+          {
+            exerciseId: "machine-hip-thrust-day1",
+            exerciseName: "Machine Hip Thrust",
+            muscleGroup: "Glutes",
+            sets: [
+              { id: "p3a", weight: 60, reps: 8, completed: true },
+              { id: "p3b", weight: 60, reps: 8, completed: true },
+            ],
+          },
+        ],
+      },
+    ],
+    new Date("2026-01-18T12:00:00+13:00"),
+  );
+
+  assert.ok(suggestion);
+  assert.equal(suggestion?.action, "increase");
+  assert.equal(suggestion?.suggestedWeight, 62.5);
+  assert.equal(suggestion?.confidenceLabel, "High confidence");
+  assert.ok(suggestion?.reason.includes("Add weight when all four sets hit 8 clean reps."));
+}
+
+function testStrengthPredictionsCarryConfidenceAndTrend() {
+  const predictions = getStrengthPredictions(
+    "joshua",
+    [
+      {
+        id: "strength-1",
+        userId: "joshua",
+        workoutDayId: "joshua-chest-triceps",
+        workoutName: "Chest + Triceps A",
+        performedAt: "2026-01-03T08:00:00+13:00",
+        durationMinutes: 50,
+        feeling: "Solid",
+        exercises: [
+          {
+            exerciseId: "incline-dumbbell-press-day1",
+            exerciseName: "Incline Dumbbell Press",
+            muscleGroup: "Chest",
+            sets: [{ id: "s1", weight: 32.5, reps: 8, completed: true }],
+          },
+        ],
+      },
+      {
+        id: "strength-2",
+        userId: "joshua",
+        workoutDayId: "joshua-chest-triceps",
+        workoutName: "Chest + Triceps A",
+        performedAt: "2026-01-10T08:00:00+13:00",
+        durationMinutes: 49,
+        feeling: "Solid",
+        exercises: [
+          {
+            exerciseId: "incline-dumbbell-press-day1",
+            exerciseName: "Incline Dumbbell Press",
+            muscleGroup: "Chest",
+            sets: [{ id: "s2", weight: 35, reps: 8, completed: true }],
+          },
+        ],
+      },
+      {
+        id: "strength-3",
+        userId: "joshua",
+        workoutDayId: "joshua-chest-triceps",
+        workoutName: "Chest + Triceps A",
+        performedAt: "2026-01-17T08:00:00+13:00",
+        durationMinutes: 52,
+        feeling: "Strong",
+        exercises: [
+          {
+            exerciseId: "incline-dumbbell-press-day1",
+            exerciseName: "Incline Dumbbell Press",
+            muscleGroup: "Chest",
+            sets: [{ id: "s3", weight: 37.5, reps: 8, completed: true }],
+          },
+        ],
+      },
+    ],
+    new Date("2026-01-18T12:00:00+13:00"),
+  );
+
+  const inclinePrediction = predictions.find((prediction) => prediction.exerciseName === "Incline Dumbbell Press");
+
+  assert.ok(inclinePrediction);
+  assert.equal(inclinePrediction?.confidenceLabel, "High confidence");
+  assert.equal(inclinePrediction?.trendLabel, "Building fast");
+  assert.ok(inclinePrediction?.note.includes("Recent estimated strength"));
 }
 
 function testStretchCompletionDedupesSameDay() {
@@ -3937,9 +4611,472 @@ function testLiftReadyLineOnlyAppearsForJoshuaOutsideBuildPhase() {
   assert.equal(natashaState.insights.liftReadyLine, null);
 }
 
+function testPostWorkoutRecapBuildsCoachReadFromRealTrainingState() {
+  const seed = createSeedState();
+  const joshua = seed.profiles.find((profile) => profile.id === "joshua");
+
+  assert.ok(joshua);
+
+  const history = [
+    {
+      id: "recap-back-1",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-back-biceps",
+      workoutName: "Back + Biceps A",
+      performedAt: "2026-03-19T08:00:00+13:00",
+      durationMinutes: 44,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "lat-pulldown-day1",
+          exerciseName: "Lat Pulldown",
+          muscleGroup: "Back" as const,
+          sets: [{ id: "recap-back-set", weight: 58, reps: 10, completed: true }],
+        },
+      ],
+    },
+    {
+      id: "recap-chest-1",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-21T08:00:00+13:00",
+      durationMinutes: 46,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "incline-dumbbell-press-day1",
+          exerciseName: "Incline Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "recap-chest-set-1", weight: 30, reps: 8, completed: true },
+            { id: "recap-chest-set-2", weight: 30, reps: 8, completed: true },
+          ],
+        },
+        {
+          exerciseId: "rope-pushdown-day1",
+          exerciseName: "Rope Pushdown",
+          muscleGroup: "Triceps" as const,
+          sets: [{ id: "recap-triceps-set", weight: 32, reps: 12, completed: true }],
+        },
+      ],
+    },
+  ];
+
+  const completedSession = {
+    id: "recap-chest-2",
+    userId: "joshua" as const,
+    workoutDayId: "joshua-chest-triceps",
+    workoutName: "Chest + Triceps A",
+    performedAt: "2026-03-23T18:00:00+13:00",
+    durationMinutes: 47,
+    feeling: "Strong" as const,
+    exercises: [
+      {
+        exerciseId: "incline-dumbbell-press-day1",
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: "recap-new-set-1", weight: 32.5, reps: 8, completed: true },
+          { id: "recap-new-set-2", weight: 32.5, reps: 7, completed: true },
+        ],
+      },
+      {
+        exerciseId: "rope-pushdown-day1",
+        exerciseName: "Rope Pushdown",
+        muscleGroup: "Triceps" as const,
+        sets: [{ id: "recap-new-set-3", weight: 34, reps: 12, completed: true }],
+      },
+    ],
+  };
+
+  const beforeState = getProfileTrainingState(
+    joshua,
+    history,
+    seed.exerciseLibrary,
+    referenceDate,
+    [],
+    0,
+    null,
+    seed.profileCreatedAt.joshua,
+    seed.profileActivationDates.joshua,
+    "build",
+  );
+  const afterState = getProfileTrainingState(
+    joshua,
+    [completedSession, ...history],
+    seed.exerciseLibrary,
+    referenceDate,
+    [],
+    0,
+    null,
+    seed.profileCreatedAt.joshua,
+    seed.profileActivationDates.joshua,
+    "build",
+  );
+
+  const recap = buildPostWorkoutIntelligenceRecap({
+    completedSession,
+    beforeState,
+    afterState,
+    prCount: 1,
+  });
+
+  assert.match(recap.headline, /PR|Upper chest|Chest/i);
+  assert.equal(recap.cards.length, 3);
+  assert.ok(recap.summary.length > 20);
+  assert.ok(recap.nextMove.length > 10);
+}
+
+function testPostWorkoutRecapTurnsPlateauIntoIntervention() {
+  const completedSession = {
+    id: "plateau-session",
+    userId: "joshua" as const,
+    workoutDayId: "joshua-chest-triceps",
+    workoutName: "Chest + Triceps A",
+    performedAt: "2026-03-23T18:00:00+13:00",
+    durationMinutes: 45,
+    feeling: "Solid" as const,
+    exercises: [
+      {
+        exerciseId: "incline-dumbbell-press-day1",
+        exerciseName: "Incline Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [{ id: "plateau-set", weight: 32.5, reps: 8, completed: true }],
+      },
+    ],
+  };
+
+  const beforeState = {
+    trainingLoad: {
+      metrics: [
+        {
+          id: "upperChest",
+          label: "Upper chest",
+          effectiveSets: 4.5,
+          percentage: 70,
+        },
+      ],
+      summary: {
+        suggestedNextFocus: {
+          zoneIds: ["upperChest"],
+          labels: ["Upper chest"],
+          text: "Upper chest",
+        },
+      },
+    },
+    progressSignals: {
+      primarySignal: {
+        title: "Current focus",
+        value: "Chest growth",
+        detail: "Chest work is still carrying the strongest visual signal.",
+      },
+      supportSignal: {
+        title: "Support signal",
+        value: "Abs visibility",
+        detail: "Core work is keeping the harder look in place.",
+      },
+    },
+    insights: {
+      progressSignal: "Upper chest work is flat and needs a cleaner push.",
+      completionNext: "Shift the next session toward lats and back support work.",
+    },
+    metrics: {
+      plateauDetection: {
+        byRegion: {
+          upperChest: {
+            zoneId: "upperChest",
+            label: "Upper chest",
+            plateauDetected: true,
+            plateauConfidence: 84,
+            weeksFlat: 2,
+            adherence: 0.9,
+            weeklyCoveragePct: 88,
+            currentWeekProgress: 0,
+            previousWeekProgress: 0,
+          },
+        },
+      },
+      mrvEstimator: {
+        byRegion: {
+          upperChest: {
+            zoneId: "upperChest",
+            label: "Upper chest",
+            mevEstimate: 5.2,
+            estimatedMrv: 8.1,
+            mrvMultiplier: 1.6,
+            mrvPressure: 0.82,
+            nearingMrv: false,
+            fatigueBand: "moderate",
+          },
+        },
+      },
+      repRangeBias: {
+        byRegion: {
+          upperChest: {
+            zoneId: "upperChest",
+            label: "Upper chest",
+            bestRespondingRepRange: "8-12",
+            confidenceScore: 72,
+            byBucket: {},
+          },
+        },
+      },
+      stimulusToFatigueRatio: {
+        byRegion: {
+          upperChest: 0.96,
+        },
+      },
+      progressVelocity: {
+        byRegion: {
+          upperChest: -0.5,
+        },
+      },
+    },
+  } as never;
+
+  const afterState = {
+    ...beforeState,
+    trainingLoad: {
+      ...beforeState.trainingLoad,
+      metrics: [
+        {
+          id: "upperChest",
+          label: "Upper chest",
+          effectiveSets: 5.8,
+          percentage: 82,
+        },
+      ],
+    },
+  } as never;
+
+  const recap = buildPostWorkoutIntelligenceRecap({
+    completedSession,
+    beforeState,
+    afterState,
+    prCount: 0,
+  });
+
+  assert.ok(recap.plateauIntervention);
+  assert.equal(recap.plateauIntervention?.label, "Rep-range shift");
+  assert.match(recap.plateauIntervention?.intervention ?? "", /8-12/);
+}
+
+function testSessionAutoregulationPushesWhenCurrentSetBeatsLastReference() {
+  const activeWorkout = {
+    id: "autoreg-push",
+    userId: "joshua" as const,
+    startedAt: "2026-03-27T10:00:00+13:00",
+    workoutDayId: "joshua-chest-triceps",
+    workoutName: "Chest + Triceps A",
+    exercises: [
+      {
+        exerciseId: "flat-dumbbell-press",
+        exerciseName: "Flat Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: [
+          { id: "ap-1", weight: 40, reps: 10, completed: true },
+          { id: "ap-2", weight: 42.5, reps: 10, completed: true },
+          { id: "ap-3", weight: 0, reps: 0, completed: false },
+        ],
+      },
+    ],
+  };
+
+  const workoutTemplate = {
+    id: "joshua-chest-triceps",
+    name: "Chest + Triceps A",
+    focus: "Chest",
+    dayLabel: "Monday",
+    durationMinutes: 55,
+    exercises: [
+      {
+        id: "flat-dumbbell-press",
+        name: "Flat Dumbbell Press",
+        muscleGroup: "Chest" as const,
+        sets: 3,
+        repRange: "8-10",
+        suggestedRepTarget: 8,
+      },
+    ],
+  };
+
+  const sessions = [
+    {
+      id: "autoreg-history-push",
+      userId: "joshua" as const,
+      workoutDayId: "joshua-chest-triceps",
+      workoutName: "Chest + Triceps A",
+      performedAt: "2026-03-20T09:00:00+13:00",
+      durationMinutes: 48,
+      feeling: "Strong" as const,
+      exercises: [
+        {
+          exerciseId: "flat-dumbbell-press",
+          exerciseName: "Flat Dumbbell Press",
+          muscleGroup: "Chest" as const,
+          sets: [
+            { id: "hist-1", weight: 40, reps: 8, completed: true },
+            { id: "hist-2", weight: 40, reps: 8, completed: true },
+            { id: "hist-3", weight: 40, reps: 7, completed: true },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const read = buildSessionAutoregulationRead({
+    activeWorkout,
+    activeWorkoutTemplate: workoutTemplate,
+    currentExerciseIndex: 0,
+    sessions,
+    liveSignal: {
+      signalType: "strong_day",
+      targetExercise: "Flat Dumbbell Press",
+      message: "Strong day.",
+      firedAt: "2026-03-27T10:10:00+13:00",
+      copyIndex: 0,
+    },
+  });
+
+  assert.ok(read);
+  assert.equal(read?.action, "push");
+  assert.match(read?.actionLabel ?? "", /Add 2.5kg/);
+  assert.equal(read?.confidence, "medium");
+}
+
+function testSessionAutoregulationTrimsWhenBankSignalAppears() {
+  const activeWorkout = {
+    id: "autoreg-trim",
+    userId: "natasha" as const,
+    startedAt: "2026-03-27T10:00:00+13:00",
+    workoutDayId: "natasha-glutes-hams",
+    workoutName: "Glutes + Hamstrings",
+    exercises: [
+      {
+        exerciseId: "machine-hip-thrust",
+        exerciseName: "Machine Hip Thrust",
+        muscleGroup: "Glutes" as const,
+        sets: [
+          { id: "trim-1", weight: 60, reps: 7, completed: true },
+          { id: "trim-2", weight: 0, reps: 0, completed: false },
+          { id: "trim-3", weight: 0, reps: 0, completed: false },
+          { id: "trim-4", weight: 0, reps: 0, completed: false },
+        ],
+      },
+    ],
+  };
+
+  const workoutTemplate = {
+    id: "natasha-glutes-hams",
+    name: "Glutes + Hamstrings",
+    focus: "Glutes",
+    dayLabel: "Tuesday",
+    durationMinutes: 60,
+    exercises: [
+      {
+        id: "machine-hip-thrust",
+        name: "Machine Hip Thrust",
+        muscleGroup: "Glutes" as const,
+        sets: 4,
+        repRange: "8-10",
+        suggestedRepTarget: 8,
+      },
+    ],
+  };
+
+  const sessions = [
+    {
+      id: "autoreg-history-trim",
+      userId: "natasha" as const,
+      workoutDayId: "natasha-glutes-hams",
+      workoutName: "Glutes + Hamstrings",
+      performedAt: "2026-03-21T09:00:00+13:00",
+      durationMinutes: 52,
+      feeling: "Solid" as const,
+      exercises: [
+        {
+          exerciseId: "machine-hip-thrust",
+          exerciseName: "Machine Hip Thrust",
+          muscleGroup: "Glutes" as const,
+          sets: [
+            { id: "trim-hist-1", weight: 60, reps: 10, completed: true },
+            { id: "trim-hist-2", weight: 60, reps: 9, completed: true },
+            { id: "trim-hist-3", weight: 60, reps: 8, completed: true },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const read = buildSessionAutoregulationRead({
+    activeWorkout,
+    activeWorkoutTemplate: workoutTemplate,
+    currentExerciseIndex: 0,
+    sessions,
+    liveSignal: {
+      signalType: "bank",
+      targetExercise: "Machine Hip Thrust",
+      message: "Protect the quality.",
+      firedAt: "2026-03-27T10:12:00+13:00",
+      copyIndex: 0,
+    },
+  });
+
+  assert.ok(read);
+  assert.equal(read?.action, "trim");
+  assert.match(read?.nextStep ?? "", /Hold 60kg/);
+  assert.equal(read?.tone, "attention");
+}
+
+function testSharedCalendarRowsStayAtSixWeeksAndCarryBothWorkoutNames() {
+  const rows = getWeeklyCalendarRows(
+    [
+      {
+        id: "calendar-joshua",
+        userId: "joshua",
+        workoutDayId: "joshua-back-biceps",
+        workoutName: "Back + Biceps A",
+        performedAt: "2026-03-24T09:00:00+13:00",
+        durationMinutes: 55,
+        feeling: "Solid",
+        exercises: [],
+      },
+      {
+        id: "calendar-natasha",
+        userId: "natasha",
+        workoutDayId: "natasha-glutes-hams",
+        workoutName: "Glutes + Hamstrings",
+        performedAt: "2026-03-25T09:00:00+13:00",
+        durationMinutes: 52,
+        feeling: "Solid",
+        exercises: [],
+      },
+    ],
+    6,
+    new Date("2026-03-30T12:00:00+13:00"),
+  );
+
+  assert.equal(rows.length, 6);
+  assert.equal(rows.flatMap((row) => row.days).length, 42);
+
+  const joshuaDay = rows.flatMap((row) => row.days).find((day) => day.key === "2026-03-24");
+  const natashaDay = rows.flatMap((row) => row.days).find((day) => day.key === "2026-03-25");
+
+  assert.ok(joshuaDay);
+  assert.ok(natashaDay);
+  assert.equal(joshuaDay?.joshuaCompleted, true);
+  assert.deepEqual(joshuaDay?.joshuaWorkouts, ["Back + Biceps A"]);
+  assert.equal(natashaDay?.natashaCompleted, true);
+  assert.deepEqual(natashaDay?.natashaWorkouts, ["Glutes + Hamstrings"]);
+}
+
 const tests = [
   ["reject invalid imported state", testInvalidImportedState],
   ["merge imported state safely", testSafeStateMerge],
+  ["migrate V1 state into V2 records without losing core data", testV2MigrationRoundTripPreservesCoreState],
+  ["merge V2 sync records by the newest update", testV2RecordMergePrefersNewerSyncFacts],
+  ["build unified coach and screen view models from one source", testUnifiedCoachAndViewModelsStayCoherent],
   ["build streak and momentum state centrally", testStreakAndMomentumSelector],
   ["hide momentum pill without completed history", testMomentumPillHidesWithoutCompletedHistory],
   ["observe quietly before profile maturity activates", testProfileMaturityObservesThenActivates],
@@ -3987,7 +5124,7 @@ const tests = [
   ["bias next focus away from just-trained zones", testRecoveryAwareNextFocus],
   ["keep suggested session actionable", testSuggestedSessionIsActionable],
   ["keep low-activity focus from repeating the freshest priority", testLowActivityFocusStillAvoidsJustTrainedPriority],
-  ["spread suggested session across useful patterns", testSuggestedSessionSpreadsFocusAcrossPatterns],
+  ["keep suggested sessions locked to the right target muscles", testSuggestedSessionStaysLockedToTheRightTargetMuscles],
   ["detect muscle ceilings and shift rep ranges centrally", testMuscleCeilingDetectsRepOnlyProgressThenShiftsRepRange],
   ["swap or rest muscle groups when ceilings persist", testMuscleCeilingCanSwapTechniqueAndEscalateToRest],
   ["log ceiling responses and clear them once progress resumes", testMuscleCeilingLogStoresAppliedResponseAndResolution],
@@ -4020,12 +5157,26 @@ const tests = [
   ["find the best responding rep-range bucket from mixed history", testPhase3RepRangeBiasFindsBestRespondingBucket],
   ["propagate fatigue through the spillover matrix", testPhase3SpilloverAdjustsIndirectFatigue],
   ["keep adaptive metrics stable with sparse history", testPhase3HandlesSparseAdaptiveHistorySafely],
+  ["add load when a lift owns the rep range cleanly", testProgressionReadAddsLoadWhenRepRangeIsOwned],
+  ["carry confidence into lift predictions", testStrengthPredictionsCarryConfidenceAndTrend],
+  ["build a real coach recap after a finished workout", testPostWorkoutRecapBuildsCoachReadFromRealTrainingState],
+  ["turn plateau reads into concrete interventions", testPostWorkoutRecapTurnsPlateauIntoIntervention],
+  ["push the workout autopilot when the lift is outperforming", testSessionAutoregulationPushesWhenCurrentSetBeatsLastReference],
+  ["trim the workout autopilot when the session should be banked", testSessionAutoregulationTrimsWhenBankSignalAppears],
+  ["keep the shared calendar to six weeks and show both workout names", testSharedCalendarRowsStayAtSixWeeksAndCarryBothWorkoutNames],
   ["select the right daily mobility prompt", testDailyMobilityPromptSelection],
   ["keep mobility rotation from repeating too long", testMobilityRotationAvoidsLongRepeats],
+  ["keep workout previews on dominant session targets", testWorkoutPreviewStaysOnDominantBackTargets],
+  ["match Natasha cardio to the wedding cut plan", testDailyCardioPromptMatchesNatashaFatLossCutPlan],
+  ["keep Joshua cardio away from the stairmaster", testDailyCardioPromptKeepsJoshuaOffTheStairmaster],
+  ["reset queued workouts to day one on a fresh Monday", testQueuedWorkoutResetsToMondayDayOneAtFreshWeekStart],
   ["dedupe same-day mobility completions", testStretchCompletionDedupesSameDay],
   ["append partial sessions safely", testAppendSessionClearsActiveWorkoutAndQueuesOverride],
   ["clear queued workout when a partial is marked done", testReplaceSessionAdvanceCycleClearsQueuedWorkout],
   ["canonicalize exercise library names", testExerciseLibraryCanonicalization],
+  ["keep canonical muscle mappings exact for priority lifts", testCanonicalMuscleMappingsStayExactForPriorityLifts],
+  ["keep the full prompt exercise map exact across the library", testPromptExerciseMappingsStayExactAcrossTheFullLibrary],
+  ["keep secondary body-map load below primary load", testWeeklyLoadKeepsSecondaryMusclesBelowPrimaryZones],
   ["keep favorite exercise ids resolvable", testFavoriteIdsStayResolvable],
 ] as const;
 

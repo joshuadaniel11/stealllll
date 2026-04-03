@@ -11,8 +11,8 @@ export function WorkoutFeelingModal({
   onClose: () => void;
 }) {
   return (
-    <div className="sheet-backdrop">
-      <div className="sheet-panel sheet-detent-medium animate-sheet-up">
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet-panel sheet-detent-medium animate-sheet-up" onClick={(event) => event.stopPropagation()}>
         <Card className="sheet-card bg-[var(--surface)]">
           <div className="sheet-drag-handle" />
           <ScrollReveal delay={0} y={18} scale={0.994}>

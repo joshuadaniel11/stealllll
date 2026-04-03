@@ -21,7 +21,7 @@ const FRONT_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "sideDelts", d: "M86 61C84 54 79 51 75 53L76 77C82 77 86 70 86 61Z" },
   { kind: "path", zone: "upperChest", d: "M47 58C51 54 55 52 60 52C65 52 69 54 73 58L69 69C65 67 63 66 60 66C57 66 55 67 51 69Z" },
   { kind: "path", zone: "midChest", d: "M49 70C52 67 56 66 60 66C64 66 68 67 71 70L69 81C66 81 63 80 60 80C57 80 54 81 51 81Z" },
-  { kind: "path", zone: "lowerChest", d: "M51 82C54 80 57 79 60 79C63 79 66 80 69 82L67 91C64 91 62 90 60 90C58 90 56 91 53 91Z" },
+  { kind: "path", zone: "midChest", d: "M51 82C54 80 57 79 60 79C63 79 66 80 69 82L67 91C64 91 62 90 60 90C58 90 56 91 53 91Z" },
   { kind: "path", zone: "biceps", d: "M27 83C30 80 34 80 36 84L36 112C31 112 27 103 27 92Z" },
   { kind: "path", zone: "biceps", d: "M93 83C90 80 86 80 84 84L84 112C89 112 93 103 93 92Z" },
   { kind: "path", zone: "triceps", d: "M34 80C38 79 41 82 41 88L40 118C35 117 32 108 32 96Z" },
@@ -34,6 +34,10 @@ const FRONT_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "lowerAbs", d: "M55 119C57 117 58 116 60 116C62 116 63 117 65 119L64 140C62 142 61 143 60 143C59 143 58 142 56 140Z" },
   { kind: "path", zone: "sideGlutes", d: "M44 149C49 146 53 148 54 154L49 168C44 167 41 160 41 154Z" },
   { kind: "path", zone: "sideGlutes", d: "M76 149C71 146 67 148 66 154L71 168C76 167 79 160 79 154Z" },
+  { kind: "path", zone: "hipFlexors", d: "M52 146C55 144 58 144 60 146L59 163C56 163 53 158 52 151Z" },
+  { kind: "path", zone: "hipFlexors", d: "M68 146C65 144 62 144 60 146L61 163C64 163 67 158 68 151Z" },
+  { kind: "path", zone: "adductors", d: "M55 171C58 170 60 171 60 177L59 214C56 214 54 202 54 188Z" },
+  { kind: "path", zone: "adductors", d: "M65 171C62 170 60 171 60 177L61 214C64 214 66 202 66 188Z" },
   { kind: "path", zone: "quads", d: "M47 170C53 168 58 171 58 180L56 220C49 219 45 205 45 187Z" },
   { kind: "path", zone: "quads", d: "M73 170C67 168 62 171 62 180L64 220C71 219 75 205 75 187Z" },
   { kind: "path", zone: "calves", d: "M48 223C52 221 55 223 55 230L53 250C49 250 46 242 46 233Z" },
@@ -43,7 +47,7 @@ const FRONT_ZONES_MALE: ShapeDef[] = [
 const BACK_ZONES_MALE: ShapeDef[] = [
   { kind: "path", zone: "rearDelts", d: "M39 56C42 49 48 47 52 50L49 67C44 67 40 63 39 56Z" },
   { kind: "path", zone: "rearDelts", d: "M81 56C78 49 72 47 68 50L71 67C76 67 80 63 81 56Z" },
-  { kind: "path", zone: "upperBack", d: "M47 55C51 52 55 50 60 50C65 50 69 52 73 55L69 74C65 76 63 77 60 77C57 77 55 76 51 74Z" },
+  { kind: "path", zone: "upperTraps", d: "M47 55C51 52 55 50 60 50C65 50 69 52 73 55L69 74C65 76 63 77 60 77C57 77 55 76 51 74Z" },
   { kind: "path", zone: "lats", d: "M46 74C49 73 52 74 53 78L51 130C47 126 44 116 44 97Z" },
   { kind: "path", zone: "lats", d: "M74 74C71 73 68 74 67 78L69 130C73 126 76 116 76 97Z" },
   { kind: "path", zone: "midBack", d: "M54 77C56 75 58 74 60 74C62 74 64 75 66 77L66 114C64 116 62 117 60 117C58 117 56 116 54 114Z" },
@@ -72,7 +76,7 @@ const FRONT_ZONES_FEMALE: ShapeDef[] = [
   { kind: "path", zone: "sideDelts", d: "M84 62C82 56 78 53 75 54L76 75C81 75 84 69 84 62Z" },
   { kind: "path", zone: "upperChest", d: "M48 60C51 56 55 55 60 55C65 55 69 56 72 60L69 69C65 68 63 67 60 67C57 67 55 68 51 69Z" },
   { kind: "path", zone: "midChest", d: "M49 70C52 68 56 67 60 67C64 67 68 68 71 70L69 79C66 79 63 78 60 78C57 78 54 79 51 79Z" },
-  { kind: "path", zone: "lowerChest", d: "M51 80C53 79 56 78 60 78C64 78 67 79 69 80L67 88C64 88 62 87 60 87C58 87 56 88 53 88Z" },
+  { kind: "path", zone: "midChest", d: "M51 80C53 79 56 78 60 78C64 78 67 79 69 80L67 88C64 88 62 87 60 87C58 87 56 88 53 88Z" },
   { kind: "path", zone: "biceps", d: "M28 84C31 82 34 82 36 85L36 110C31 110 28 102 28 92Z" },
   { kind: "path", zone: "biceps", d: "M92 84C89 82 86 82 84 85L84 110C89 110 92 102 92 92Z" },
   { kind: "path", zone: "triceps", d: "M34 82C38 81 40 84 40 90L39 117C35 116 32 108 32 98Z" },
@@ -85,6 +89,10 @@ const FRONT_ZONES_FEMALE: ShapeDef[] = [
   { kind: "path", zone: "lowerAbs", d: "M55 119C57 117 58 116 60 116C62 116 63 117 65 119L64 141C62 143 61 144 60 144C59 144 58 143 56 141Z" },
   { kind: "path", zone: "sideGlutes", d: "M41 151C47 147 52 149 54 156L49 172C43 171 39 163 39 155Z" },
   { kind: "path", zone: "sideGlutes", d: "M79 151C73 147 68 149 66 156L71 172C77 171 81 163 81 155Z" },
+  { kind: "path", zone: "hipFlexors", d: "M52 147C55 145 58 145 60 147L59 164C56 164 53 159 52 152Z" },
+  { kind: "path", zone: "hipFlexors", d: "M68 147C65 145 62 145 60 147L61 164C64 164 67 159 68 152Z" },
+  { kind: "path", zone: "adductors", d: "M55 172C58 171 60 172 60 178L59 215C56 215 54 203 54 189Z" },
+  { kind: "path", zone: "adductors", d: "M65 172C62 171 60 172 60 178L61 215C64 215 66 203 66 189Z" },
   { kind: "path", zone: "quads", d: "M45 171C52 168 58 171 58 181L55 220C48 219 44 205 44 188Z" },
   { kind: "path", zone: "quads", d: "M75 171C68 168 62 171 62 181L65 220C72 219 76 205 76 188Z" },
   { kind: "path", zone: "calves", d: "M47 223C51 221 54 223 54 230L53 250C49 250 46 243 46 234Z" },
@@ -94,7 +102,7 @@ const FRONT_ZONES_FEMALE: ShapeDef[] = [
 const BACK_ZONES_FEMALE: ShapeDef[] = [
   { kind: "path", zone: "rearDelts", d: "M41 57C43 51 47 49 50 51L48 66C44 66 41 63 41 57Z" },
   { kind: "path", zone: "rearDelts", d: "M79 57C77 51 73 49 70 51L72 66C76 66 79 63 79 57Z" },
-  { kind: "path", zone: "upperBack", d: "M48 56C51 53 55 52 60 52C65 52 69 53 72 56L69 74C65 76 63 77 60 77C57 77 55 76 51 74Z" },
+  { kind: "path", zone: "upperTraps", d: "M48 56C51 53 55 52 60 52C65 52 69 53 72 56L69 74C65 76 63 77 60 77C57 77 55 76 51 74Z" },
   { kind: "path", zone: "lats", d: "M47 74C49 73 51 74 52 78L50 131C46 127 44 117 44 99Z" },
   { kind: "path", zone: "lats", d: "M73 74C71 73 69 74 68 78L70 131C74 127 76 117 76 99Z" },
   { kind: "path", zone: "midBack", d: "M55 76C57 74 58 73 60 73C62 73 63 74 65 76L65 114C63 116 62 117 60 117C58 117 57 116 55 114Z" },
@@ -132,18 +140,18 @@ function withAlpha(color: string, alpha: number) {
 function getZoneStyle(metric?: TrainingLoadMetric) {
   if (!metric || metric.percentage <= 0) {
     return {
-      fill: "rgba(255,255,255,0.008)",
-      stroke: "rgba(255,255,255,0.02)",
+      fill: "rgba(255,255,255,0.015)",
+      stroke: "rgba(255,255,255,0.03)",
       filter: "none",
     };
   }
 
-  const fillAlpha = Math.max(0.18, Math.min(0.46, metric.percentage / 180));
-  const strokeAlpha = metric.overload ? 0.6 : 0.42;
+  const fillAlpha = Math.max(0.1, Math.min(0.22, metric.percentage / 320));
+  const strokeAlpha = metric.overload ? 0.18 : 0.12;
 
   return {
-    fill: withAlpha(metric.color, fillAlpha),
-    stroke: withAlpha(metric.color, strokeAlpha),
+    fill: withAlpha("#ffffff", fillAlpha),
+    stroke: withAlpha("#ffffff", strokeAlpha),
     filter: "none",
   };
 }
@@ -164,8 +172,8 @@ function Shape({
   return (
     <path
       d={shape.d}
-      fill={selected ? style.fill : subdued ? "rgba(104,110,124,0.008)" : style.fill}
-      stroke={selected ? "rgba(255,255,255,0.92)" : subdued ? "rgba(255,255,255,0.012)" : style.stroke}
+      fill={selected ? style.fill : subdued ? "rgba(255,255,255,0.01)" : style.fill}
+      stroke={selected ? "rgba(255,255,255,0.88)" : subdued ? "rgba(255,255,255,0.02)" : style.stroke}
       strokeWidth={selected ? 1.2 : 0.8}
       style={{
         filter: style.filter,
@@ -262,8 +270,8 @@ export function BodyActivationVisual({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[12px] border border-white/8 bg-[#111111] px-5 py-5">
-      <div className="relative mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-white/34">
+    <div className="relative overflow-hidden rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)] px-5 py-5">
+      <div className="relative mb-3 flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-white/35">
         <span>{selectedMetric ? selectedMetric.label : "Weekly activation"}</span>
         <span>{selectedMetric ? `${selectedMetric.percentage}%` : `${activeMetricCount} active`}</span>
       </div>
@@ -314,7 +322,7 @@ export function BodyActivationVisual({
           })}
         </svg>
       </div>
-      <div className="relative mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-white/30">
+      <div className="relative mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-white/30">
         <span>{view === "front" ? "Front" : "Back"} view</span>
         <span>{selectedMetric ? "Focused" : "This week"}</span>
       </div>

@@ -307,7 +307,7 @@ export function getNatashaPriorityLock(
     case "build":
       return {
         lockedPrimary: ["gluteMax", "upperGlutes"],
-        lockedSecondary: ["lats", "upperBack", "obliques"],
+        lockedSecondary: ["lats", "midBack", "obliques"],
         minimumFrequency: {
           gluteMax: 3,
           upperGlutes: 2,
@@ -319,7 +319,7 @@ export function getNatashaPriorityLock(
     case "define":
       return {
         lockedPrimary: ["gluteMax", "upperGlutes", "sideGlutes"],
-        lockedSecondary: ["lats", "obliques", "upperBack"],
+        lockedSecondary: ["lats", "obliques", "midBack"],
         minimumFrequency: {
           gluteMax: 3,
           upperGlutes: 2,
@@ -430,7 +430,7 @@ export function getBackRevealState(
       active: false,
       weeksRemaining,
       backPriorityLevel: "elevated",
-      targetMuscles: ["lats", "upperBack"],
+      targetMuscles: ["lats", "midBack"],
       movementBias: [],
       volumeAddition: 0,
     };
@@ -441,7 +441,7 @@ export function getBackRevealState(
       active: true,
       weeksRemaining,
       backPriorityLevel: "peak",
-      targetMuscles: ["lats", "upperBack", "rearDelts"],
+      targetMuscles: ["lats", "midBack", "rearDelts"],
       movementBias: ["face_pull", "band_pull_apart", "light_lat_pulldown"],
       volumeAddition: 1,
     };
@@ -452,7 +452,7 @@ export function getBackRevealState(
       active: true,
       weeksRemaining,
       backPriorityLevel: "high",
-      targetMuscles: ["lats", "upperBack", "rearDelts"],
+      targetMuscles: ["lats", "midBack", "rearDelts"],
       movementBias: ["lat_pulldown", "face_pull", "rear_delt", "cable_row"],
       volumeAddition: 2,
     };
@@ -462,7 +462,7 @@ export function getBackRevealState(
     active: true,
     weeksRemaining,
     backPriorityLevel: "elevated",
-    targetMuscles: ["lats", "upperBack"],
+    targetMuscles: ["lats", "midBack"],
     movementBias: ["lat_pulldown", "cable_row", "single_arm_row"],
     volumeAddition: 1,
   };
@@ -1082,12 +1082,20 @@ export function getQueuedWorkoutForProfile(
   profile: Profile,
   workoutHistory: WorkoutSession[],
   overrideWorkoutId: string | null,
+  referenceDate = new Date(),
 ): WorkoutPlanDay {
   if (overrideWorkoutId) {
     return (
       profile.workoutPlan.find((workout) => workout.id === overrideWorkoutId) ??
       getNextWorkoutFromSessions(profile, workoutHistory)
     );
+  }
+
+  const currentWeekStart = startOfWeekMonday(referenceDate);
+  const completedThisWeek = getSessionsWithinWeek(workoutHistory, currentWeekStart).filter((session) => !session.partial);
+  if (!completedThisWeek.length) {
+    const scheduledIndex = getSplitWeekdayIndex(referenceDate);
+    return profile.workoutPlan[Math.min(scheduledIndex, profile.workoutPlan.length - 1)] ?? profile.workoutPlan[0];
   }
 
   return getNextWorkoutFromSessions(profile, workoutHistory);
@@ -1326,52 +1334,52 @@ function getWeddingRivalryCopy(
     joshua: {
       relaxed: {
         both: "Both on track. Good start.",
-        joshua: "You're ahead on goal work. Keep it.",
-        natasha: "She's more consistent on her goals. Step up.",
+        joshua: "You're a little ahead on goal work. Keep the rhythm.",
+        natasha: "She's a little steadier on her goals. Match it.",
         neither: "Both off-track this week. Reset.",
       },
       focused: {
         both: "Both consistent. The work is showing.",
-        joshua: "More focused than her right now. Stay there.",
-        natasha: "She's outworking you on goal sessions. Fix that.",
+        joshua: "You're a touch more focused right now. Stay steady.",
+        natasha: "She's ahead on goal sessions right now. Close the gap.",
         neither: "Neither fully on track. This week matters.",
       },
       sharp: {
         both: "Both locked in. Final push.",
-        joshua: "You're more on-track. Don't let it slip.",
-        natasha: "She's ahead on consistency. Take it back.",
-        neither: "Slipping with weeks left. One of you needs to move.",
+        joshua: "You're slightly more on-track. Hold it.",
+        natasha: "She's ahead on consistency. Bring your side with her.",
+        neither: "Both slipping with weeks left. Time to tighten up.",
       },
       final: {
         both: "Both ready. The work is done.",
         joshua: "You're where you need to be. Protect it.",
-        natasha: "She's more prepared right now. Last chance.",
+        natasha: "She's a little more prepared right now. Final push.",
         neither: "Final weeks. Everything from here counts.",
       },
     },
     natasha: {
       relaxed: {
         both: "Both on track. Good energy this week.",
-        natasha: "More consistent on your goals than him. Keep it.",
-        joshua: "He's more on-track right now. Match it.",
+        natasha: "You're a little steadier on your goals than him. Keep it.",
+        joshua: "He's a little more on-track right now. Match it.",
         neither: "Both off-track. Fresh start tomorrow.",
       },
       focused: {
         both: "Both consistent. November is getting real.",
         natasha: "Ahead on goal work. Stay focused.",
-        joshua: "He's outworking you on his goals. Your move.",
+        joshua: "He's ahead on his goal work. Bring your side with him.",
         neither: "Both losing ground. This week needs to count.",
       },
       sharp: {
         both: "Both locked in. Final stretch.",
-        natasha: "More on-track than him right now. Hold it.",
-        joshua: "He's more consistent. Take it back.",
-        neither: "Weeks left and both slipping. Not the time.",
+        natasha: "You're slightly more on-track than him. Hold it.",
+        joshua: "He's more consistent right now. Close the gap.",
+        neither: "Weeks left and both slipping. Time to settle in.",
       },
       final: {
         both: "Both ready. You've done the work.",
         natasha: "You're where you need to be. Stay calm.",
-        joshua: "He's more prepared. Final push starts now.",
+        joshua: "He's a little more prepared right now. Final push starts now.",
         neither: "Last weeks. No more room for missed sessions.",
       },
     },
@@ -1401,7 +1409,7 @@ export function getRivalryCardCopy(
   if (rivalryState.weekComplete) {
     if (rivalryState.leader === "tied") {
       return {
-        headline: "This week was a draw.",
+        headline: "This week landed even.",
         highlightName: null,
         leaderColorClass: null,
         detail: `${rivalryState.joshuaSessions + rivalryState.natashaSessions} sessions between you this week`,
@@ -1412,7 +1420,7 @@ export function getRivalryCardCopy(
 
     const winnerName = rivalryState.leader === "joshua" ? "Joshua" : "Natasha";
     return {
-      headline: `${winnerName} took this week.`,
+      headline: `${winnerName} edged this week.`,
       highlightName: winnerName,
       leaderColorClass: rivalryState.leader === "joshua" ? "text-emerald-300/90" : "text-sky-300/90",
       detail:
@@ -1428,7 +1436,7 @@ export function getRivalryCardCopy(
 
   if (rivalryState.leader === "tied") {
     return {
-      headline: "Dead even. Someone's got to move.",
+      headline: "Dead even. Keep the pressure healthy.",
       highlightName: null,
       leaderColorClass: null,
       detail: `${rivalryState.joshuaSessions + rivalryState.natashaSessions} sessions between you this week`,
@@ -1440,26 +1448,26 @@ export function getRivalryCardCopy(
   const copyMap = {
     joshua: {
       joshua: {
-        close: "Ahead. Don't let up.",
-        clear: "Joshua's week. Keep the gap.",
-        dominant: "No contest this week.",
+        close: "Slightly ahead. Stay steady.",
+        clear: "Joshua has the edge this week.",
+        dominant: "Joshua has built a clear lead this week.",
       },
       natasha: {
-        close: "Natasha's got it. Take it back.",
-        clear: "She's pulling away. Your move.",
-        dominant: "Natasha owns this week. Reset Monday.",
+        close: "Natasha has a slight edge. Stay with her.",
+        clear: "She's pulling ahead. Bring your side with her.",
+        dominant: "Natasha has a strong lead this week. Reset and come again Monday.",
       },
     },
     natasha: {
       natasha: {
-        close: "Ahead. Hold the shape.",
-        clear: "Natasha's week. Stay on it.",
-        dominant: "Not even close this week.",
+        close: "Slightly ahead. Hold the shape.",
+        clear: "Natasha has the edge this week.",
+        dominant: "Natasha has built a clear lead this week.",
       },
       joshua: {
-        close: "Joshua's got it. Take it back.",
-        clear: "He's pulling away. Your move.",
-        dominant: "Joshua owns this week. Reset Monday.",
+        close: "Joshua has a slight edge. Stay with him.",
+        clear: "He's pulling ahead. Bring your side with him.",
+        dominant: "Joshua has a strong lead this week. Reset and come again Monday.",
       },
     },
   } as const;
@@ -1495,26 +1503,26 @@ function getStealCopy(viewingProfileId: Profile["id"], stealState?: StealState) 
   const copyMap = {
     joshua: {
       self: {
-        one: "You trained. She didn't. Day stolen.",
-        two: "Two days in a row. She owes you.",
-        three: "Three straight. This is a statement.",
+        one: "You trained and she rested. Today tipped your way.",
+        two: "Two days in a row. Nice healthy pressure.",
+        three: "Three straight. Keep it playful and keep moving.",
       },
       other: {
-        one: "She trained. You didn't. She took today.",
-        two: "Two days. She's taking ground.",
-        three: "Three in a row. Take it back.",
+        one: "She trained and you rested. Today tipped her way.",
+        two: "Two days. She's building a little edge.",
+        three: "Three in a row. Time to answer with your own session.",
       },
     },
     natasha: {
       self: {
-        one: "You trained. He didn't. Day stolen.",
-        two: "Two days in a row. He owes you.",
-        three: "Three straight. Make it four.",
+        one: "You trained and he rested. Today tipped your way.",
+        two: "Two days in a row. Nice healthy pressure.",
+        three: "Three straight. Keep it playful and keep moving.",
       },
       other: {
-        one: "He trained. You didn't. He took today.",
-        two: "Two days. He's taking ground.",
-        three: "Three in a row. Take it back.",
+        one: "He trained and you rested. Today tipped his way.",
+        two: "Two days. He's building a little edge.",
+        three: "Three in a row. Time to answer with your own session.",
       },
     },
   } as const;
@@ -2372,8 +2380,8 @@ function getMonthlyClosingLine(
   }
   if (rivalry.monthWinner === profileId && selfWeekWins > otherWeekWins) {
     return profileId === "joshua"
-      ? "Rivalry: Joshua. See you next month."
-      : "Rivalry: Natasha. See you next month.";
+      ? "Healthy competition edge: Joshua. See you next month."
+      : "Healthy competition edge: Natasha. See you next month.";
   }
   if (selfSteals > otherSteals) {
     return profileId === "joshua" ? "Took the most days. That counts." : "Took the most days. She showed up.";
@@ -2385,7 +2393,7 @@ function getMonthlyClosingLine(
     return profileId === "joshua" ? "Inconsistent month. Next one's different." : "Patchy month. Next one's cleaner.";
   }
   if (rivalry.monthWinner === "tied") {
-    return profileId === "joshua" ? "Even month. Someone has to break that." : "Even month. One of you needs to move.";
+    return "Even month. Keep the next one moving.";
   }
   return profileId === "joshua" ? "Another month done. Keep building." : "Another month done. Keep the shape.";
 }
@@ -2574,8 +2582,8 @@ function buildProgressSignals(
   weeklyStretchCount: number,
 ): ProgressSignals {
   const zoneExposure = getRecentZoneExposure(sessions);
-  const chestExposure = getExposureTotal(zoneExposure, ["upperChest", "midChest", "lowerChest"]);
-  const backExposure = getExposureTotal(zoneExposure, ["lats", "upperBack", "midBack"]);
+  const chestExposure = getExposureTotal(zoneExposure, ["upperChest", "midChest"]);
+  const backExposure = getExposureTotal(zoneExposure, ["lats", "midBack", "upperTraps"]);
   const gluteExposure = getExposureTotal(zoneExposure, ["upperGlutes", "gluteMax", "sideGlutes"]);
   const coreExposure = getExposureTotal(zoneExposure, ["upperAbs", "lowerAbs", "obliques"]);
   const shoulderExposure = getExposureTotal(zoneExposure, ["frontDelts", "sideDelts", "rearDelts"]);
@@ -2761,7 +2769,7 @@ function buildGoalDashboard(profile: Profile, trainingLoad: WeeklyTrainingLoad, 
   const gluteMetrics = ["upperGlutes", "gluteMax", "sideGlutes"]
     .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
     .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
-  const shapeMetrics = ["lats", "upperBack", "sideDelts"]
+  const shapeMetrics = ["lats", "midBack", "sideDelts"]
     .map((zoneId) => trainingLoad.metrics.find((metric) => metric.id === zoneId))
     .filter((metric): metric is WeeklyTrainingLoad["metrics"][number] => Boolean(metric));
   const coreMetrics = ["lowerAbs", "obliques"]

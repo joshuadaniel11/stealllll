@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
@@ -36,17 +37,27 @@ export function OnboardingModal({
   const isLastStep = step === onboardingSteps.length - 1;
 
   return (
-    <div className="sheet-backdrop">
-      <div className="sheet-panel sheet-detent-medium animate-sheet-up">
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet-panel sheet-detent-medium animate-sheet-up" onClick={(event) => event.stopPropagation()}>
         <Card className="sheet-card bg-[var(--surface)]">
           <div className="sheet-drag-handle" />
 
           <ScrollReveal delay={0} y={20} scale={0.992}>
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-muted">{currentStep.eyebrow}</p>
-              <p className="caption-text text-muted">
-                {step + 1} / {onboardingSteps.length}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="caption-text text-muted">
+                  {step + 1} / {onboardingSteps.length}
+                </p>
+                <button
+                  type="button"
+                  aria-label="Close onboarding"
+                  className="liquid-icon-button inline-flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:text-white"
+                  onClick={onClose}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </ScrollReveal>
 
@@ -79,13 +90,24 @@ export function OnboardingModal({
             <div className="mt-6 flex gap-3">
               {step > 0 ? (
                 <button
+                  type="button"
                   className="flex-1 rounded-[28px] bg-[var(--card-strong)] px-4 py-4 text-base font-medium text-text"
                   onClick={() => setStep((current) => current - 1)}
                 >
                   Back
                 </button>
               ) : null}
+              {!isLastStep ? (
+                <button
+                  type="button"
+                  className="rounded-[28px] bg-white/[0.08] px-4 py-4 text-base font-medium text-white/76"
+                  onClick={onClose}
+                >
+                  Skip
+                </button>
+              ) : null}
               <button
+                type="button"
                 className="flex-1 rounded-[28px] bg-white px-4 py-4 text-base font-semibold text-black"
                 onClick={() => {
                   if (isLastStep) {

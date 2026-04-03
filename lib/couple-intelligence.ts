@@ -69,8 +69,8 @@ function getExposureTotal(exposure: Record<string, number>, zoneIds: string[]) {
 
 function getJoshuaComplement(joshuaSessions: WorkoutSession[]) {
   const exposure = getRecentZoneExposure(joshuaSessions);
-  const chestLoad = getExposureTotal(exposure, ["upperChest", "midChest", "lowerChest", "triceps"]);
-  const backLoad = getExposureTotal(exposure, ["lats", "upperBack", "midBack", "biceps"]);
+  const chestLoad = getExposureTotal(exposure, ["upperChest", "midChest", "triceps"]);
+  const backLoad = getExposureTotal(exposure, ["lats", "midBack", "upperTraps", "biceps"]);
 
   if (chestLoad >= backLoad) {
     return "Joshua's chest and arm work is leading the visual change right now.";
@@ -82,7 +82,7 @@ function getJoshuaComplement(joshuaSessions: WorkoutSession[]) {
 function getNatashaComplement(natashaSessions: WorkoutSession[]) {
   const exposure = getRecentZoneExposure(natashaSessions);
   const gluteLoad = getExposureTotal(exposure, ["upperGlutes", "gluteMax", "sideGlutes"]);
-  const backLoad = getExposureTotal(exposure, ["lats", "upperBack", "midBack"]);
+  const backLoad = getExposureTotal(exposure, ["lats", "midBack", "upperTraps"]);
 
   if (gluteLoad >= backLoad) {
     return "Natasha's glute-focused work is shaping the stronger silhouette signal right now.";

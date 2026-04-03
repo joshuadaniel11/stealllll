@@ -1,3 +1,4 @@
+import { BrandEmptyState } from "@/components/brand-empty-state";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { Card } from "@/components/ui";
 import { getExercisePerformance } from "@/lib/progression";
@@ -31,12 +32,13 @@ export function ExerciseDetailModal({
     )
     .slice(0, 5);
 
-  const suggestion = "repRange" in exercise ? getExercisePerformance(exercise, userSessions).suggestion : null;
+  const performanceRead = "repRange" in exercise ? getExercisePerformance(exercise, userSessions) : null;
+  const suggestion = performanceRead?.suggestion ?? null;
   const cues = "cues" in exercise ? exercise.cues : [exercise.note ?? "Smooth tempo and stable setup."];
 
   return (
-    <div className="sheet-backdrop">
-      <div className="sheet-panel sheet-detent-large animate-sheet-up">
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet-panel sheet-detent-large animate-sheet-up" onClick={(event) => event.stopPropagation()}>
         <Card className="sheet-card bg-[var(--surface)]">
           <div className="sheet-drag-handle" />
           <ScrollReveal delay={0} y={18} scale={0.994}>
@@ -60,6 +62,18 @@ export function ExerciseDetailModal({
               <div className="library-summary-card mt-4 rounded-[24px] p-4">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-muted">Progress cue</p>
                 <p className="mt-2 text-sm leading-6 text-text">{suggestion}</p>
+                {performanceRead ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted">
+                    <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-3 py-3">
+                      <p className="uppercase tracking-[0.14em] text-white/42">Last session</p>
+                      <p className="mt-2 text-sm text-white/76">{performanceRead.lastSession}</p>
+                    </div>
+                    <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-3 py-3">
+                      <p className="uppercase tracking-[0.14em] text-white/42">Current best</p>
+                      <p className="mt-2 text-sm text-white/76">{performanceRead.bestPerformance}</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </ScrollReveal>
           )}
@@ -93,9 +107,12 @@ export function ExerciseDetailModal({
                   </div>
                 ))
               ) : (
-                <div className="empty-state text-sm">
-                  No recent history yet.
-                </div>
+                <BrandEmptyState
+                  title="Fresh movement"
+                  body="This exercise has not built a visible history yet. Your recent sets will show up here once you log them."
+                  className="text-sm"
+                  compact
+                />
               )}
             </div>
           </ScrollReveal>

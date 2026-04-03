@@ -1,102 +1,70 @@
 import type { DailyMobilityPrompt, MobilityPromptTemplate, StretchCompletion, UserId } from "@/lib/types";
 
-type MobilityFocusKey = "hips" | "lower-back" | "flexibility" | "core" | "light-flow";
+type MobilityFocusKey = "hips" | "lower-back" | "splits" | "arch" | "pelvic-health";
 
 const THIRTY_DAY_ROTATION: MobilityFocusKey[] = [
   "hips",
   "lower-back",
-  "flexibility",
-  "core",
+  "splits",
+  "arch",
   "hips",
   "lower-back",
-  "light-flow",
-  "core",
+  "pelvic-health",
+  "splits",
   "hips",
-  "flexibility",
+  "arch",
   "lower-back",
-  "core",
+  "splits",
   "hips",
-  "light-flow",
-  "flexibility",
+  "pelvic-health",
+  "arch",
   "lower-back",
-  "core",
   "hips",
-  "flexibility",
-  "light-flow",
+  "splits",
+  "pelvic-health",
+  "arch",
   "lower-back",
-  "core",
   "hips",
-  "flexibility",
+  "splits",
+  "arch",
+  "pelvic-health",
   "lower-back",
-  "light-flow",
-  "core",
   "hips",
-  "flexibility",
+  "splits",
+  "arch",
   "lower-back",
 ];
 
-const ctaLabel = "Start Stretch";
-
 const noteLinesByFocus: Record<MobilityFocusKey, string[]> = {
-  core: [
-    "That control… yeah, it shows.",
-    "Hold it there. That’s where it builds.",
-    "This kind of control is noticeable.",
-    "Keep it steady. Don’t rush it.",
-    "Stronger here changes everything.",
-    "That control? Yeah… it shows.",
-    "Stay clean through the hold.",
-    "Quiet control always reads better.",
-    "That brace is getting sharper.",
-    "Smooth control changes the whole look.",
-  ],
   hips: [
-    "Move like this more often… you’ll feel it.",
-    "That range is opening up nicely.",
-    "Yeah… that’s getting smoother.",
-    "Let it loosen. Don’t force it.",
-    "That movement’s getting cleaner.",
-    "Move like that more often.",
-    "Those hips are starting to move right.",
-    "That glide is getting easier.",
-    "Stay soft and let it open.",
-    "The smooth version always lands better.",
-  ],
-  flexibility: [
-    "You’re getting more flexible… keep that.",
-    "That stretch is hitting right.",
-    "Don’t rush it… sit in it.",
-    "That range is improving.",
-    "Yeah… that’s opening up.",
-    "That range… don’t lose it.",
-    "You’re getting smoother… noticeable.",
-    "That line is opening cleanly.",
-    "Stay in it a little longer.",
-    "That looseness is starting to show.",
+    "Open the hips first. Everything else moves better after that.",
+    "Loose hips make the whole lower body feel smoother.",
+    "This is your clean movement work today.",
+    "Open the hips and let the lower back stop fighting.",
   ],
   "lower-back": [
-    "Less tension… better movement.",
-    "That release feels better already.",
-    "Keep that slow and controlled.",
-    "You’ll notice this later.",
-    "That’s easing up nicely.",
-    "Yeah… that’s a good one.",
-    "Let the tension drop out of it.",
-    "That reset is landing well.",
-    "Keep the spine long and easy.",
-    "That release is making everything move cleaner.",
+    "Less lower-back tension means cleaner movement everywhere else.",
+    "This is a reset day for the lower back and the line around it.",
+    "Take pressure out of the lower back before it builds up.",
+    "A calmer lower back usually makes the whole body feel better.",
   ],
-  "light-flow": [
-    "Keep it easy and let the body soften.",
-    "A smoother body always reads better.",
-    "Move slow. Let the tension go.",
-    "That easy range is worth keeping.",
-    "Light flow today. Clean movement tomorrow.",
-    "Stay loose. It shows.",
-    "This is the kind of reset that helps everything.",
-    "A little softness goes a long way.",
-    "Let it feel unhurried today.",
-    "Easy control still counts.",
+  splits: [
+    "This is your split-range work today.",
+    "Open the adductors, hamstrings, and hip flexors before anything else.",
+    "Longer range here helps both flexibility and shape.",
+    "This is the range that opens cleaner lines through the legs and hips.",
+  ],
+  arch: [
+    "This is the arch line today: lower back, hips, and front-body opening.",
+    "Open the front of the hips and let the spine move easier.",
+    "This supports a cleaner arch and smoother hip extension.",
+    "Think arch line, not just one stretch.",
+  ],
+  "pelvic-health": [
+    "This is your intimate-mobility day: hips, inner thighs, and lower back.",
+    "Keep the hips and inner thighs soft so the lower body feels freer.",
+    "This focus is about pelvic comfort and smoother lower-body movement.",
+    "Open the inner line today and let the lower back stay easy.",
   ],
 };
 
@@ -105,10 +73,10 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
     hips: [
       {
         key: "joshua-hips-1",
-        focusRegions: ["Hips", "Control"],
+        focusRegions: ["Hips", "Hip Flexors", "Lower Back"],
         primaryStretch: {
           name: "Deep hip flexor stretch",
-          why: "Opens the front of the hips so your lower body moves cleaner and stronger.",
+          why: "Opens the front of the hips and takes pressure off the lower back.",
         },
         secondaryStretches: [
           {
@@ -120,19 +88,19 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
       },
       {
         key: "joshua-hips-2",
-        focusRegions: ["Hips", "Hamstrings"],
+        focusRegions: ["Hips", "Hamstrings", "Adductors"],
         primaryStretch: {
-          name: "World’s greatest stretch",
-          why: "Loosens hips and stride so you stop moving like everything is still tight.",
+          name: "World's greatest stretch",
+          why: "Opens the hips and hamstrings together so the lower body moves cleaner.",
         },
         secondaryStretches: [
           {
             name: "Cossack hold",
-            why: "Builds range through the hips with a little more control.",
+            why: "Builds side-to-side range through the adductors and hips.",
           },
           {
             name: "Deep squat pry",
-            why: "Opens the hips and ankles together.",
+            why: "Opens hips and ankles together.",
           },
         ],
         note: "",
@@ -141,126 +109,126 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
     "lower-back": [
       {
         key: "joshua-lower-back-1",
-        focusRegions: ["Lower Back", "Spine"],
+        focusRegions: ["Lower Back", "Glutes", "Spine"],
         primaryStretch: {
-          name: "Child’s pose reach",
-          why: "Takes tension out of the low back and gives the spine an easy reset.",
+          name: "Child's pose reach",
+          why: "Takes tension out of the lower back and lets the spine settle.",
         },
         secondaryStretches: [
           {
             name: "Cat-cow",
-            why: "Restores smooth spinal movement without overthinking it.",
+            why: "Restores easier movement through the spine.",
           },
         ],
         note: "",
       },
       {
         key: "joshua-lower-back-2",
-        focusRegions: ["Lower Back", "Hips"],
+        focusRegions: ["Lower Back", "Hips", "Hamstrings"],
         primaryStretch: {
           name: "Knees-to-chest hold",
-          why: "Relieves stiffness through the lower back and lets the hips relax.",
+          why: "Relieves lower-back stiffness and lets the hips relax.",
         },
         secondaryStretches: [
           {
             name: "Supine twist",
-            why: "Adds a soft rotational reset through the spine.",
+            why: "Adds a soft rotational reset through the trunk.",
           },
         ],
         note: "",
       },
     ],
-    flexibility: [
+    splits: [
       {
-        key: "joshua-flexibility-1",
-        focusRegions: ["Hamstrings", "Flexibility"],
+        key: "joshua-splits-1",
+        focusRegions: ["Adductors", "Hamstrings", "Hip Flexors"],
         primaryStretch: {
-          name: "Long forward fold",
-          why: "Lengthens the back line so hinges and setup positions feel cleaner.",
+          name: "Seated straddle fold",
+          why: "Builds split-range by opening the inner thighs and hamstrings together.",
         },
         secondaryStretches: [
           {
-            name: "Single-leg hamstring reach",
-            why: "Improves side-to-side flexibility and control.",
+            name: "Long forward fold",
+            why: "Lengthens the whole back line.",
           },
         ],
         note: "",
       },
       {
-        key: "joshua-flexibility-2",
-        focusRegions: ["Flexibility", "Hips", "Hamstrings"],
+        key: "joshua-splits-2",
+        focusRegions: ["Hamstrings", "Adductors", "Calves"],
         primaryStretch: {
-          name: "Seated straddle fold",
-          why: "Opens adductors and hamstrings for smoother range through the hips.",
+          name: "Single-leg hamstring reach",
+          why: "Improves back-line range without turning this into a full mobility block.",
         },
         secondaryStretches: [
           {
             name: "Standing calf stretch",
-            why: "Helps the whole back line open more evenly.",
+            why: "Keeps the whole line opening down the leg.",
           },
         ],
         note: "",
       },
     ],
-    core: [
+    arch: [
       {
-        key: "joshua-core-1",
-        focusRegions: ["Core", "Control"],
+        key: "joshua-arch-1",
+        focusRegions: ["Hip Flexors", "Abs", "Lower Back"],
         primaryStretch: {
-          name: "Dead bug hold",
-          why: "Sharpens trunk control so bracing feels cleaner through everything else.",
+          name: "Cobra press-up",
+          why: "Opens the front of the body so the lower back does not stay compressed.",
         },
         secondaryStretches: [
           {
-            name: "Bear plank breathing",
-            why: "Builds deeper control through the midline without a lot of time.",
+            name: "Couch stretch",
+            why: "Loosens the hip flexors for cleaner extension through the front line.",
           },
         ],
         note: "",
       },
       {
-        key: "joshua-core-2",
-        focusRegions: ["Core", "Lower Back"],
+        key: "joshua-arch-2",
+        focusRegions: ["Thoracic Spine", "Hip Flexors", "Lower Back"],
         primaryStretch: {
-          name: "Open-book rotation",
-          why: "Unwinds the trunk and improves control through the spine and ribs.",
+          name: "Sphinx hold",
+          why: "Supports a cleaner arch line by opening the front body without forcing it.",
         },
         secondaryStretches: [
           {
-            name: "Hollow body tuck hold",
-            why: "Keeps your core switched on while the torso stays controlled.",
+            name: "Open-book rotation",
+            why: "Helps the upper spine extend and rotate more easily.",
           },
         ],
         note: "",
       },
     ],
-    "light-flow": [
+    "pelvic-health": [
       {
-        key: "joshua-flow-1",
-        focusRegions: ["Hips", "Lower Back", "Flexibility"],
+        key: "joshua-pelvic-1",
+        focusRegions: ["Inner Thighs", "Hips", "Lower Back"],
         primaryStretch: {
-          name: "Deep squat hold",
-          why: "Gives ankles, hips, and lower back one clean reset when everything feels stiff.",
+          name: "Butterfly hold",
+          why: "Opens the inner thighs and hips so the lower body feels freer.",
         },
         secondaryStretches: [
           {
-            name: "Forward fold hang",
-            why: "Lets the whole back line settle down.",
+            name: "Figure-four glute stretch",
+            why: "Softens hip tension around the pelvis and lower back.",
           },
         ],
         note: "",
       },
       {
-        key: "joshua-flow-2",
-        focusRegions: ["Movement", "Control"],
+        key: "joshua-pelvic-2",
+        focusRegions: ["Adductors", "Hip Flexors", "Lower Back"],
         primaryStretch: {
-          name: "Slow mobility flow",
-          why: "Keeps range and coordination feeling easy without turning this into a workout.",
+          name: "Half-kneeling groin stretch",
+          why: "Supports pelvic comfort by opening the inner line of the hips.",
         },
         secondaryStretches: [
           {
-            name: "Hip opener reach",
-            why: "Restores smooth movement through the hips and trunk.",
+            name: "Supine adductor stretch",
+            why: "Lets the inner thighs lengthen without strain.",
           },
         ],
         note: "",
@@ -271,30 +239,30 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
     hips: [
       {
         key: "natasha-hips-1",
-        focusRegions: ["Hips", "Control"],
+        focusRegions: ["Hips", "Hip Flexors", "Glutes"],
         primaryStretch: {
           name: "Couch stretch",
-          why: "Opens the front of the hips so your lower-body movement feels cleaner and smoother.",
+          why: "Opens the front of the hips so the lower body moves cleaner and smoother.",
         },
         secondaryStretches: [
           {
             name: "Figure-four glute stretch",
-            why: "Softens hip tension and gives your lower body a freer line.",
+            why: "Softens glute and hip tension so the hips move with less pull.",
           },
         ],
         note: "",
       },
       {
         key: "natasha-hips-2",
-        focusRegions: ["Hips", "Glutes", "Control"],
+        focusRegions: ["Hips", "Adductors", "Glutes"],
         primaryStretch: {
           name: "90/90 hip stretch",
-          why: "Improves hip rotation so glute work and daily movement feel less sticky.",
+          why: "Improves hip rotation so glute work and everyday movement feel less sticky.",
         },
         secondaryStretches: [
           {
             name: "Deep squat pry",
-            why: "Opens the hips and ankles together for cleaner movement.",
+            why: "Opens hips and ankles together for cleaner lower-body range.",
           },
         ],
         note: "",
@@ -303,10 +271,10 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
     "lower-back": [
       {
         key: "natasha-lower-back-1",
-        focusRegions: ["Lower Back", "Flexibility"],
+        focusRegions: ["Lower Back", "Hip Flexors", "Glutes"],
         primaryStretch: {
-          name: "Child’s pose reach",
-          why: "Relieves lower-back tension and makes the whole body feel less compressed.",
+          name: "Child's pose reach",
+          why: "Relieves lower-back tension and makes the whole back line feel less compressed.",
         },
         secondaryStretches: [
           {
@@ -318,111 +286,111 @@ const mobilityTemplatesByProfile: Record<UserId, Record<MobilityFocusKey, Mobili
       },
       {
         key: "natasha-lower-back-2",
-        focusRegions: ["Lower Back", "Core"],
+        focusRegions: ["Lower Back", "Hamstrings", "Hips"],
         primaryStretch: {
           name: "Knees-to-chest hold",
-          why: "Takes pressure out of the low back and helps movement feel calmer.",
+          why: "Takes pressure out of the lower back and helps the hips settle.",
         },
         secondaryStretches: [
           {
             name: "Cat-cow",
-            why: "Restores easy spinal movement and control.",
+            why: "Restores easier spinal movement and control.",
           },
         ],
         note: "",
       },
     ],
-    flexibility: [
+    splits: [
       {
-        key: "natasha-flexibility-1",
-        focusRegions: ["Hamstrings", "Flexibility"],
+        key: "natasha-splits-1",
+        focusRegions: ["Adductors", "Hamstrings", "Hip Flexors"],
         primaryStretch: {
           name: "Seated straddle fold",
-          why: "Opens the back line so your hips and legs move with a softer, cleaner feel.",
+          why: "Builds split-range by opening the inner thighs and back line together.",
         },
         secondaryStretches: [
           {
             name: "Forward fold hang",
-            why: "Lets the whole back line settle and lengthen.",
+            why: "Lets the whole back line soften and lengthen.",
           },
         ],
         note: "",
       },
       {
-        key: "natasha-flexibility-2",
-        focusRegions: ["Flexibility", "Hips", "Hamstrings"],
+        key: "natasha-splits-2",
+        focusRegions: ["Adductors", "Hip Flexors", "Calves"],
         primaryStretch: {
-          name: "Single-leg hamstring reach",
-          why: "Improves flexibility and control without turning it into a big session.",
+          name: "Half split hold",
+          why: "Supports front-split range without turning it into a big session.",
         },
         secondaryStretches: [
           {
             name: "Standing calf stretch",
-            why: "Keeps the back line opening all the way down.",
+            why: "Keeps the whole line opening down the leg.",
           },
         ],
         note: "",
       },
     ],
-    core: [
+    arch: [
       {
-        key: "natasha-core-1",
-        focusRegions: ["Core", "Control"],
+        key: "natasha-arch-1",
+        focusRegions: ["Lower Back", "Hip Flexors", "Glutes"],
         primaryStretch: {
-          name: "Dead bug hold",
-          why: "Builds trunk control so your movement feels tighter and more intentional.",
+          name: "Sphinx hold",
+          why: "Supports a cleaner arch line by opening the front hips while easing the lower back.",
         },
         secondaryStretches: [
           {
-            name: "Side-plank reach",
-            why: "Adds oblique control with a lighter feel.",
+            name: "Couch stretch",
+            why: "Loosens the hip flexors so hip extension feels freer.",
           },
         ],
         note: "",
       },
       {
-        key: "natasha-core-2",
-        focusRegions: ["Core", "Lower Back", "Control"],
+        key: "natasha-arch-2",
+        focusRegions: ["Thoracic Spine", "Hip Flexors", "Lower Back"],
         primaryStretch: {
-          name: "Open-book rotation",
-          why: "Unwinds the torso and keeps your midsection moving with more ease.",
+          name: "Cobra press-up",
+          why: "Opens the front body and helps the arch line feel smoother instead of jammed.",
         },
         secondaryStretches: [
           {
-            name: "Bear plank breathing",
-            why: "Sharpens deep control through the core without noise.",
+            name: "Open-book rotation",
+            why: "Keeps the upper spine moving so the arch is not all lower-back pressure.",
           },
         ],
         note: "",
       },
     ],
-    "light-flow": [
+    "pelvic-health": [
       {
-        key: "natasha-flow-1",
-        focusRegions: ["Hips", "Lower Back", "Flexibility"],
+        key: "natasha-pelvic-1",
+        focusRegions: ["Inner Thighs", "Hips", "Lower Back"],
         primaryStretch: {
-          name: "Deep squat hold",
-          why: "Resets hips, spine, and flexibility all at once when you want a lighter reset.",
+          name: "Butterfly hold",
+          why: "Supports pelvic comfort by opening the inner thighs and hips without strain.",
         },
         secondaryStretches: [
           {
-            name: "Child’s pose reach",
-            why: "Keeps the whole line feeling soft and open.",
+            name: "Figure-four glute stretch",
+            why: "Reduces deep hip tension that can pull on the lower back.",
           },
         ],
         note: "",
       },
       {
-        key: "natasha-flow-2",
-        focusRegions: ["Movement", "Control"],
+        key: "natasha-pelvic-2",
+        focusRegions: ["Adductors", "Hip Flexors", "Lower Back"],
         primaryStretch: {
-          name: "Slow mobility flow",
-          why: "Keeps your body moving well without turning this into a program.",
+          name: "Half-kneeling groin stretch",
+          why: "Keeps the inner line of the hips open for better pelvic comfort and smoother movement.",
         },
         secondaryStretches: [
           {
-            name: "Hip opener reach",
-            why: "Restores a smoother feel through the lower body and waist.",
+            name: "Supine adductor stretch",
+            why: "Lets the inner thighs lengthen without forcing range.",
           },
         ],
         note: "",
@@ -440,7 +408,7 @@ function getRotationDay(date: Date) {
   const startKey = new Date(startOfYear.getFullYear(), startOfYear.getMonth(), startOfYear.getDate()).getTime();
   const todayKey = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const diffDays = Math.floor((todayKey - startKey) / 86400000);
-  return (diffDays % 30) + 1;
+  return (diffDays % THIRTY_DAY_ROTATION.length) + 1;
 }
 
 function getPromptFocusKey(rotationDay: number) {
@@ -454,16 +422,12 @@ function getPromptTemplate(userId: UserId, rotationDay: number): MobilityPromptT
   return promptPool[templateIndex] ?? promptPool[0];
 }
 
-function getNoteLine(userId: UserId, focusKey: MobilityFocusKey, rotationDay: number) {
+function getNoteLine(focusKey: MobilityFocusKey, rotationDay: number) {
   const pool = noteLinesByFocus[focusKey];
-  const profileOffset = userId === "natasha" ? 3 : 0;
-  return pool[(rotationDay + profileOffset) % pool.length] ?? pool[0];
+  return pool[(rotationDay - 1) % pool.length] ?? pool[0];
 }
 
-export function selectDailyMobilityPrompt(
-  userId: UserId,
-  date = new Date(),
-): DailyMobilityPrompt {
+export function selectDailyMobilityPrompt(userId: UserId, date = new Date()): DailyMobilityPrompt {
   const rotationDay = getRotationDay(date);
   const focusKey = getPromptFocusKey(rotationDay);
   const template = getPromptTemplate(userId, rotationDay);
@@ -471,7 +435,7 @@ export function selectDailyMobilityPrompt(
   return {
     ...template,
     secondaryStretches: template.secondaryStretches?.slice(0, 2) ?? [],
-    note: getNoteLine(userId, focusKey, rotationDay),
+    note: getNoteLine(focusKey, rotationDay),
     ctaLabel: "Start 30s",
     rotationDay,
   };

@@ -19,12 +19,12 @@ export function CompletionCelebration({
         visible ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-4 opacity-0"
       }`}
     >
-      <div className="glass hairline rounded-[28px] px-5 py-4 shadow-glow">
-        <p className="text-sm text-muted">{title}</p>
+      <div className="rounded-[20px] border border-white/[0.07] bg-[var(--bg-overlay)] px-5 py-4 backdrop-blur-[20px] [backdrop-filter:blur(20px)_saturate(180%)]">
+        <p className="secondary-copy">{title}</p>
         <div className="mt-1 flex items-center justify-between gap-3">
-          <p className="text-base font-medium">{message}</p>
+          <p className="text-base font-medium text-white/88">{message}</p>
           {actionLabel ? (
-            <button className="shrink-0 text-sm font-semibold text-accent" onClick={onAction}>
+            <button className="shrink-0 text-sm font-semibold text-white/60" onClick={onAction}>
               {actionLabel}
             </button>
           ) : null}

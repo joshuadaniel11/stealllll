@@ -4,12 +4,17 @@ import type {
   MuscleCeilingResponse,
   MuscleCeilingState,
   MuscleGroup,
+  MuscleKey,
   UserId,
   WorkoutPlanDay,
   WorkoutSession,
   WorkoutSessionExercise,
 } from "@/lib/types";
-import { buildCanonicalExerciseLibrary, normalizeExerciseName } from "@/lib/exercise-data";
+import {
+  buildCanonicalExerciseLibrary,
+  getExerciseMuscleProfile,
+  normalizeExerciseName,
+} from "@/lib/exercise-data";
 import { getExerciseSwapOptions } from "@/lib/exercise-swaps";
 import type { WeddingPhaseProfile } from "@/lib/wedding-date";
 
@@ -25,26 +30,27 @@ export type TrainingLoadGroupId =
 export type TrainingLoadZone =
   | "upperChest"
   | "midChest"
-  | "lowerChest"
   | "frontDelts"
   | "sideDelts"
-  | "rearDelts"
-  | "upperBack"
+  | "triceps"
+  | "upperTraps"
   | "lats"
   | "midBack"
-  | "lowerBack"
+  | "rearDelts"
+  | "biceps"
+  | "forearms"
   | "upperAbs"
   | "lowerAbs"
   | "obliques"
+  | "lowerBack"
+  | "quads"
+  | "hamstrings"
   | "upperGlutes"
   | "gluteMax"
   | "sideGlutes"
-  | "biceps"
-  | "triceps"
-  | "forearms"
-  | "quads"
-  | "hamstrings"
-  | "calves";
+  | "hipFlexors"
+  | "calves"
+  | "adductors";
 
 export type TrainingLoadMetric = {
   id: TrainingLoadZone;
@@ -115,6 +121,8 @@ export type SuggestedFocusSessionExercise = {
   exerciseId: string | null;
   name: string;
   muscleGroup: MuscleGroup;
+  primaryMuscles: TrainingLoadZone[];
+  secondaryMuscles: TrainingLoadZone[];
   sets: number | null;
   repRange: string | null;
   suggestedRepTarget?: number | null;
@@ -281,7 +289,7 @@ function isNatashaBackOrGluteExercise(exercise: FocusExerciseCandidate) {
     }),
   ).some(([zoneId, weight]) =>
     weight > 0 &&
-    ["upperGlutes", "gluteMax", "sideGlutes", "lats", "upperBack", "midBack"].includes(zoneId),
+    ["upperGlutes", "gluteMax", "sideGlutes", "lats", "midBack", "upperTraps"].includes(zoneId),
   );
 }
 
@@ -610,13 +618,9 @@ function weaveNatashaWaistProtocolIntoSession(
     return { exercises: selectedSlice, added: false };
   }
 
-  const existingCoreIndex = selectedSlice.findIndex((exercise) => {
-    const contribution = getExerciseMuscleContribution({
-      exerciseName: exercise.name,
-      muscleGroup: exercise.muscleGroup,
-    });
-    return (contribution.obliques ?? 0) > 0 || (contribution.upperAbs ?? 0) > 0 || (contribution.lowerAbs ?? 0) > 0;
-  });
+  const existingCoreIndex = selectedSlice.findIndex(
+    (exercise) => exercise.muscleGroup === "Core" || isNatashaWaistProtocolExercise(exercise.name),
+  );
 
   const adjusted = selectedSlice.map((exercise) => ({ ...exercise }));
 
@@ -684,7 +688,7 @@ function adjustSetsForNatashaWaistProtocol(
 }
 
 function isNatashaBackPrimarySession(selectedSlice: FocusExerciseCandidate[], focus: NextWorkoutFocus) {
-  if (focus.zoneIds.some((zoneId) => zoneId === "lats" || zoneId === "upperBack" || zoneId === "midBack")) {
+  if (focus.zoneIds.some((zoneId) => zoneId === "lats" || zoneId === "midBack" || zoneId === "upperTraps")) {
     return true;
   }
 
@@ -778,7 +782,7 @@ function adjustRepRangeForNatashaBackReveal(
     return repRange;
   }
 
-  if (exercise.muscleGroup === "Back" && NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
+  if (NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
     return getBackRevealRepRange(backReveal);
   }
 
@@ -794,7 +798,7 @@ function adjustSetsForNatashaBackReveal(
     return sets;
   }
 
-  if (exercise.muscleGroup === "Back" && NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
+  if (NATASHA_BACK_REVEAL_MOVEMENTS.some((option) => normalizeExerciseName(option.name) === normalizeExerciseName(exercise.name))) {
     return Math.max(1, getBackRevealSets(backReveal));
   }
 
@@ -995,22 +999,23 @@ export const TRAINING_LOAD_VIEW_ZONES: Record<"front" | "back", TrainingLoadZone
   front: [
     "upperChest",
     "midChest",
-    "lowerChest",
     "frontDelts",
     "sideDelts",
-    "biceps",
     "triceps",
+    "biceps",
     "forearms",
     "upperAbs",
     "lowerAbs",
     "obliques",
+    "hipFlexors",
     "sideGlutes",
+    "adductors",
     "quads",
     "calves",
   ],
   back: [
     "rearDelts",
-    "upperBack",
+    "upperTraps",
     "lats",
     "midBack",
     "lowerBack",
@@ -1042,7 +1047,7 @@ const PROFILE_PRIORITY_ZONES: Record<UserId, TrainingLoadZone[]> = {
     "gluteMax",
     "sideGlutes",
     "lats",
-    "upperBack",
+    "midBack",
     "lowerAbs",
     "obliques",
     "sideDelts",
@@ -1061,6 +1066,8 @@ type ZoneContribution = Partial<Record<TrainingLoadZone, number>>;
 type ExerciseLike = {
   exerciseName: string;
   muscleGroup: MuscleGroup;
+  primaryMuscles?: MuscleKey[];
+  secondaryMuscles?: MuscleKey[];
 };
 
 type CalendarCell = {
@@ -1071,6 +1078,8 @@ type CalendarCell = {
   isToday: boolean;
   joshuaCompleted: boolean;
   natashaCompleted: boolean;
+  joshuaWorkouts: string[];
+  natashaWorkouts: string[];
 };
 
 type CalendarRow = {
@@ -1097,222 +1106,107 @@ export const TRAINING_LOAD_ZONE_META: Record<
 > = {
   upperChest: { label: "Upper chest", group: "chest", color: "#ff8e72", targetSets: 5 },
   midChest: { label: "Mid chest", group: "chest", color: "#ffa57a", targetSets: 7 },
-  lowerChest: { label: "Lower chest", group: "chest", color: "#ffbf88", targetSets: 4 },
   frontDelts: { label: "Front delts", group: "shoulders", color: "#ff9f58", targetSets: 5 },
   sideDelts: { label: "Side delts", group: "shoulders", color: "#ffbc63", targetSets: 7 },
-  rearDelts: { label: "Rear delts", group: "shoulders", color: "#f0d15c", targetSets: 7 },
-  upperBack: { label: "Upper back", group: "back", color: "#55c0ff", targetSets: 7 },
+  triceps: { label: "Triceps", group: "arms", color: "#f5be67", targetSets: 6 },
+  upperTraps: { label: "Upper traps", group: "back", color: "#55c0ff", targetSets: 5 },
   lats: { label: "Lats", group: "back", color: "#589bff", targetSets: 8 },
   midBack: { label: "Mid back", group: "back", color: "#4caef6", targetSets: 8 },
-  lowerBack: { label: "Lower back", group: "back", color: "#53d3d0", targetSets: 5 },
+  rearDelts: { label: "Rear delts", group: "shoulders", color: "#f0d15c", targetSets: 7 },
+  biceps: { label: "Biceps", group: "arms", color: "#ebd35f", targetSets: 6 },
+  forearms: { label: "Forearms", group: "arms", color: "#f2db7e", targetSets: 4 },
   upperAbs: { label: "Upper abs", group: "core", color: "#39d4aa", targetSets: 5 },
   lowerAbs: { label: "Lower abs", group: "core", color: "#4be0b6", targetSets: 5 },
   obliques: { label: "Obliques", group: "core", color: "#69e3c6", targetSets: 4 },
+  lowerBack: { label: "Lower back", group: "back", color: "#53d3d0", targetSets: 5 },
+  quads: { label: "Quads", group: "legs", color: "#7bd26f", targetSets: 8 },
+  hamstrings: { label: "Hamstrings", group: "legs", color: "#61c37d", targetSets: 6 },
   upperGlutes: { label: "Upper glutes", group: "glutes", color: "#9877ff", targetSets: 6 },
   gluteMax: { label: "Glute max", group: "glutes", color: "#8264ff", targetSets: 8 },
   sideGlutes: { label: "Side glutes", group: "glutes", color: "#ac88ff", targetSets: 5 },
-  biceps: { label: "Biceps", group: "arms", color: "#ebd35f", targetSets: 6 },
-  triceps: { label: "Triceps", group: "arms", color: "#f5be67", targetSets: 6 },
-  forearms: { label: "Forearms", group: "arms", color: "#f2db7e", targetSets: 4 },
-  quads: { label: "Quads", group: "legs", color: "#7bd26f", targetSets: 8 },
-  hamstrings: { label: "Hamstrings", group: "legs", color: "#61c37d", targetSets: 6 },
+  hipFlexors: { label: "Hip flexors", group: "legs", color: "#84cf90", targetSets: 3 },
   calves: { label: "Calves", group: "legs", color: "#95db72", targetSets: 4 },
+  adductors: { label: "Adductors", group: "legs", color: "#a0d77b", targetSets: 4 },
 };
 
 const TARGET_DISPLAY_LABELS: Record<TrainingLoadZone, string> = {
   upperChest: "Upper chest",
   midChest: "Mid chest",
-  lowerChest: "Lower chest",
   frontDelts: "Front delts",
   sideDelts: "Side delts",
-  rearDelts: "Rear delts",
-  upperBack: "Upper back",
+  triceps: "Triceps",
+  upperTraps: "Upper traps",
   lats: "Lats",
   midBack: "Mid back",
-  lowerBack: "Lower back",
+  rearDelts: "Rear delts",
+  biceps: "Biceps",
+  forearms: "Forearms",
   upperAbs: "Upper abs",
   lowerAbs: "Lower abs",
   obliques: "Obliques",
+  lowerBack: "Lower back",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
   upperGlutes: "Glute shelf",
   gluteMax: "Lower glute",
   sideGlutes: "Side glute",
-  biceps: "Biceps",
-  triceps: "Triceps",
-  forearms: "Forearms",
-  quads: "Quads",
-  hamstrings: "Hamstrings",
+  hipFlexors: "Hip flexors",
   calves: "Calves",
+  adductors: "Adductors",
 };
 
 const USER_TARGET_OVERRIDES: Record<UserId, Partial<Record<TrainingLoadZone, number>>> = {
   joshua: {
     upperChest: 6,
     midChest: 8,
-    lowerChest: 5,
     frontDelts: 5,
     sideDelts: 7,
-    rearDelts: 6,
-    upperBack: 7,
+    triceps: 7,
+    upperTraps: 5,
     lats: 8,
     midBack: 8,
-    lowerBack: 5,
+    rearDelts: 6,
+    biceps: 7,
+    forearms: 4,
     upperAbs: 4,
     lowerAbs: 4,
     obliques: 3,
+    lowerBack: 5,
+    quads: 6,
+    hamstrings: 5,
     upperGlutes: 4,
     gluteMax: 5,
     sideGlutes: 3,
-    biceps: 7,
-    triceps: 7,
-    forearms: 4,
-    quads: 6,
-    hamstrings: 5,
+    hipFlexors: 2,
     calves: 4,
+    adductors: 3,
   },
   natasha: {
     upperChest: 4,
     midChest: 5,
-    lowerChest: 3,
     frontDelts: 4,
     sideDelts: 6,
-    rearDelts: 6,
-    upperBack: 7,
+    triceps: 5,
+    upperTraps: 5,
     lats: 8,
     midBack: 7,
-    lowerBack: 4,
+    rearDelts: 6,
+    biceps: 5,
+    forearms: 3,
     upperAbs: 4,
     lowerAbs: 4,
     obliques: 4,
+    lowerBack: 4,
+    quads: 7,
+    hamstrings: 6,
     upperGlutes: 8,
     gluteMax: 10,
     sideGlutes: 7,
-    biceps: 5,
-    triceps: 5,
-    forearms: 3,
-    quads: 7,
-    hamstrings: 6,
+    hipFlexors: 5,
     calves: 4,
+    adductors: 5,
   },
 };
-
-const EXERCISE_RULES: Array<{ pattern: RegExp; contribution: ZoneContribution }> = [
-  {
-    pattern: /incline dumbbell press|incline machine press|smith incline press/i,
-    contribution: { upperChest: 1, midChest: 0.25, frontDelts: 0.35, triceps: 0.3 },
-  },
-  {
-    pattern: /flat dumbbell press|flat machine press|machine chest press|bench press|chest press/i,
-    contribution: { midChest: 1, upperChest: 0.18, lowerChest: 0.15, frontDelts: 0.28, triceps: 0.32 },
-  },
-  {
-    pattern: /dip|weighted dip/i,
-    contribution: { lowerChest: 0.95, triceps: 0.65, frontDelts: 0.22, midChest: 0.18 },
-  },
-  {
-    pattern: /chest fly|pec deck|machine chest fly|cable fly/i,
-    contribution: { midChest: 0.8, upperChest: 0.24, lowerChest: 0.2 },
-  },
-  {
-    pattern: /shoulder press/i,
-    contribution: { frontDelts: 0.8, sideDelts: 0.35, triceps: 0.42 },
-  },
-  {
-    pattern: /lateral raise/i,
-    contribution: { sideDelts: 1 },
-  },
-  {
-    pattern: /reverse pec deck|rear delt|reverse fly/i,
-    contribution: { rearDelts: 0.9, upperBack: 0.4, midBack: 0.22 },
-  },
-  {
-    pattern: /face pull/i,
-    contribution: { rearDelts: 0.72, upperBack: 0.62, midBack: 0.22 },
-  },
-  {
-    pattern: /lat pulldown|single arm lat pulldown|pull up|pull in|lat pullover|machine lat pullover|straight arm cable pulldown|straight arm pulldown|assisted pull up/i,
-    contribution: { lats: 1, upperBack: 0.25, biceps: 0.3, forearms: 0.15 },
-  },
-  {
-    pattern: /barbell row|single-arm seated row|single-arm dumbbell row|chest-supported dumbbell row|seated cable row|close-grip seated cable row|t-bar row|machine row/i,
-    contribution: { midBack: 0.82, lats: 0.45, upperBack: 0.4, biceps: 0.22, forearms: 0.14, lowerBack: 0.1 },
-  },
-  {
-    pattern: /neutral-grip lat pulldown/i,
-    contribution: { lats: 0.85, upperBack: 0.22, biceps: 0.32, forearms: 0.14 },
-  },
-  {
-    pattern: /hyperextension/i,
-    contribution: { lowerBack: 0.92, gluteMax: 0.36, hamstrings: 0.22 },
-  },
-  {
-    pattern: /bicep curl|preacher curl|hammer curl|rope hammer curl|ez-bar curl|cable curl|bayesian curl|incline dumbbell curl/i,
-    contribution: { biceps: 1, forearms: 0.28 },
-  },
-  {
-    pattern: /pushdown|tricep|triceps|skull crusher|rope extension|cable extension/i,
-    contribution: { triceps: 1, forearms: 0.1 },
-  },
-  {
-    pattern: /hip thrust|glute bridge/i,
-    contribution: { gluteMax: 1, upperGlutes: 0.5, hamstrings: 0.1 },
-  },
-  {
-    pattern: /glute kickback/i,
-    contribution: { gluteMax: 0.68, upperGlutes: 0.62, sideGlutes: 0.18 },
-  },
-  {
-    pattern: /abductor|abduction/i,
-    contribution: { sideGlutes: 1, upperGlutes: 0.3 },
-  },
-  {
-    pattern: /romanian deadlift|rdl/i,
-    contribution: { hamstrings: 0.92, gluteMax: 0.42, lowerBack: 0.18, forearms: 0.08 },
-  },
-  {
-    pattern: /hamstring curl|leg curl/i,
-    contribution: { hamstrings: 1 },
-  },
-  {
-    pattern: /leg extension/i,
-    contribution: { quads: 1 },
-  },
-  {
-    pattern: /calf raise/i,
-    contribution: { calves: 1 },
-  },
-  {
-    pattern: /walking lunge|reverse lunge|bulgarian split squat|split squat|step-up|step up/i,
-    contribution: { quads: 0.52, gluteMax: 0.48, sideGlutes: 0.18, hamstrings: 0.16, calves: 0.08 },
-  },
-  {
-    pattern: /squat|hack squat|pendulum squat/i,
-    contribution: { quads: 0.9, gluteMax: 0.32, sideGlutes: 0.08, hamstrings: 0.12, lowerBack: 0.08 },
-  },
-  {
-    pattern: /leg press/i,
-    contribution: { quads: 0.86, gluteMax: 0.24, calves: 0.08 },
-  },
-  {
-    pattern: /crunch|sit-up/i,
-    contribution: { upperAbs: 0.95, lowerAbs: 0.18 },
-  },
-  {
-    pattern: /leg raise|knee raise|reverse crunch/i,
-    contribution: { lowerAbs: 0.95, upperAbs: 0.2 },
-  },
-  {
-    pattern: /ab wheel|dead bug|plank/i,
-    contribution: { upperAbs: 0.45, lowerAbs: 0.45, obliques: 0.2 },
-  },
-  {
-    pattern: /woodchop|wood chop/i,
-    contribution: { obliques: 0.95, upperAbs: 0.22, lowerAbs: 0.22 },
-  },
-  {
-    pattern: /kettlebell swing/i,
-    contribution: { gluteMax: 0.55, hamstrings: 0.52, lowerBack: 0.12, upperBack: 0.08, forearms: 0.1 },
-  },
-];
 
 function toLocalDayKey(value: Date | string) {
   const date = new Date(value);
@@ -1361,39 +1255,33 @@ function getCompletedSetCount(exercise: WorkoutSessionExercise) {
   return exercise.sets.filter((set) => set.completed).length;
 }
 
-function getFallbackContribution(exercise: ExerciseLike): ZoneContribution {
-  switch (exercise.muscleGroup) {
-    case "Chest":
-      return { midChest: 0.75, upperChest: 0.2, lowerChest: 0.15, frontDelts: 0.2, triceps: 0.2 };
-    case "Back":
-      return { upperBack: 0.35, lats: 0.35, midBack: 0.35, biceps: 0.15 };
-    case "Shoulders":
-      return { frontDelts: 0.3, sideDelts: 0.4, rearDelts: 0.3 };
-    case "Biceps":
-      return { biceps: 1, forearms: 0.2 };
-    case "Triceps":
-      return { triceps: 1, forearms: 0.1 };
-    case "Glutes":
-      return { gluteMax: 0.7, upperGlutes: 0.35, sideGlutes: 0.25 };
-    case "Hamstrings":
-      return { hamstrings: 1 };
-    case "Quads":
-      return { quads: 1 };
-    case "Legs":
-      return { quads: 0.55, hamstrings: 0.25, calves: 0.2 };
-    case "Core":
-      return { upperAbs: 0.42, lowerAbs: 0.42, obliques: 0.26 };
-    case "Full Body":
-      return { quads: 0.25, gluteMax: 0.2, upperBack: 0.14, upperAbs: 0.12, sideDelts: 0.1, forearms: 0.08 };
-    default:
-      return {};
+function buildContributionFromMuscles(
+  primaryMuscles: MuscleKey[],
+  secondaryMuscles: MuscleKey[],
+): ZoneContribution {
+  const contribution: ZoneContribution = {};
+
+  for (const muscle of primaryMuscles) {
+    contribution[muscle] = Math.max(contribution[muscle] ?? 0, 1);
   }
+
+  for (const muscle of secondaryMuscles) {
+    contribution[muscle] = Math.max(contribution[muscle] ?? 0, 0.5);
+  }
+
+  return contribution;
 }
 
 export function getExerciseMuscleContribution(exercise: ExerciseLike): ZoneContribution {
-  const normalizedName = normalizeExerciseName(exercise.exerciseName);
-  const matchedRule = EXERCISE_RULES.find((rule) => rule.pattern.test(normalizedName));
-  return matchedRule?.contribution ?? getFallbackContribution(exercise);
+  const profile =
+    exercise.primaryMuscles?.length || exercise.secondaryMuscles?.length
+      ? {
+          primaryMuscles: exercise.primaryMuscles ?? [],
+          secondaryMuscles: exercise.secondaryMuscles ?? [],
+        }
+      : getExerciseMuscleProfile(exercise.exerciseName, exercise.muscleGroup);
+
+  return buildContributionFromMuscles(profile.primaryMuscles, profile.secondaryMuscles);
 }
 
 export function getExerciseTargetLabels(exercise: ExerciseLike, limit = 2) {
@@ -1412,6 +1300,8 @@ function getTemplateExerciseContribution(exercise: ExerciseTemplate) {
   return getExerciseMuscleContribution({
     exerciseName: exercise.name,
     muscleGroup: exercise.muscleGroup,
+    primaryMuscles: exercise.primaryMuscles,
+    secondaryMuscles: exercise.secondaryMuscles,
   });
 }
 
@@ -2121,6 +2011,7 @@ export function getSuggestedFocusSession(
   return {
     focusText: phaseProfile?.currentPhase === "wedding_week" ? "This week." : focus.text,
     exercises: selectedSlice.map((exercise) => ({
+      ...getExerciseMuscleProfile(exercise.name, exercise.muscleGroup),
       exerciseId: exercise.exerciseId,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
@@ -2332,15 +2223,34 @@ export function getWeeklyCalendarRows(
 ): CalendarRow[] {
   const currentWeek = getCurrentWeekWindow(referenceDate);
   const workoutDays = sessions.reduce<
-    Record<string, { joshuaCompleted: boolean; natashaCompleted: boolean }>
+    Record<
+      string,
+      {
+        joshuaCompleted: boolean;
+        natashaCompleted: boolean;
+        joshuaWorkouts: string[];
+        natashaWorkouts: string[];
+      }
+    >
   >((accumulator, session) => {
     const key = toLocalDayKey(session.performedAt);
-    const current = accumulator[key] ?? { joshuaCompleted: false, natashaCompleted: false };
+    const current = accumulator[key] ?? {
+      joshuaCompleted: false,
+      natashaCompleted: false,
+      joshuaWorkouts: [],
+      natashaWorkouts: [],
+    };
     if (session.userId === "joshua") {
       current.joshuaCompleted = true;
+      if (!current.joshuaWorkouts.includes(session.workoutName)) {
+        current.joshuaWorkouts.push(session.workoutName);
+      }
     }
     if (session.userId === "natasha") {
       current.natashaCompleted = true;
+      if (!current.natashaWorkouts.includes(session.workoutName)) {
+        current.natashaWorkouts.push(session.workoutName);
+      }
     }
     accumulator[key] = current;
     return accumulator;
@@ -2359,7 +2269,12 @@ export function getWeeklyCalendarRows(
         const date = new Date(weekStart);
         date.setDate(date.getDate() + dayIndex);
         const key = toLocalDayKey(date);
-        const dayCompletion = workoutDays[key] ?? { joshuaCompleted: false, natashaCompleted: false };
+        const dayCompletion = workoutDays[key] ?? {
+          joshuaCompleted: false,
+          natashaCompleted: false,
+          joshuaWorkouts: [],
+          natashaWorkouts: [],
+        };
 
         return {
           key,
@@ -2369,6 +2284,8 @@ export function getWeeklyCalendarRows(
           isToday: key === todayKey,
           joshuaCompleted: dayCompletion.joshuaCompleted,
           natashaCompleted: dayCompletion.natashaCompleted,
+          joshuaWorkouts: dayCompletion.joshuaWorkouts,
+          natashaWorkouts: dayCompletion.natashaWorkouts,
         };
       }),
     };

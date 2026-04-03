@@ -1,4 +1,4 @@
-import type { StrengthPrediction, UserId, WorkoutSession } from "@/lib/types";
+import type { RecommendationConfidence, StrengthPrediction, UserId, WorkoutSession } from "@/lib/types";
 
 type LiftConfig = {
   label: string;
@@ -31,11 +31,16 @@ const trackedLiftsByUser: Record<UserId, LiftConfig[]> = {
   ],
 };
 
-const roundToNearestHalf = (value: number) => Math.round(value * 2) / 2;
+const millisecondsPerWeek = 604_800_000;
+const millisecondsPerDay = 86_400_000;
 
+const roundToNearestHalf = (value: number) => Math.round(value * 2) / 2;
 const formatProjection = (weight: number, reps: number) => `${roundToNearestHalf(weight)}kg x ${reps}`;
 const getEstimatedOneRepMax = (weight: number, reps: number) => weight * (1 + reps / 30);
-const millisecondsPerWeek = 604_800_000;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 function getLiftEntries(sessions: WorkoutSession[], aliases: string[]) {
   return sessions
@@ -101,15 +106,65 @@ function getWeightedWeeklyE1rmGain(entries: LiftEntry[], maxWeeklyIncreaseKg: nu
     weightedGains.reduce((sum, item) => sum + item.weeklyGain * item.weight, 0) /
     weightedGains.reduce((sum, item) => sum + item.weight, 0);
 
-  const cappedWeeklyE1rmGain = Math.max(
-    0,
-    Math.min(weightedAverage, maxWeeklyIncreaseKg * 1.35),
-  );
-
-  return cappedWeeklyE1rmGain;
+  return Math.max(0, Math.min(weightedAverage, maxWeeklyIncreaseKg * 1.35));
 }
 
-function buildPrediction(config: LiftConfig, sessions: WorkoutSession[]): StrengthPrediction | null {
+function getPredictionConfidence(entries: LiftEntry[], referenceDate = new Date()) {
+  const lastEntry = entries[entries.length - 1];
+  const recent = entries.slice(-3);
+  const daysSinceLast = Math.max(
+    0,
+    Math.round((referenceDate.getTime() - new Date(lastEntry.date).getTime()) / millisecondsPerDay),
+  );
+  const scoreSpread =
+    recent.length > 1
+      ? Math.max(...recent.map((entry) => entry.score)) - Math.min(...recent.map((entry) => entry.score))
+      : 0;
+
+  let score = 0.18;
+  score += Math.min(entries.length, 6) * 0.08;
+  score += daysSinceLast <= 10 ? 0.16 : daysSinceLast <= 21 ? 0.1 : 0.04;
+  score += scoreSpread <= 8 ? 0.14 : scoreSpread <= 18 ? 0.08 : 0.04;
+
+  const normalized = clamp(score, 0.18, 0.9);
+
+  if (normalized >= 0.72) {
+    return {
+      confidence: "high" as RecommendationConfidence,
+      confidenceLabel: "High confidence",
+    };
+  }
+
+  if (normalized >= 0.46) {
+    return {
+      confidence: "medium" as RecommendationConfidence,
+      confidenceLabel: "Medium confidence",
+    };
+  }
+
+  return {
+    confidence: "low" as RecommendationConfidence,
+    confidenceLabel: "Low confidence",
+  };
+}
+
+function getTrendLabel(weeklyE1rmGain: number) {
+  if (weeklyE1rmGain >= 1.25) {
+    return "Building fast";
+  }
+
+  if (weeklyE1rmGain >= 0.45) {
+    return "Steady trend";
+  }
+
+  return "Slow trend";
+}
+
+function buildPrediction(
+  config: LiftConfig,
+  sessions: WorkoutSession[],
+  referenceDate = new Date(),
+): StrengthPrediction | null {
   const entries = getLiftEntries(sessions, config.aliases);
   if (entries.length < 3) {
     return null;
@@ -124,18 +179,27 @@ function buildPrediction(config: LiftConfig, sessions: WorkoutSession[]): Streng
   const projectedEstimatedOneRepMax = lastEstimatedOneRepMax + weeklyE1rmGain * 8;
   const projectedWeight = projectedEstimatedOneRepMax / (1 + projectedReps / 30);
   const bestEntry = entries.reduce((top, entry) => (entry.score > top.score ? entry : top), entries[0]);
+  const { confidence, confidenceLabel } = getPredictionConfidence(entries, referenceDate);
+  const trendLabel = getTrendLabel(weeklyE1rmGain);
+  const note =
+    weeklyE1rmGain >= 0.45
+      ? `Recent estimated strength is climbing cleanly from ${formatProjection(last.weight, last.reps)}.`
+      : `Recent estimated strength is steady, so this outlook is a smaller nudge than a big leap.`;
 
   return {
     exerciseName: config.label,
     currentBest: `${roundToNearestHalf(bestEntry.weight)}kg x ${bestEntry.reps}`,
     projectedPerformance: formatProjection(projectedWeight, projectedReps),
-    note: "Based on recent estimated strength trend",
+    note,
+    confidence,
+    confidenceLabel,
+    trendLabel,
   };
 }
 
-export function getStrengthPredictions(userId: UserId, sessions: WorkoutSession[]) {
+export function getStrengthPredictions(userId: UserId, sessions: WorkoutSession[], referenceDate = new Date()) {
   return trackedLiftsByUser[userId]
-    .map((config) => buildPrediction(config, sessions))
+    .map((config) => buildPrediction(config, sessions, referenceDate))
     .filter((prediction): prediction is StrengthPrediction => Boolean(prediction))
     .slice(0, 3);
 }

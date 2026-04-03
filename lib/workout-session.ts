@@ -41,6 +41,7 @@ export function buildSessionSummary(
     partial?: boolean;
     prCount?: number;
     prHighlights?: string[];
+    intelligenceRecap?: SessionSummary["intelligenceRecap"];
   },
 ): SessionSummary {
   return {
@@ -54,6 +55,7 @@ export function buildSessionSummary(
     partial: options?.partial ?? session.partial,
     prCount: options?.prCount,
     prHighlights: options?.prHighlights,
+    intelligenceRecap: options?.intelligenceRecap ?? null,
   };
 }
 
@@ -86,6 +88,8 @@ export function buildResumedActiveWorkout(
         exerciseId: partialExercise?.exerciseId ?? exercise.id,
         exerciseName: partialExercise?.exerciseName ?? exercise.name,
         muscleGroup: partialExercise?.muscleGroup ?? exercise.muscleGroup,
+        primaryMuscles: partialExercise?.primaryMuscles ?? exercise.primaryMuscles,
+        secondaryMuscles: partialExercise?.secondaryMuscles ?? exercise.secondaryMuscles,
         note: partialExercise?.note ?? exercise.note ?? "",
         sets: Array.from({ length: exercise.sets }, (_, setIndex) => {
           const loggedSet = completedSets[setIndex];

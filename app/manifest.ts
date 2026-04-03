@@ -5,13 +5,13 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "STEAL",
     short_name: "STEAL",
-    description: "A premium couple workout tracker for Joshua and Natasha.",
+    description: "Private shared training app for Joshua and Natasha.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#050507",
-    theme_color: "#050507",
+    background_color: "#090a0d",
+    theme_color: "#090a0d",
     categories: ["health", "fitness", "lifestyle"],
     icons: [
       {
