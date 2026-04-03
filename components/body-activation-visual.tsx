@@ -186,13 +186,18 @@ function Shape({
 }
 
 function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }) {
-  const shellFill = "rgba(255,255,255,0.022)";
-  const shellStroke = "rgba(244,246,255,0.16)";
-  const contourStroke = "rgba(255,255,255,0.032)";
-  const frame = variant === "male" ? { x: 13, y: 8, width: 94, height: 236 } : { x: 15, y: 8, width: 90, height: 236 };
   const isMale = variant === "male";
+  const isFront = view === "front";
 
-  // Torso + legs shell (shoulders taper in at armpit — arms are separate shapes below)
+  const fill = "rgba(255,255,255,0.062)";
+  const stroke = "rgba(255,255,255,0.22)";
+  const muscleFill = "rgba(255,255,255,0.026)";
+  const muscleStroke = "rgba(255,255,255,0.072)";
+  const detail = "rgba(255,255,255,0.058)";
+  const subtle = "rgba(255,255,255,0.036)";
+
+  const frame = isMale ? { x: 13, y: 8, width: 94, height: 236 } : { x: 15, y: 8, width: 90, height: 236 };
+
   const frontShell = isMale
     ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 91 36 102 39 114C42 129 44 143 47 155C49 164 51 171 53 178C55 186 55 195 54 208L52 246H57L59 209C59 194 59 182 60 171C61 182 61 194 61 209L63 246H68L66 208C65 195 65 186 67 178C69 171 71 164 73 155C76 143 78 129 81 114C84 102 86 91 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
     : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 113C43 128 45 143 48 156C50 164 52 171 54 179C56 187 56 196 55 209L53 246H58L59 210C59 195 59 184 60 173C61 184 61 195 61 210L62 246H67L65 209C64 196 64 187 66 179C68 171 70 164 72 156C75 143 77 128 80 113C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
@@ -201,16 +206,12 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
     ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 92 36 103 39 116C42 129 44 143 47 156C49 165 51 172 53 179C55 187 55 196 54 209L52 246H57L59 210C59 195 59 184 60 173C61 184 61 195 61 210L63 246H68L66 209C65 196 65 187 67 179C69 172 71 165 73 156C76 143 78 129 81 116C84 103 86 92 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
     : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 114C43 128 45 143 48 156C50 164 52 171 54 180C56 188 56 197 55 210L53 246H58L59 211C59 196 59 185 60 174C61 185 61 196 61 211L62 246H67L65 210C64 197 64 188 66 180C68 171 70 164 72 156C75 143 77 128 80 114C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
 
-  // Upper arm paths — drawn behind torso so shoulder junction is seamless
-  // Male: wider, more angular; Female: slightly narrower and more tapered
   const leftUpperArm = isMale
     ? "M41 52Q34 47 25 50Q18 54 17 64L16 90C16 104 19 115 24 120L32 122Q38 120 41 114L42 70Q42 55 41 52Z"
     : "M40 52Q34 47 26 50Q20 55 19 63L18 89C18 102 21 112 26 117L32 119Q37 117 39 111L40 70Q40 55 40 52Z";
   const rightUpperArm = isMale
     ? "M79 52Q86 47 95 50Q102 54 103 64L104 90C104 104 101 115 96 120L88 122Q82 120 79 114L78 70Q78 55 79 52Z"
     : "M80 52Q86 47 94 50Q100 55 101 63L102 89C102 102 99 112 94 117L88 119Q83 117 81 111L80 70Q80 55 80 52Z";
-
-  // Forearm paths
   const leftForearm = isMale
     ? "M24 120Q15 122 14 132L14 150Q14 158 19 163L27 165Q34 163 35 154L35 132Q34 122 27 120Z"
     : "M26 117Q17 119 16 129L16 147Q16 155 21 160L28 162Q35 160 36 151L36 130Q35 120 29 117Z";
@@ -220,68 +221,182 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
 
   return (
     <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
-      <ellipse cx="60" cy="118" rx={isMale ? 24 : 22} ry="62" fill="rgba(255,255,255,0.01)" />
-
-      {/* Arms rendered first — torso shell renders on top for a seamless shoulder join */}
-      <path d={leftUpperArm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path d={rightUpperArm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path d={leftForearm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <path d={rightForearm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      {/* Arms — behind torso for seamless shoulder join */}
+      <path d={leftUpperArm} fill={fill} stroke={stroke} strokeWidth="0.9" />
+      <path d={rightUpperArm} fill={fill} stroke={stroke} strokeWidth="0.9" />
+      <path d={leftForearm} fill={fill} stroke={stroke} strokeWidth="0.9" />
+      <path d={rightForearm} fill={fill} stroke={stroke} strokeWidth="0.9" />
 
       {/* Hands */}
-      <ellipse cx={isMale ? 25 : 27} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
-      <ellipse cx={isMale ? 95 : 93} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <ellipse cx={isMale ? 25 : 27} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={fill} stroke={stroke} strokeWidth="0.9" />
+      <ellipse cx={isMale ? 95 : 93} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={fill} stroke={stroke} strokeWidth="0.9" />
 
       {/* Head */}
-      <circle cx="60" cy="17" r={isMale ? 10.5 : 10} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <circle cx="60" cy="14" r={isMale ? 10.5 : 10} fill={fill} stroke={stroke} strokeWidth="0.9" />
 
-      {/* Torso + legs — renders over arm tops for clean shoulder join */}
-      <path d={view === "front" ? frontShell : backShell} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      {/* Torso + legs — over arm tops for clean shoulder join */}
+      <path d={isFront ? frontShell : backShell} fill={fill} stroke={stroke} strokeWidth="0.9" />
 
-      {/* Arm inner-edge contour lines */}
-      <path
-        d={isMale ? "M44 49C40 61 38 75 38 93" : "M45 50C41 61 39 75 39 93"}
-        fill="none"
-        stroke={contourStroke}
-        strokeWidth="0.82"
-        strokeLinecap="round"
-      />
-      <path
-        d={isMale ? "M76 49C80 61 82 75 82 93" : "M75 50C79 61 81 75 81 93"}
-        fill="none"
-        stroke={contourStroke}
-        strokeWidth="0.82"
-        strokeLinecap="round"
-      />
+      {/* Neck sides */}
+      <path d="M55.5 24C56 27 55.5 30 55 33" fill="none" stroke={detail} strokeWidth="0.55" strokeLinecap="round" />
+      <path d="M64.5 24C64 27 64.5 30 65 33" fill="none" stroke={detail} strokeWidth="0.55" strokeLinecap="round" />
 
-      {view === "front" ? (
+      {/* Arm inner-edge contour */}
+      <path d={isMale ? "M44 49C40 61 38 75 38 93" : "M45 50C41 61 39 75 39 93"} fill="none" stroke={subtle} strokeWidth="0.78" strokeLinecap="round" />
+      <path d={isMale ? "M76 49C80 61 82 75 82 93" : "M75 50C79 61 81 75 81 93"} fill="none" stroke={subtle} strokeWidth="0.78" strokeLinecap="round" />
+
+      {isFront ? (
         <>
-          <path d="M49 54C52 51 56 50 60 50C64 50 68 51 71 54" fill="none" stroke={contourStroke} strokeWidth="0.6" strokeLinecap="round" />
-          <path d="M60 50L60 142" fill="none" stroke="rgba(255,255,255,0.024)" strokeWidth="0.7" strokeLinecap="round" />
+          {/* Clavicle */}
+          <path d={isMale ? "M50 34C54 32 57 31 60 31C63 31 66 32 70 34" : "M51 34C54 32 57 31 60 31C63 31 66 32 69 34"} fill="none" stroke={detail} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Deltoid cap arc */}
+          <path d={isMale ? "M38 50C41 46 46 46 49 51" : "M39 50C42 47 46 47 49 52"} fill="none" stroke={detail} strokeWidth="0.65" strokeLinecap="round" />
+          <path d={isMale ? "M82 50C79 46 74 46 71 51" : "M81 50C78 47 74 47 71 52"} fill="none" stroke={detail} strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Pectorals (male only) */}
+          {isMale && (
+            <>
+              <path d="M47 58C50 54 55 52 60 52L59 86C56 88 53 87 50 84C47 80 46 73 47 63Z" fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55" />
+              <path d="M73 58C70 54 65 52 60 52L61 86C64 88 67 87 70 84C73 80 74 73 73 63Z" fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55" />
+              <path d="M50 84C53 89 56 90 60 90C64 90 67 89 70 84" fill="none" stroke={detail} strokeWidth="0.55" strokeLinecap="round" />
+            </>
+          )}
+
           {/* Female chest contour */}
           {!isMale && (
-            <path d="M53 80C54 88 57 93 60 94C63 93 66 88 67 80" fill="none" stroke={contourStroke} strokeWidth="0.72" strokeLinecap="round" />
+            <>
+              <path d="M53 80C54 88 57 93 60 94C63 93 66 88 67 80" fill="none" stroke={detail} strokeWidth="0.72" strokeLinecap="round" />
+              <path d="M52 75C54 72 57 70 60 70C63 70 66 72 68 75" fill="none" stroke={subtle} strokeWidth="0.58" strokeLinecap="round" />
+            </>
           )}
+
+          {/* Sternum / linea alba */}
+          <path d={isMale ? "M60 34L60 142" : "M60 34L60 143"} fill="none" stroke="rgba(255,255,255,0.038)" strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Abs grid */}
+          {isMale && (
+            <>
+              <path d="M55 93H65" fill="none" stroke={detail} strokeWidth="0.5" strokeLinecap="round" />
+              <path d="M54 106H66" fill="none" stroke={detail} strokeWidth="0.5" strokeLinecap="round" />
+              <path d="M54 119H66" fill="none" stroke={detail} strokeWidth="0.5" strokeLinecap="round" />
+              <path d="M54 132H66" fill="none" stroke={subtle} strokeWidth="0.48" strokeLinecap="round" />
+            </>
+          )}
+          {!isMale && (
+            <>
+              <path d="M56 97H64" fill="none" stroke={subtle} strokeWidth="0.45" strokeLinecap="round" />
+              <path d="M55 110H65" fill="none" stroke={subtle} strokeWidth="0.45" strokeLinecap="round" />
+              <path d="M55 123H65" fill="none" stroke="rgba(255,255,255,0.030)" strokeWidth="0.42" strokeLinecap="round" />
+            </>
+          )}
+
+          {/* Serratus / lateral border */}
+          <path d={isMale ? "M46 89C47 97 48 108 49 121" : "M47 90C48 98 48 109 49 121"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+          <path d={isMale ? "M74 89C73 97 72 108 71 121" : "M73 90C72 98 72 109 71 121"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Hip crease */}
+          <path d={isMale ? "M47 143C50 140 55 138 60 138C65 138 70 140 73 143" : "M44 149C48 145 53 143 60 143C67 143 72 145 76 149"} fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Quad separation */}
+          <path d={isMale ? "M53 172C51 187 50 201 51 215" : "M52 172C50 187 49 201 50 215"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+          <path d={isMale ? "M67 172C69 187 70 201 69 215" : "M68 172C70 187 71 201 70 215"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Knee caps */}
+          <ellipse cx={isMale ? 52 : 51} cy={isMale ? 213 : 214} rx="5" ry="4" fill="rgba(255,255,255,0.022)" stroke="rgba(255,255,255,0.058)" strokeWidth="0.5" />
+          <ellipse cx={isMale ? 68 : 69} cy={isMale ? 213 : 214} rx="5" ry="4" fill="rgba(255,255,255,0.022)" stroke="rgba(255,255,255,0.058)" strokeWidth="0.5" />
+
+          {/* Shin / tibialis line */}
+          <path d={isMale ? "M50 222C50 233 51 243 51 250" : "M49 222C49 233 50 243 50 250"} fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+          <path d={isMale ? "M70 222C70 233 69 243 69 250" : "M71 222C71 233 70 243 70 250"} fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Bicep peak */}
+          <path d={isMale ? "M22 86C20 90 20 96 22 102" : "M23 86C21 90 21 96 23 102"} fill="none" stroke={subtle} strokeWidth="0.58" strokeLinecap="round" />
+          <path d={isMale ? "M98 86C100 90 100 96 98 102" : "M97 86C99 90 99 96 97 102"} fill="none" stroke={subtle} strokeWidth="0.58" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <path d="M49 50L60 68L71 50" fill="none" stroke={contourStroke} strokeWidth="0.66" strokeLinecap="round" />
-          <path d="M60 67L60 145" fill="none" stroke="rgba(255,255,255,0.024)" strokeWidth="0.68" strokeLinecap="round" />
-          {/* Shoulder blade contours (back view) */}
+          {/* BACK VIEW */}
+
+          {/* Trapezius fill */}
           <path
-            d={isMale ? "M50 77C52 74 56 73 60 73C64 73 68 74 70 77" : "M51 79C53 76 56 74 60 74C64 74 67 76 69 79"}
-            fill="none"
-            stroke={contourStroke}
-            strokeWidth="0.6"
-            strokeLinecap="round"
+            d={isMale
+              ? "M49 54C52 51 56 50 60 50C64 50 68 51 71 54L68 72C65 74 62 75 60 75C58 75 55 74 52 72Z"
+              : "M50 55C53 52 56 51 60 51C64 51 67 52 70 55L67 72C64 74 62 75 60 75C58 75 56 74 53 72Z"}
+            fill={muscleFill} stroke={muscleStroke} strokeWidth="0.6"
+          />
+
+          {/* Trap neck line */}
+          <path d="M49 54L60 68L71 54" fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Posterior delt arcs */}
+          <path d={isMale ? "M38 50C41 46 46 46 49 51" : "M39 50C42 47 46 47 49 52"} fill="none" stroke={detail} strokeWidth="0.65" strokeLinecap="round" />
+          <path d={isMale ? "M82 50C79 46 74 46 71 51" : "M81 50C78 47 74 47 71 52"} fill="none" stroke={detail} strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Lat fills */}
+          <path
+            d={isMale ? "M46 76C49 74 52 75 53 80L51 128C47 124 44 115 44 98Z" : "M47 76C50 74 52 75 53 80L51 128C47 124 45 116 45 100Z"}
+            fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55"
           />
           <path
-            d={isMale ? "M52 88C55 90 58 91 60 91C62 91 65 90 68 88" : "M53 90C55 92 58 93 60 93C62 93 65 92 67 90"}
-            fill="none"
-            stroke={contourStroke}
-            strokeWidth="0.55"
-            strokeLinecap="round"
+            d={isMale ? "M74 76C71 74 68 75 67 80L69 128C73 124 76 115 76 98Z" : "M73 76C70 74 68 75 67 80L69 128C73 124 75 116 75 100Z"}
+            fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55"
           />
+
+          {/* Mid back / rhomboids */}
+          <path
+            d={isMale
+              ? "M54 78C56 76 58 75 60 75C62 75 64 76 66 78L66 114C64 116 62 117 60 117C58 117 56 116 54 114Z"
+              : "M55 78C57 76 58 75 60 75C62 75 63 76 65 78L65 114C63 116 62 117 60 117C58 117 57 116 55 114Z"}
+            fill="rgba(255,255,255,0.018)" stroke="rgba(255,255,255,0.056)" strokeWidth="0.55"
+          />
+
+          {/* Spinal groove */}
+          <path d={isMale ? "M60 74L60 145" : "M60 75L60 146"} fill="none" stroke="rgba(255,255,255,0.038)" strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Shoulder blade hints */}
+          <path d={isMale ? "M50 82C52 79 55 78 57 81L56 100C53 101 50 97 49 90Z" : "M51 83C53 80 55 79 57 82L56 100C53 101 50 97 49 90Z"} fill="rgba(255,255,255,0.018)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+          <path d={isMale ? "M70 82C68 79 65 78 63 81L64 100C67 101 70 97 71 90Z" : "M69 83C67 80 65 79 63 82L64 100C67 101 70 97 71 90Z"} fill="rgba(255,255,255,0.018)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+
+          {/* Blade lower arc */}
+          <path d={isMale ? "M52 88C55 90 58 91 60 91C62 91 65 90 68 88" : "M53 90C55 92 58 93 60 93C62 93 65 92 67 90"} fill="none" stroke={subtle} strokeWidth="0.52" strokeLinecap="round" />
+
+          {/* Lower back */}
+          <path
+            d={isMale
+              ? "M54 115C56 113 58 112 60 112C62 112 64 113 66 115L65 143C63 145 61 146 60 146C59 146 57 145 55 143Z"
+              : "M55 116C57 114 58 113 60 113C62 113 63 114 65 116L64 144C62 146 61 147 60 147C59 147 58 146 56 144Z"}
+            fill="rgba(255,255,255,0.016)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"
+          />
+
+          {/* Glute fills */}
+          <path
+            d={isMale ? "M46 157C51 154 56 155 58 162L55 182C49 181 44 171 44 161Z" : "M43 157C49 152 56 154 58 162L55 183C48 183 43 172 43 161Z"}
+            fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55"
+          />
+          <path
+            d={isMale ? "M74 157C69 154 64 155 62 162L65 182C71 181 76 171 76 161Z" : "M77 157C71 152 64 154 62 162L65 183C72 183 77 172 77 161Z"}
+            fill={muscleFill} stroke={muscleStroke} strokeWidth="0.55"
+          />
+
+          {/* Glute center crease */}
+          <path d={isMale ? "M60 145L60 183" : "M60 145L60 184"} fill="none" stroke={detail} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Hamstring lines */}
+          <path d={isMale ? "M50 184C49 196 49 209 50 221" : "M48 185C47 198 47 211 48 223"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+          <path d={isMale ? "M70 184C71 196 71 209 70 221" : "M72 185C73 198 73 211 72 223"} fill="none" stroke={subtle} strokeWidth="0.65" strokeLinecap="round" />
+
+          {/* Knee area */}
+          <ellipse cx={isMale ? 52 : 51} cy={isMale ? 213 : 214} rx="5" ry="4" fill="rgba(255,255,255,0.022)" stroke="rgba(255,255,255,0.058)" strokeWidth="0.5" />
+          <ellipse cx={isMale ? 68 : 69} cy={isMale ? 213 : 214} rx="5" ry="4" fill="rgba(255,255,255,0.022)" stroke="rgba(255,255,255,0.058)" strokeWidth="0.5" />
+
+          {/* Calf medial split */}
+          <path d={isMale ? "M51 230C50 240 50 247 51 251" : "M50 230C49 240 49 247 50 251"} fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+          <path d={isMale ? "M69 230C70 240 70 247 69 251" : "M70 230C71 240 71 247 70 251"} fill="none" stroke={subtle} strokeWidth="0.6" strokeLinecap="round" />
+
+          {/* Bicep rear contour */}
+          <path d={isMale ? "M22 86C20 90 20 96 22 102" : "M23 86C21 90 21 96 23 102"} fill="none" stroke={subtle} strokeWidth="0.58" strokeLinecap="round" />
+          <path d={isMale ? "M98 86C100 90 100 96 98 102" : "M97 86C99 90 99 96 97 102"} fill="none" stroke={subtle} strokeWidth="0.58" strokeLinecap="round" />
         </>
       )}
     </svg>
