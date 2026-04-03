@@ -190,43 +190,98 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
   const shellStroke = "rgba(244,246,255,0.16)";
   const contourStroke = "rgba(255,255,255,0.032)";
   const frame = variant === "male" ? { x: 13, y: 8, width: 94, height: 236 } : { x: 15, y: 8, width: 90, height: 236 };
-  const frontShell =
-    variant === "male"
-      ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 91 36 102 39 114C42 129 44 143 47 155C49 164 51 171 53 178C55 186 55 195 54 208L52 246H57L59 209C59 194 59 182 60 171C61 182 61 194 61 209L63 246H68L66 208C65 195 65 186 67 178C69 171 71 164 73 155C76 143 78 129 81 114C84 102 86 91 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
-      : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 113C43 128 45 143 48 156C50 164 52 171 54 179C56 187 56 196 55 209L53 246H58L59 210C59 195 59 184 60 173C61 184 61 195 61 210L62 246H67L65 209C64 196 64 187 66 179C68 171 70 164 72 156C75 143 77 128 80 113C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
-  const backShell =
-    variant === "male"
-      ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 92 36 103 39 116C42 129 44 143 47 156C49 165 51 172 53 179C55 187 55 196 54 209L52 246H57L59 210C59 195 59 184 60 173C61 184 61 195 61 210L63 246H68L66 209C65 196 65 187 67 179C69 172 71 165 73 156C76 143 78 129 81 116C84 103 86 92 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
-      : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 114C43 128 45 143 48 156C50 164 52 171 54 180C56 188 56 197 55 210L53 246H58L59 211C59 196 59 185 60 174C61 185 61 196 61 211L62 246H67L65 210C64 197 64 188 66 180C68 171 70 164 72 156C75 143 77 128 80 114C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
+  const isMale = variant === "male";
+
+  // Torso + legs shell (shoulders taper in at armpit — arms are separate shapes below)
+  const frontShell = isMale
+    ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 91 36 102 39 114C42 129 44 143 47 155C49 164 51 171 53 178C55 186 55 195 54 208L52 246H57L59 209C59 194 59 182 60 171C61 182 61 194 61 209L63 246H68L66 208C65 195 65 186 67 178C69 171 71 164 73 155C76 143 78 129 81 114C84 102 86 91 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
+    : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 113C43 128 45 143 48 156C50 164 52 171 54 179C56 187 56 196 55 209L53 246H58L59 210C59 195 59 184 60 173C61 184 61 195 61 210L62 246H67L65 209C64 196 64 187 66 179C68 171 70 164 72 156C75 143 77 128 80 113C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
+
+  const backShell = isMale
+    ? "M60 27C54 27 50 29 47 33C44 38 42 43 38 49C34 56 32 67 33 79C34 92 36 103 39 116C42 129 44 143 47 156C49 165 51 172 53 179C55 187 55 196 54 209L52 246H57L59 210C59 195 59 184 60 173C61 184 61 195 61 210L63 246H68L66 209C65 196 65 187 67 179C69 172 71 165 73 156C76 143 78 129 81 116C84 103 86 92 87 79C88 67 86 56 82 49C78 43 76 38 73 33C70 29 66 27 60 27Z"
+    : "M60 27C55 27 51 29 48 33C45 38 43 43 39 49C36 55 34 65 35 77C36 89 38 101 40 114C43 128 45 143 48 156C50 164 52 171 54 180C56 188 56 197 55 210L53 246H58L59 211C59 196 59 185 60 174C61 185 61 196 61 211L62 246H67L65 210C64 197 64 188 66 180C68 171 70 164 72 156C75 143 77 128 80 114C82 101 84 89 85 77C86 65 84 55 81 49C77 43 75 38 72 33C69 29 65 27 60 27Z";
+
+  // Upper arm paths — drawn behind torso so shoulder junction is seamless
+  // Male: wider, more angular; Female: slightly narrower and more tapered
+  const leftUpperArm = isMale
+    ? "M41 52Q34 47 25 50Q18 54 17 64L16 90C16 104 19 115 24 120L32 122Q38 120 41 114L42 70Q42 55 41 52Z"
+    : "M40 52Q34 47 26 50Q20 55 19 63L18 89C18 102 21 112 26 117L32 119Q37 117 39 111L40 70Q40 55 40 52Z";
+  const rightUpperArm = isMale
+    ? "M79 52Q86 47 95 50Q102 54 103 64L104 90C104 104 101 115 96 120L88 122Q82 120 79 114L78 70Q78 55 79 52Z"
+    : "M80 52Q86 47 94 50Q100 55 101 63L102 89C102 102 99 112 94 117L88 119Q83 117 81 111L80 70Q80 55 80 52Z";
+
+  // Forearm paths
+  const leftForearm = isMale
+    ? "M24 120Q15 122 14 132L14 150Q14 158 19 163L27 165Q34 163 35 154L35 132Q34 122 27 120Z"
+    : "M26 117Q17 119 16 129L16 147Q16 155 21 160L28 162Q35 160 36 151L36 130Q35 120 29 117Z";
+  const rightForearm = isMale
+    ? "M96 120Q105 122 106 132L106 150Q106 158 101 163L93 165Q86 163 85 154L85 132Q86 122 93 120Z"
+    : "M94 117Q103 119 104 129L104 147Q104 155 99 160L92 162Q85 160 84 151L84 130Q85 120 91 117Z";
 
   return (
     <svg x={frame.x} y={frame.y} width={frame.width} height={frame.height} viewBox="0 0 120 260">
-      <ellipse cx="60" cy="118" rx={variant === "male" ? 24 : 22} ry="62" fill="rgba(255,255,255,0.01)" />
-      <circle cx="60" cy="17" r={variant === "male" ? 10.5 : 10} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <ellipse cx="60" cy="118" rx={isMale ? 24 : 22} ry="62" fill="rgba(255,255,255,0.01)" />
+
+      {/* Arms rendered first — torso shell renders on top for a seamless shoulder join */}
+      <path d={leftUpperArm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d={rightUpperArm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d={leftForearm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <path d={rightForearm} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+
+      {/* Hands */}
+      <ellipse cx={isMale ? 25 : 27} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+      <ellipse cx={isMale ? 95 : 93} cy={isMale ? 169 : 166} rx={isMale ? 8 : 7} ry="5" fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+
+      {/* Head */}
+      <circle cx="60" cy="17" r={isMale ? 10.5 : 10} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+
+      {/* Torso + legs — renders over arm tops for clean shoulder join */}
       <path d={view === "front" ? frontShell : backShell} fill={shellFill} stroke={shellStroke} strokeWidth="1" />
+
+      {/* Arm inner-edge contour lines */}
       <path
-        d={variant === "male" ? "M44 49C40 61 38 75 38 93" : "M45 50C41 61 39 75 39 93"}
+        d={isMale ? "M44 49C40 61 38 75 38 93" : "M45 50C41 61 39 75 39 93"}
         fill="none"
         stroke={contourStroke}
         strokeWidth="0.82"
         strokeLinecap="round"
       />
       <path
-        d={variant === "male" ? "M76 49C80 61 82 75 82 93" : "M75 50C79 61 81 75 81 93"}
+        d={isMale ? "M76 49C80 61 82 75 82 93" : "M75 50C79 61 81 75 81 93"}
         fill="none"
         stroke={contourStroke}
         strokeWidth="0.82"
         strokeLinecap="round"
       />
+
       {view === "front" ? (
         <>
           <path d="M49 54C52 51 56 50 60 50C64 50 68 51 71 54" fill="none" stroke={contourStroke} strokeWidth="0.6" strokeLinecap="round" />
           <path d="M60 50L60 142" fill="none" stroke="rgba(255,255,255,0.024)" strokeWidth="0.7" strokeLinecap="round" />
+          {/* Female chest contour */}
+          {!isMale && (
+            <path d="M53 80C54 88 57 93 60 94C63 93 66 88 67 80" fill="none" stroke={contourStroke} strokeWidth="0.72" strokeLinecap="round" />
+          )}
         </>
       ) : (
         <>
           <path d="M49 50L60 68L71 50" fill="none" stroke={contourStroke} strokeWidth="0.66" strokeLinecap="round" />
           <path d="M60 67L60 145" fill="none" stroke="rgba(255,255,255,0.024)" strokeWidth="0.68" strokeLinecap="round" />
+          {/* Shoulder blade contours (back view) */}
+          <path
+            d={isMale ? "M50 77C52 74 56 73 60 73C64 73 68 74 70 77" : "M51 79C53 76 56 74 60 74C64 74 67 76 69 79"}
+            fill="none"
+            stroke={contourStroke}
+            strokeWidth="0.6"
+            strokeLinecap="round"
+          />
+          <path
+            d={isMale ? "M52 88C55 90 58 91 60 91C62 91 65 90 68 88" : "M53 90C55 92 58 93 60 93C62 93 65 92 67 90"}
+            fill="none"
+            stroke={contourStroke}
+            strokeWidth="0.55"
+            strokeLinecap="round"
+          />
         </>
       )}
     </svg>
