@@ -189,12 +189,12 @@ function BodyBaseArt({ variant, view }: { variant: BodyVariant; view: BodyView }
   const isMale = variant === "male";
   const isFront = view === "front";
 
-  const fill = "rgba(255,255,255,0.062)";
-  const stroke = "rgba(255,255,255,0.22)";
-  const muscleFill = "rgba(255,255,255,0.026)";
-  const muscleStroke = "rgba(255,255,255,0.072)";
-  const detail = "rgba(255,255,255,0.058)";
-  const subtle = "rgba(255,255,255,0.036)";
+  const fill = "rgba(255,255,255,0.11)";
+  const stroke = "rgba(255,255,255,0.44)";
+  const muscleFill = "rgba(255,255,255,0.07)";
+  const muscleStroke = "rgba(255,255,255,0.20)";
+  const detail = "rgba(255,255,255,0.18)";
+  const subtle = "rgba(255,255,255,0.12)";
 
   const frame = isMale ? { x: 13, y: 8, width: 94, height: 236 } : { x: 15, y: 8, width: 90, height: 236 };
 
