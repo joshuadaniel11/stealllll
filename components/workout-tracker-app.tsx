@@ -1,9 +1,14 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ErrorBoundary, SectionErrorBoundary } from "@/components/error-boundary";
+import { useUIState } from "@/hooks/use-ui-state";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { useCloudSync } from "@/hooks/use-cloud-sync";
 import clsx from "clsx";
-import { Activity, ChartColumn, Dumbbell, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 
+import { AppNav } from "@/components/app-nav";
 import { BibleVerseModal } from "@/components/bible-verse-modal";
 import { CompletionCelebration } from "@/components/completion-celebration";
 import { ExerciseDetailModal } from "@/components/exercise-detail-modal";
@@ -80,19 +85,6 @@ import {
 import { selectDailyMobilityPrompt } from "@/lib/daily-mobility";
 import type { SuggestedFocusSession } from "@/lib/training-load";
 import type { ActiveWorkout, AppState, ExerciseLibraryItem, HapticEvent, RecentTrainingUpdate, ExerciseTemplate, Profile, SetLog, UserId, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
-
-type TabId = "home" | "workout" | "progress";
-
-type DeferredInstallPrompt = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-};
-
-const navItems = [
-  { id: "home" as const, label: "Home", icon: Activity },
-  { id: "workout" as const, label: "Workout", icon: Dumbbell },
-  { id: "progress" as const, label: "Progress", icon: ChartColumn },
-];
 
 const ONBOARDING_KEY = "workout-together-onboarding-seen-v1";
 
@@ -308,36 +300,11 @@ function getInstallCopy(
   };
 }
 
-export function WorkoutTrackerApp() {
+function WorkoutTrackerAppInner() {
+  // Core app state — kept here since it feeds into every hook and handler
   const [state, setState] = useState<AppState>(createSeedState);
   const [hydrated, setHydrated] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [showInstallLaunch, setShowInstallLaunch] = useState(false);
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
-  const [isIosInstallPath, setIsIosInstallPath] = useState(false);
   const [lockedProfile, setLockedProfile] = useState<UserId | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("home");
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
-  const [showDailyVerse, setShowDailyVerse] = useState(false);
-  const [showWorkoutFeelingPrompt, setShowWorkoutFeelingPrompt] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [completionTitle, setCompletionTitle] = useState("Update");
-  const [completionMessage, setCompletionMessage] = useState("");
-  const [showCompletionCelebration, setShowCompletionCelebration] = useState(false);
-  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [toastActionLabel, setToastActionLabel] = useState<string | null>(null);
-  const [toastActionKind, setToastActionKind] = useState<"undo-schedule" | null>(null);
-  const [pendingScheduleUndo, setPendingScheduleUndo] = useState<{
-    userId: UserId;
-    previousNextWorkoutId: string | null;
-  } | null>(null);
-  const [hasEnteredProfile, setHasEnteredProfile] = useState(false);
-  const [profileEntryTransition, setProfileEntryTransition] = useState<UserId | null>(null);
-  const [workoutPreviewId, setWorkoutPreviewId] = useState<string | null>(null);
-  const [suggestedSessionPreview, setSuggestedSessionPreview] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
   const [weddingDayKey, setWeddingDayKey] = useState(() => new Date().toDateString());
   const [phaseTransitionLines, setPhaseTransitionLines] = useState<Record<UserId, string | null>>({
     joshua: null,
@@ -345,27 +312,58 @@ export function WorkoutTrackerApp() {
   });
   const [recentTrainingUpdate, setRecentTrainingUpdate] = useState<RecentTrainingUpdate | null>(null);
   const previousRivalryLeaderRef = useRef<"joshua" | "natasha" | "tied" | null>(null);
-  const lastLocalSyncedHashRef = useRef<string | null>(null);
-  const lastCloudSyncedHashRef = useRef<string | null>(null);
-  const lastKnownSyncUpdatedAtRef = useRef<string | null>(null);
-  const weddingDate = useMemo(() => WeddingDateService.getState(new Date()), [weddingDayKey]);
 
-  const showToast = (
-    message: string,
-    options?: {
-      title?: string;
-      actionLabel?: string;
-      actionKind?: "undo-schedule";
-      pendingScheduleUndo?: { userId: UserId; previousNextWorkoutId: string | null } | null;
-    },
-  ) => {
-    setCompletionTitle(options?.title ?? "Update");
-    setCompletionMessage(message);
-    setToastActionLabel(options?.actionLabel ?? null);
-    setToastActionKind(options?.actionKind ?? null);
-    setPendingScheduleUndo(options?.pendingScheduleUndo ?? null);
-    setShowCompletionCelebration(true);
-  };
+  // UI state (navigation, modals, toast) — extracted into a hook
+  const {
+    showToast,
+    activeTab,
+    setActiveTab,
+    scrollY,
+    hasEnteredProfile,
+    setHasEnteredProfile,
+    profileEntryTransition,
+    setProfileEntryTransition,
+    showDailyVerse,
+    setShowDailyVerse,
+    showWorkoutFeelingPrompt,
+    setShowWorkoutFeelingPrompt,
+    showSettings,
+    setShowSettings,
+    showOnboarding,
+    setShowOnboarding,
+    workoutPreviewId,
+    setWorkoutPreviewId,
+    suggestedSessionPreview,
+    setSuggestedSessionPreview,
+    selectedExerciseId,
+    setSelectedExerciseId,
+    editingSessionId,
+    setEditingSessionId,
+    sessionSummary,
+    setSessionSummary,
+    // Backward-compat aliases for render code
+    showCompletionCelebration,
+    completionTitle,
+    completionMessage,
+    toastActionLabel,
+    toastActionKind,
+    pendingScheduleUndo,
+  } = useUIState();
+
+  // PWA install prompt state — extracted into a hook
+  const {
+    isStandalone,
+    setIsStandalone,
+    showInstallLaunch,
+    deferredInstallPrompt,
+    setDeferredInstallPrompt,
+    isIosInstallPath,
+  } = useInstallPrompt(() => showToast("STEAL is installed on this phone."));
+
+  // Cloud sync (debounced push + visibility-triggered pull) — extracted into a hook
+  const cloudSync = useCloudSync({ hydrated, state, setState });
+
+  const weddingDate = useMemo(() => WeddingDateService.getState(new Date()), [weddingDayKey]);
 
   const markTrainingStateUpdated = (
     userId: UserId,
@@ -415,15 +413,17 @@ export function WorkoutTrackerApp() {
         deviceLockedProfile ?? launchProfile ?? rememberedProfile ?? initialState.selectedUserId;
       const syncedHash = getSyncedStateHash(getSyncedAppState(initialState));
 
-      lastLocalSyncedHashRef.current = syncedHash;
-      lastCloudSyncedHashRef.current = shouldUseCloud
-        ? syncedHash
-        : cloudSnapshot?.state
-          ? getSyncedStateHash(cloudSnapshot.state)
-          : null;
-      lastKnownSyncUpdatedAtRef.current = shouldUseCloud
-        ? cloudUpdatedAt
-        : localSyncedUpdatedAt ?? cloudUpdatedAt;
+      cloudSync.initRefs({
+        localHash: syncedHash,
+        cloudHash: shouldUseCloud
+          ? syncedHash
+          : cloudSnapshot?.state
+            ? getSyncedStateHash(cloudSnapshot.state)
+            : null,
+        knownUpdatedAt: shouldUseCloud
+          ? cloudUpdatedAt
+          : localSyncedUpdatedAt ?? cloudUpdatedAt,
+      });
 
       if (shouldUseCloud && cloudUpdatedAt) {
         saveSyncedStateUpdatedAt(cloudUpdatedAt);
@@ -462,46 +462,7 @@ export function WorkoutTrackerApp() {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIos = /iphone|ipad|ipod/.test(userAgent);
-
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setDeferredInstallPrompt(event as DeferredInstallPrompt);
-    };
-
-    const handleInstalled = () => {
-      setDeferredInstallPrompt(null);
-      setIsStandalone(true);
-      showToast("STEAL is installed on this phone.");
-    };
-
-    setIsStandalone(standalone);
-    setIsIosInstallPath(isIos);
-    document.body.classList.toggle("app-standalone", standalone);
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
-    window.addEventListener("appinstalled", handleInstalled);
-
-    setShowInstallLaunch(true);
-    const timeout = window.setTimeout(() => {
-      setShowInstallLaunch(false);
-    }, standalone ? 1200 : 900);
-
-    return () => {
-      document.body.classList.remove("app-standalone");
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
-      window.removeEventListener("appinstalled", handleInstalled);
-      window.clearTimeout(timeout);
-    };
-  }, []);
+  // Install prompt logic is handled by useInstallPrompt above.
 
   useEffect(() => {
     if (!hydrated) {
@@ -511,88 +472,15 @@ export function WorkoutTrackerApp() {
     saveState(state);
 
     const syncedHash = getSyncedStateHash(getSyncedAppState(state));
-    if (syncedHash !== lastLocalSyncedHashRef.current) {
+    if (syncedHash !== cloudSync.lastLocalSyncedHashRef.current) {
       const updatedAt = new Date().toISOString();
-      lastLocalSyncedHashRef.current = syncedHash;
-      lastKnownSyncUpdatedAtRef.current = updatedAt;
+      cloudSync.lastLocalSyncedHashRef.current = syncedHash;
+      cloudSync.lastKnownSyncUpdatedAtRef.current = updatedAt;
       saveSyncedStateUpdatedAt(updatedAt);
     }
-  }, [state, hydrated]);
+  }, [state, hydrated, cloudSync]);
 
-  useEffect(() => {
-    if (!hydrated || !isCloudSyncConfigured()) {
-      return;
-    }
-
-    const syncedHash = getSyncedStateHash(getSyncedAppState(state));
-    if (syncedHash === lastCloudSyncedHashRef.current) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void saveCloudSnapshot(state).then((snapshot) => {
-        if (!snapshot) {
-          return;
-        }
-
-        lastCloudSyncedHashRef.current = syncedHash;
-        lastKnownSyncUpdatedAtRef.current = snapshot.updatedAt;
-        saveSyncedStateUpdatedAt(snapshot.updatedAt);
-      });
-    }, 900);
-
-    return () => window.clearTimeout(timeout);
-  }, [state, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated || !isCloudSyncConfigured() || typeof document === "undefined") {
-      return;
-    }
-
-    let cancelled = false;
-
-    const syncFromCloud = async () => {
-      const snapshot = await loadCloudSnapshot();
-      if (
-        cancelled ||
-        !snapshot?.state ||
-        !snapshot.updatedAt ||
-        toComparableTimestamp(snapshot.updatedAt) <= toComparableTimestamp(lastKnownSyncUpdatedAtRef.current)
-      ) {
-        return;
-      }
-
-      lastCloudSyncedHashRef.current = getSyncedStateHash(snapshot.state);
-      lastKnownSyncUpdatedAtRef.current = snapshot.updatedAt;
-      saveSyncedStateUpdatedAt(snapshot.updatedAt);
-
-      setState((current) => {
-        const next = applyCloudState(current, snapshot.state ?? {});
-        lastLocalSyncedHashRef.current = getSyncedStateHash(getSyncedAppState(next));
-        return next;
-      });
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void syncFromCloud();
-      }
-    };
-
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void syncFromCloud();
-      }
-    }, 15000);
-
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [hydrated]);
+  // Cloud sync push + pull are handled by useCloudSync above.
 
   useEffect(() => {
     const now = new Date();
@@ -665,26 +553,7 @@ export function WorkoutTrackerApp() {
     setState((current) => syncMonthlyReportArchive(current, new Date()));
   }, [hydrated, state.sessions]);
 
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!showCompletionCelebration) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setShowCompletionCelebration(false);
-      setCompletionTitle("Update");
-      setToastActionLabel(null);
-      setToastActionKind(null);
-      setPendingScheduleUndo(null);
-    }, toastActionKind ? 3600 : 1250);
-    return () => window.clearTimeout(timeout);
-  }, [showCompletionCelebration, toastActionKind]);
+  // Scroll tracking and toast auto-dismiss are handled by useUIState above.
 
   const selectedProfile = useMemo(
     () => state.profiles.find((profile) => profile.id === state.selectedUserId) ?? state.profiles[0],
@@ -797,11 +666,20 @@ export function WorkoutTrackerApp() {
   }, [selectedExerciseId, selectedProfile, state.exerciseLibrary]);
   const profileRecentTrainingUpdate =
     recentTrainingUpdate?.userId === selectedProfile.id ? recentTrainingUpdate : null;
-  const momentumPillText = getMomentumPillCopy(
-    selectedProfile.id,
-    trainingState.streakAndMomentum,
-    trainingState.userSessions.some((session) => !session.partial),
-    trainingState.maturityState.isObserving,
+  const momentumPillText = useMemo(
+    () =>
+      getMomentumPillCopy(
+        selectedProfile.id,
+        trainingState.streakAndMomentum,
+        trainingState.userSessions.some((session) => !session.partial),
+        trainingState.maturityState.isObserving,
+      ),
+    [
+      selectedProfile.id,
+      trainingState.streakAndMomentum,
+      trainingState.userSessions,
+      trainingState.maturityState.isObserving,
+    ],
   );
   const rivalryState = useMemo(() => {
     const week = getCurrentWeekWindow(new Date());
@@ -809,6 +687,16 @@ export function WorkoutTrackerApp() {
     const natashaHistory = state.sessions.filter((session) => session.userId === "natasha");
     return getWeeklyRivalryState(joshuaHistory, natashaHistory, week.start, new Date());
   }, [state.sessions]);
+  const rivalSessions = useMemo(() => {
+    const week = getCurrentWeekWindow(new Date());
+    const rivalId = selectedProfile.id === "joshua" ? "natasha" : "joshua";
+    return state.sessions.filter(
+      (session) =>
+        session.userId === rivalId &&
+        !session.partial &&
+        new Date(session.performedAt) >= week.start,
+    );
+  }, [selectedProfile.id, state.sessions]);
   const stealState = useMemo(() => {
     const week = getCurrentWeekWindow(new Date());
     const joshuaHistory = state.sessions.filter((session) => session.userId === "joshua");
@@ -881,12 +769,19 @@ export function WorkoutTrackerApp() {
       new Date(),
     );
   }, [selectedProfile, state.activeWorkout, state.sessionSignalLog, trainingState.maturityState.isObserving, userSessions]);
-  const restDayRead = getRestDayRead(
-    selectedProfile.id,
-    trainingState.restDayState.restReason,
-    trainingState.maturityState.isObserving,
+  const restDayRead = useMemo(
+    () =>
+      getRestDayRead(
+        selectedProfile.id,
+        trainingState.restDayState.restReason,
+        trainingState.maturityState.isObserving,
+      ),
+    [selectedProfile.id, trainingState.restDayState.restReason, trainingState.maturityState.isObserving],
   );
-  const restRecoveryLabel = getRestRecoveryLabel(trainingState.restDayState.recoveryScore);
+  const restRecoveryLabel = useMemo(
+    () => getRestRecoveryLabel(trainingState.restDayState.recoveryScore),
+    [trainingState.restDayState.recoveryScore],
+  );
 
   const editingSession = useMemo(
     () => state.sessions.find((session) => session.id === editingSessionId) ?? null,
@@ -1825,6 +1720,7 @@ export function WorkoutTrackerApp() {
 
         <div className="animate-page-in">
           {activeTab === "home" && (
+            <SectionErrorBoundary>
             <HomeScreen
                 profile={selectedProfile}
                 todaysWorkout={todaysWorkout}
@@ -1842,7 +1738,7 @@ export function WorkoutTrackerApp() {
                 restRecoveryLabel={restRecoveryLabel}
                 weeklyCount={weeklyCount}
                 streak={streak}
-                pbCount={state.personalBests[selectedProfile.id].length}
+                pbCount={(state.personalBests[selectedProfile.id] ?? []).length}
                 strengthPredictions={strengthPredictions}
                 dailyVerse={dailyVerse}
                 dailyMobilityPrompt={todaysMobilityPrompt}
@@ -1856,6 +1752,7 @@ export function WorkoutTrackerApp() {
                 momentumPillText={trainingState.restDayState.isRest ? null : momentumPillText}
                 rivalryState={rivalryState}
                 rivalryCopy={rivalryCopy}
+                rivalSessions={rivalSessions}
                 monthlyReport={monthlyReport}
                 onOpenDailyVerse={() => setShowDailyVerse(true)}
                 onToggleStretch={toggleStretchCompletion}
@@ -1882,9 +1779,11 @@ export function WorkoutTrackerApp() {
                 }
               }}
             />
+            </SectionErrorBoundary>
           )}
 
           {activeTab === "workout" && (
+            <SectionErrorBoundary>
             <WorkoutScreen
               profile={selectedProfile}
               todaysWorkoutId={todaysWorkout.id}
@@ -1907,9 +1806,11 @@ export function WorkoutTrackerApp() {
               onDismissLiveSignal={dismissLiveSessionSignal}
               onCancelWorkout={cancelWorkout}
             />
+            </SectionErrorBoundary>
           )}
 
           {activeTab === "progress" && (
+            <SectionErrorBoundary>
             <ProgressScreen
               profile={selectedProfile}
               trainingState={trainingState}
@@ -1920,6 +1821,7 @@ export function WorkoutTrackerApp() {
               onSaveMeasurement={saveMeasurement}
               onEditSession={setEditingSessionId}
             />
+            </SectionErrorBoundary>
           )}
 
         </div>
@@ -1982,38 +1884,20 @@ export function WorkoutTrackerApp() {
         onSave={saveEditedSession}
       />
 
-      <nav className="tabbar-shell fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between rounded-[12px] px-3.5 py-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            const showSessionDot = state.isSessionActive && item.id === "workout";
-            return (
-              <button
-                key={item.id}
-                className={clsx(
-                  "tabbar-button flex flex-col items-center gap-1 text-xs font-medium transition duration-300",
-                  isActive ? "tabbar-button-active text-accent" : "text-muted",
-                )}
-                onClick={() => {
-                  setActiveTab(item.id);
-                }}
-              >
-                <div className="relative flex flex-col items-center">
-                  <Icon className="h-5 w-5" />
-                  {showSessionDot ? (
-                    <span
-                      className={clsx(
-                        "mt-1 inline-block h-1 w-1 rounded-full",
-                        selectedProfile.id === "joshua" ? "bg-emerald-300/90" : "bg-sky-300/90",
-                      )}
-                    />
-                  ) : null}
-                </div>
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+      <AppNav
+        activeTab={activeTab}
+        isSessionActive={state.isSessionActive}
+        profileId={selectedProfile.id}
+        onTabChange={setActiveTab}
+      />
     </main>
+  );
+}
+
+export function WorkoutTrackerApp() {
+  return (
+    <ErrorBoundary>
+      <WorkoutTrackerAppInner />
+    </ErrorBoundary>
   );
 }
