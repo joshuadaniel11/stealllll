@@ -1841,6 +1841,7 @@ function WorkoutTrackerAppInner() {
                 profile: selectedProfile,
                 trainingState,
                 measurements: state.measurements[selectedProfile.id],
+                rivalSessions: state.sessions.filter((s) => s.userId !== selectedProfile.id),
                 coach,
               })}
               onEditSession={setEditingSessionId}

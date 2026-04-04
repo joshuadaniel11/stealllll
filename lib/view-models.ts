@@ -77,6 +77,7 @@ export type ProgressViewModel = {
   profile: Profile;
   trainingState: ProfileTrainingState;
   measurements: MeasurementEntry[];
+  rivalSessions: WorkoutSession[];
   coach: CoachReadModel;
 };
 
@@ -237,17 +238,20 @@ export function buildProgressViewModel({
   profile,
   trainingState,
   measurements,
+  rivalSessions,
   coach,
 }: {
   profile: Profile;
   trainingState: ProfileTrainingState;
   measurements: MeasurementEntry[];
+  rivalSessions: WorkoutSession[];
   coach: CoachReadModel;
 }): ProgressViewModel {
   return {
     profile,
     trainingState,
     measurements,
+    rivalSessions,
     coach,
   };
 }
