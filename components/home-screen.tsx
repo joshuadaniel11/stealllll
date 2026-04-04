@@ -1,100 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
 
 import { DailyBibleCard } from "@/components/daily-bible-card";
 import { DailyMobilityPromptCard } from "@/components/daily-mobility-prompt-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
-import { StrengthPredictionCard } from "@/components/strength-prediction-card";
-import { Card, MiniMetric } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { WeeklyTrainingCalendar } from "@/components/weekly-training-calendar";
 import type { MonthlyReportCard, RestDayState, RivalryCardCopy, WeeklyRivalryState } from "@/lib/profile-training-state";
 import { getSessionPresentation } from "@/lib/session-presentation";
-import { getWeddingCountdownCardState, type WeddingDateState } from "@/lib/wedding-date";
-import type { RecentTrainingUpdate } from "@/lib/types";
+import type { WeddingDateState } from "@/lib/wedding-date";
 import type {
   BibleVerse,
   DailyMobilityPrompt,
   Profile,
+  RecentTrainingUpdate,
   SharedSummary,
   StrengthPrediction,
   WorkoutPlanDay,
   WorkoutSession,
 } from "@/lib/types";
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-NZ", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(value));
-}
-
-function formatRecentTrainingUpdate(update: {
-  timestamp: string;
-  workoutName: string;
-  kind: "partial" | "complete" | "edit";
-}) {
-  const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(update.timestamp).getTime()) / 60000));
-  const freshness =
-    minutesAgo <= 1 ? "just now" : minutesAgo < 60 ? `${minutesAgo} min ago` : "recently";
-
-  return {
-    detail: `${update.workoutName} refreshed your training view ${freshness}.`,
-  };
-}
-
-function formatNextSessionDaysOut(daysOut: number) {
-  if (daysOut <= 0) {
-    return "today";
-  }
-  if (daysOut === 1) {
-    return "tomorrow";
-  }
-  return `in ${daysOut} days`;
-}
-
-function renderRivalryHeadline(copy: RivalryCardCopy) {
-  if (!copy.highlightName || !copy.leaderColorClass || !copy.headline.includes(copy.highlightName)) {
-    return copy.headline;
-  }
-
-  const [prefix, ...rest] = copy.headline.split(copy.highlightName);
-  const suffix = rest.join(copy.highlightName);
-
-  return (
-    <>
-      {prefix}
-      <span className={copy.leaderColorClass}>{copy.highlightName}</span>
-      {suffix}
-    </>
-  );
-}
-
-function getWeddingCountdownBorderClass(urgencyLevel: WeddingDateState["urgencyLevel"]) {
-  switch (urgencyLevel) {
-    case "low":
-      return "border-white/8";
-    case "medium":
-      return "border-white/12";
-    case "high":
-      return "border-white/18";
-    case "final":
-      return "border-white/24";
-  }
-}
-
-function getWeddingCountdownNumberClass(urgencyLevel: WeddingDateState["urgencyLevel"]) {
-  switch (urgencyLevel) {
-    case "low":
-      return "text-white/72";
-    case "medium":
-      return "text-white/86";
-    case "high":
-    case "final":
-      return "text-white";
-  }
-}
 
 type HomeScreenProps = {
   profile: Profile;
@@ -148,6 +73,32 @@ type HomeScreenProps = {
   onOpenRecentWorkout: (workoutDayId: string, exerciseId?: string) => void;
 };
 
+function timeAgo(dateStr: string) {
+  const mins = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function shortDate(dateStr: string) {
+  return new Intl.DateTimeFormat("en-NZ", { month: "short", day: "numeric" }).format(new Date(dateStr));
+}
+
+function RivalryHeadline({ copy }: { copy: RivalryCardCopy }) {
+  if (!copy.highlightName || !copy.headline.includes(copy.highlightName)) {
+    return <>{copy.headline}</>;
+  }
+  const [prefix, ...rest] = copy.headline.split(copy.highlightName);
+  return (
+    <>
+      {prefix}
+      <span className={copy.leaderColorClass ?? undefined}>{copy.highlightName}</span>
+      {rest.join(copy.highlightName)}
+    </>
+  );
+}
+
 export function HomeScreen({
   profile,
   todaysWorkout,
@@ -155,28 +106,21 @@ export function HomeScreen({
   isSessionActive,
   activeSessionSetCount,
   trainingInsight,
-  liftReadyLine,
   restDayState,
   restDayRead,
   restRecoveryLabel,
   weeklyCount,
   streak,
-  pbCount,
-  strengthPredictions = [],
   dailyVerse,
   dailyMobilityPrompt,
   stretchCompletedToday,
-  sharedSummary,
-  recentWorkouts = [],
-  weddingDate,
+  recentWorkouts,
   phaseTransitionLine,
-  recentTrainingUpdate,
   momentumPillText,
-  rivalryState,
   rivalryCopy,
-  rivalSessions = [],
+  rivalSessions,
   monthlyReport,
-  calendarRows = [],
+  calendarRows,
   onOpenDailyVerse,
   onToggleStretch,
   onStartWorkout,
@@ -186,533 +130,323 @@ export function HomeScreen({
   onMoveWorkout,
   onOpenRecentWorkout,
 }: HomeScreenProps) {
-  const [showDetails, setShowDetails] = useState(false);
-  const [showExtras, setShowExtras] = useState(false);
-  const [showUtilityStack, setShowUtilityStack] = useState(false);
-  const [showMoveChoices, setShowMoveChoices] = useState(false);
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
 
   const sessionPresentation = getSessionPresentation(profile, todaysWorkout);
-  const latestSession = recentWorkouts[0] ?? null;
-  const pendingPartial =
-    latestSession?.partial && latestSession.workoutDayId === todaysWorkout.id ? latestSession : null;
-  const homeStateLabel = activeWorkoutName
-    ? "Live now"
-    : pendingPartial
-      ? "Resume ready"
-      : "Queued today";
-  const homeStateDetail = activeWorkoutName
-    ? `Resume when you're ready. ${trainingInsight}`
-    : pendingPartial
-      ? `Pick it back up. ${trainingInsight}`
-      : trainingInsight;
-  const primaryActionLabel = activeWorkoutName
-    ? "Resume Session"
-    : pendingPartial
-      ? "Resume Session"
-      : "Start Session";
-  const recentUpdateBadge = recentTrainingUpdate ? formatRecentTrainingUpdate(recentTrainingUpdate) : null;
-  const showRestDayHero = restDayState.isRest && restDayRead;
-  const showActiveSessionPulse = isSessionActive && Boolean(activeWorkoutName);
-  const weddingCountdown = getWeddingCountdownCardState(profile.id, weddingDate);
-  const moreSummary = showRestDayHero
-    ? "Note first. One quiet utility layer."
-    : dailyMobilityPrompt
-      ? "Note first. Mobility if you want it."
-      : "Note first. One quiet utility layer.";
+  const isLive = isSessionActive && Boolean(activeWorkoutName);
+  const isRestDay = restDayState.isRest && !isLive;
+
+  const isJoshua = profile.id === "joshua";
+  const accentText = isJoshua ? "text-emerald-300/90" : "text-sky-300/90";
+  const accentBtn = isJoshua
+    ? "bg-emerald-500/90 hover:bg-emerald-500 active:bg-emerald-600"
+    : "bg-sky-500/90 hover:bg-sky-500 active:bg-sky-600";
 
   return (
-    <div className="space-y-4 pb-28">
-      {monthlyReport ? (
-        <ScrollReveal delay={18}>
-          <div className={showActiveSessionPulse ? "opacity-35" : ""}>
-          <Card className="home-session-hero tab-fade-enter max-h-[70vh] space-y-5 overflow-y-auto px-6 py-6">
-            <div className="space-y-1 text-center">
-              <h2 className="text-[1.65rem] font-medium tracking-[-0.04em] text-white">
-                {monthlyReport.month} {monthlyReport.year}
-              </h2>
-              <p className="text-[12px] text-white/42">Month closed.</p>
-            </div>
+    <div className="space-y-3 pb-28">
 
-            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-4">
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-white/78">
-                  <span className="text-emerald-300/85">Joshua</span>
-                </p>
-                <div className="space-y-2 text-sm text-white/58">
-                  <p>{monthlyReport.joshua.sessions} sessions</p>
-                  <p>{monthlyReport.joshua.totalSets} sets</p>
-                  <p>{monthlyReport.joshua.topMuscleGroup}</p>
-                  <p>{monthlyReport.joshua.streakBest} day streak</p>
-                  {monthlyReport.joshua.newPRs > 0 ? <p>{monthlyReport.joshua.newPRs} PRs</p> : null}
-                </div>
-              </div>
-              <div className="h-full w-px bg-white/10" />
-              <div className="space-y-3 text-right">
-                <p className="text-sm font-medium text-white/78">
-                  <span className="text-sky-300/85">Natasha</span>
-                </p>
-                <div className="space-y-2 text-sm text-white/58">
-                  <p>{monthlyReport.natasha.sessions} sessions</p>
-                  <p>{monthlyReport.natasha.totalSets} sets</p>
-                  <p>{monthlyReport.natasha.topMuscleGroup}</p>
-                  <p>{monthlyReport.natasha.streakBest} day streak</p>
-                  {monthlyReport.natasha.newPRs > 0 ? <p>{monthlyReport.natasha.newPRs} PRs</p> : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-4">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-white/36">Rivalry record this month</p>
-              <p className="text-sm text-white/70">
-                Week wins: Joshua {monthlyReport.rivalry.weekWins.joshua} {"\u2014"} Natasha {monthlyReport.rivalry.weekWins.natasha}
-                {monthlyReport.rivalry.weekWins.tied > 0 ? ` \u2014 Tied ${monthlyReport.rivalry.weekWins.tied}` : ""}
-              </p>
-              <p className="text-sm text-white/58">
-                Steals: Joshua {monthlyReport.rivalry.totalSteals.joshua} {"\u00b7"} Natasha {monthlyReport.rivalry.totalSteals.natasha}
-              </p>
-              <p className="text-sm font-medium text-white/82">
-                Month winner:{" "}
-                {monthlyReport.rivalry.monthWinner === "joshua" ? (
-                  <span className="text-emerald-300/85">Joshua</span>
-                ) : monthlyReport.rivalry.monthWinner === "natasha" ? (
-                  <span className="text-sky-300/85">Natasha</span>
-                ) : (
-                  "Tied"
-                )}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <p className="text-left italic text-emerald-300/80">{monthlyReport.closingLine.joshua}</p>
-              <p className="text-right italic text-sky-300/80">{monthlyReport.closingLine.natasha}</p>
-            </div>
+      {/* ── Phase transition notice ────────────────────── */}
+      {phaseTransitionLine ? (
+        <ScrollReveal>
+          <Card className="px-5 py-4">
+            <p className="text-[13px] leading-6 text-white/68">{phaseTransitionLine}</p>
           </Card>
-          </div>
         </ScrollReveal>
       ) : null}
 
-      <ScrollReveal delay={30}>
-        {showActiveSessionPulse ? (
-          <Card className="home-session-hero tab-fade-enter space-y-4 px-6 py-6">
-            <div className="space-y-1.5">
-              <h2 className={`text-[1.9rem] tracking-[-0.06em] ${profile.id === "joshua" ? "text-emerald-300/88" : "text-sky-300/88"}`}>
+      {/* ── Monthly report (last day of month) ────────── */}
+      {monthlyReport ? (
+        <ScrollReveal>
+          <Card className="home-hero-card space-y-5 px-6 py-6">
+            <div className="text-center space-y-1">
+              <p className="label-eyebrow">Month closed</p>
+              <h2 className="text-[1.7rem] font-medium tracking-[-0.04em] text-white">
+                {monthlyReport.month} {monthlyReport.year}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-[1fr_1px_1fr] items-start gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-emerald-300/85">Joshua</p>
+                <p className="text-sm text-white/55">{monthlyReport.joshua.sessions} sessions</p>
+                <p className="text-sm text-white/55">{monthlyReport.joshua.totalSets} sets</p>
+                <p className="text-sm text-white/55">{monthlyReport.joshua.topMuscleGroup}</p>
+                {monthlyReport.joshua.newPRs > 0 ? (
+                  <p className="text-sm text-white/55">{monthlyReport.joshua.newPRs} PRs</p>
+                ) : null}
+              </div>
+              <div className="self-stretch bg-white/[0.08]" />
+              <div className="space-y-2 text-right">
+                <p className="text-sm font-medium text-sky-300/85">Natasha</p>
+                <p className="text-sm text-white/55">{monthlyReport.natasha.sessions} sessions</p>
+                <p className="text-sm text-white/55">{monthlyReport.natasha.totalSets} sets</p>
+                <p className="text-sm text-white/55">{monthlyReport.natasha.topMuscleGroup}</p>
+                {monthlyReport.natasha.newPRs > 0 ? (
+                  <p className="text-sm text-white/55">{monthlyReport.natasha.newPRs} PRs</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-[12px] border border-white/8 bg-white/[0.02] px-4 py-3 space-y-1.5">
+              <p className="label-eyebrow">Rivalry</p>
+              <p className="text-sm text-white/60">
+                Week wins — Joshua {monthlyReport.rivalry.weekWins.joshua} · Natasha {monthlyReport.rivalry.weekWins.natasha}
+                {monthlyReport.rivalry.weekWins.tied > 0 ? ` · Tied ${monthlyReport.rivalry.weekWins.tied}` : ""}
+              </p>
+              <p className="text-sm text-white/60">
+                Steals — Joshua {monthlyReport.rivalry.totalSteals.joshua} · Natasha {monthlyReport.rivalry.totalSteals.natasha}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <p className="text-[13px] italic text-emerald-300/70">{monthlyReport.closingLine.joshua}</p>
+              <p className="text-[13px] italic text-right text-sky-300/70">{monthlyReport.closingLine.natasha}</p>
+            </div>
+          </Card>
+        </ScrollReveal>
+      ) : null}
+
+      {/* ── Active session banner ──────────────────────── */}
+      {isLive ? (
+        <ScrollReveal>
+          <Card className="home-hero-card space-y-4 px-6 py-6">
+            <div className="space-y-1">
+              <p className="label-eyebrow">In progress</p>
+              <h2 className={`text-[1.9rem] font-medium tracking-[-0.06em] ${accentText}`}>
                 {activeWorkoutName}
               </h2>
-              <p className="text-sm text-white/46">In progress</p>
-              <p className="text-sm leading-6 text-white/58">{activeSessionSetCount} sets logged</p>
+              <p className="text-sm text-white/46">{activeSessionSetCount} sets logged</p>
             </div>
             <button
               type="button"
               onClick={onResumeWorkout}
-              className="text-left text-sm text-white/46 transition hover:text-white/72"
+              className={`inline-flex h-[52px] w-full items-center justify-center rounded-[14px] text-[15px] font-semibold text-white transition-colors ${accentBtn}`}
             >
-              Return to session {"\u2192"}
+              Return to session
             </button>
           </Card>
-        ) : showRestDayHero ? (
-          <Card className="home-session-hero tab-fade-enter space-y-5 px-6 py-6">
-            <div className="space-y-2">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">Rest read</p>
-              <h2 className="text-[1.85rem] tracking-[-0.06em] text-white">{restDayRead}</h2>
-            </div>
+        </ScrollReveal>
+      ) : null}
+
+      {/* ── Rest day card ──────────────────────────────── */}
+      {!isLive && isRestDay && restDayRead ? (
+        <ScrollReveal>
+          <Card className="space-y-4 px-6 py-6">
             <div className="space-y-1">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-white/34">Recovery state</p>
-              <p className="text-sm leading-6 text-white/54">{restRecoveryLabel}</p>
+              <p className="label-eyebrow">Rest day</p>
+              <h2 className="text-[1.65rem] font-medium tracking-[-0.04em] text-white leading-snug">
+                {restDayRead}
+              </h2>
             </div>
-            <div className="space-y-1">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-white/34">Next session</p>
-              <p className="text-base font-medium tracking-[-0.02em] text-white/88">
-                {restDayState.nextBestSession} {"\u00b7"} {formatNextSessionDaysOut(restDayState.nextBestSessionDaysOut)}
-              </p>
+            <p className="text-[13px] leading-6 text-white/50">{restRecoveryLabel}</p>
+            <div className="flex items-center gap-2">
+              <span className="label-eyebrow">Next</span>
+              <span className="text-[13px] text-white/64">
+                {restDayState.nextBestSession}
+                {restDayState.nextBestSessionDaysOut === 0
+                  ? " · today"
+                  : restDayState.nextBestSessionDaysOut === 1
+                    ? " · tomorrow"
+                    : ` · in ${restDayState.nextBestSessionDaysOut} days`}
+              </span>
             </div>
           </Card>
-        ) : (
-          <Card className="home-hero-card home-session-hero tab-fade-enter space-y-4 px-6 py-6">
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-white/40">
-                  {sessionPresentation.splitLabel}
-                </p>
-                <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-white/54">
-                  {homeStateLabel}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <h2 className="font-editorial text-[2.1rem] tracking-[-0.03em] text-white" style={{ fontFamily: "var(--font-editorial)" }}>
+        </ScrollReveal>
+      ) : null}
+
+      {/* ── Today's workout hero ───────────────────────── */}
+      {!isLive && !isRestDay ? (
+        <ScrollReveal>
+          <Card className="home-hero-card space-y-5 px-6 py-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <p className="label-eyebrow">{sessionPresentation.splitLabel}</p>
+                <h2 className="text-[2rem] font-medium tracking-[-0.04em] text-white leading-[1.08]">
                   {sessionPresentation.title}
                 </h2>
-                <p className="text-sm leading-6 text-white/56">
-                  {homeStateDetail}
-                </p>
               </div>
+              <span className="mt-1 flex-shrink-0 rounded-full border border-white/[0.10] bg-white/[0.035] px-3 py-1.5 text-[11px] text-white/42">
+                Queued
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
+            <p className="text-[13px] leading-[1.65] text-white/54">{trainingInsight}</p>
+
+            {momentumPillText ? (
+              <span className="inline-block rounded-full border border-white/[0.10] bg-white/[0.03] px-3 py-1 text-[12px] text-white/48">
+                {momentumPillText}
+              </span>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => onStartWorkout()}
+              className={`hero-cta-shimmer inline-flex h-[54px] w-full items-center justify-center rounded-[16px] text-[15px] font-semibold tracking-[-0.01em] text-white transition-colors ${accentBtn}`}
+            >
+              Start Session
+            </button>
+
+            <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() =>
-                  activeWorkoutName ? onResumeWorkout() : onStartWorkout(todaysWorkout.id)
-                }
-                className="hero-cta-shimmer rounded-[12px] border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-5 py-4 text-base tracking-[-0.02em] text-[color:var(--accent)] transition duration-200 active:scale-[0.99]"
+                onClick={() => onPreviewWorkout(todaysWorkout.id)}
+                className="text-[13px] text-white/38 transition-colors hover:text-white/66"
               >
-                {primaryActionLabel}
+                Preview
               </button>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <button
-                  type="button"
-                  onClick={() => onPreviewWorkout(todaysWorkout.id)}
-                  className="rounded-full px-1 py-1 transition text-white/58 hover:text-white/82"
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMoveChoices((value) => !value)}
-                  className="rounded-full px-1 py-1 transition text-white/42 hover:text-white/72"
-                >
-                  Move or skip
-                </button>
-              </div>
+              <span className="text-white/18">·</span>
+              <button
+                type="button"
+                onClick={() => setShowSchedulePicker((v) => !v)}
+                className="text-[13px] text-white/38 transition-colors hover:text-white/66"
+              >
+                Rearrange
+              </button>
+              <span className="text-white/18">·</span>
+              <button
+                type="button"
+                onClick={onSkipWorkout}
+                className="text-[13px] text-white/38 transition-colors hover:text-white/66"
+              >
+                Skip
+              </button>
             </div>
 
-            {showMoveChoices ? (
-              <div className="space-y-2 rounded-[12px] border border-white/8 bg-white/[0.02] p-3">
+            {showSchedulePicker ? (
+              <div className="rounded-[14px] border border-white/[0.08] bg-white/[0.02] p-2">
                 {profile.workoutPlan.map((workout) => (
                   <button
                     key={workout.id}
                     type="button"
                     onClick={() => {
                       onMoveWorkout(workout.id);
-                      setShowMoveChoices(false);
+                      setShowSchedulePicker(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-[12px] px-3 py-3 text-left transition hover:bg-white/[0.03]"
+                    className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05] ${
+                      workout.id === todaysWorkout.id ? "text-white/88" : "text-white/44"
+                    }`}
                   >
-                    <span className="text-sm font-medium text-white/86">
-                      {workout.dayLabel} {"\u2022"} {workout.name}
-                    </span>
-                    <span className="text-xs text-white/45">Move here</span>
+                    <span className="text-[13px]">{workout.name}</span>
+                    <span className="text-[11px] text-white/28">{workout.dayLabel}</span>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSkipWorkout();
-                    setShowMoveChoices(false);
-                  }}
-                  className="w-full rounded-[12px] border border-white/8 px-3 py-3 text-sm text-white/58 transition hover:bg-white/[0.03]"
-                >
-                  Skip for now
-                </button>
               </div>
             ) : null}
           </Card>
-        )}
-      </ScrollReveal>
-
-      {liftReadyLine ? (
-        <ScrollReveal delay={34}>
-          <p className="px-2 text-[11px] tracking-[-0.01em] text-white/40">
-            {liftReadyLine}
-          </p>
         </ScrollReveal>
       ) : null}
 
-      <div className={showActiveSessionPulse ? "opacity-35" : ""}>
-        {phaseTransitionLine ? (
-          <ScrollReveal delay={34}>
-            <p className="px-2 text-[11px] tracking-[-0.01em] text-white/40">
-              {phaseTransitionLine}
+      {/* ── Stats row ─────────────────────────────────── */}
+      <ScrollReveal delay={40}>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="px-4 py-4">
+            <p className="label-eyebrow">This week</p>
+            <p className="mt-2 text-[36px] font-bold tracking-[-0.05em] text-white leading-none">
+              {weeklyCount}
             </p>
-          </ScrollReveal>
-        ) : null}
-
-        {weddingCountdown.visible ? (
-          <ScrollReveal delay={38}>
-            <Card className={`tab-fade-enter px-5 py-5 ${getWeddingCountdownBorderClass(weddingDate.urgencyLevel)}`}>
-              {weddingDate.isWeddingDay ? (
-                <div className="py-2 text-center">
-                  <p className="text-[1.5rem] font-medium tracking-[-0.05em] text-white">{weddingCountdown.copy}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-[auto_1fr] items-center gap-5">
-                  <div className="min-w-[92px]">
-                    <p className={`text-[3.15rem] leading-none tracking-[-0.08em] ${getWeddingCountdownNumberClass(weddingDate.urgencyLevel)}`}>
-                      {weddingCountdown.heroValue}
-                    </p>
-                    <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-white/36">{weddingCountdown.heroUnit}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm leading-6 text-white/74">{weddingCountdown.copy}</p>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/34">{weddingCountdown.phaseLabel}</p>
-                  </div>
-                </div>
-              )}
-            </Card>
-          </ScrollReveal>
-        ) : null}
-
-        {showRestDayHero && dailyMobilityPrompt ? (
-          <ScrollReveal delay={36}>
-            <DailyMobilityPromptCard
-              prompt={dailyMobilityPrompt}
-              completed={stretchCompletedToday}
-              onToggle={onToggleStretch}
-            />
-          </ScrollReveal>
-        ) : null}
-
-        {momentumPillText ? (
-          <ScrollReveal delay={36}>
-          <p className="px-2 text-[11px] tracking-[-0.01em] text-white/34">
-            {momentumPillText}
-          </p>
-          </ScrollReveal>
-        ) : null}
-
-        <ScrollReveal delay={44}>
-          <Card className="space-y-4 px-4 py-5">
-            {/* Score header */}
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">This week</p>
-
-            {/* Score row */}
-            <div className="flex items-end justify-between gap-2">
-              <div className="flex-1 text-left">
-                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-400/60">Joshua</p>
-                <p className="mt-1 text-[3rem] font-bold leading-none tracking-[-0.06em] text-emerald-300/90">
-                  {rivalryState.joshuaSessions}
-                </p>
-                {rivalSessions.length > 0 && profile.id !== "joshua" ? (
-                  <div className="mt-1.5 space-y-0.5">
-                    {rivalSessions.map((session) => (
-                      <p key={session.id} className="text-[11px] leading-4 text-white/36">
-                        {session.workoutName.replace(/\s*\(Partial\)$/i, "")}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex flex-col items-center gap-1 pb-2">
-                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/22">vs</p>
-              </div>
-
-              <div className="flex-1 text-right">
-                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-400/60">Natasha</p>
-                <p className="mt-1 text-[3rem] font-bold leading-none tracking-[-0.06em] text-sky-300/90">
-                  {rivalryState.natashaSessions}
-                </p>
-                {rivalSessions.length > 0 && profile.id === "joshua" ? (
-                  <div className="mt-1.5 space-y-0.5">
-                    {rivalSessions.map((session) => (
-                      <p key={session.id} className="text-[11px] leading-4 text-white/36">
-                        {session.workoutName.replace(/\s*\(Partial\)$/i, "")}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Leader bar */}
-            {(() => {
-              const j = rivalryState.joshuaSessions;
-              const n = rivalryState.natashaSessions;
-              const total = j + n;
-              if (total === 0) return null;
-              const jPct = Math.round((j / total) * 100);
-              return (
-                <div className="flex h-[3px] overflow-hidden rounded-full bg-white/8">
-                  <div
-                    className="h-full rounded-full bg-emerald-400/70 transition-all duration-700"
-                    style={{ width: `${jPct}%` }}
-                  />
-                  <div
-                    className="h-full flex-1 rounded-full bg-sky-400/70 transition-all duration-700"
-                  />
-                </div>
-              );
-            })()}
-
-            {rivalryCopy.headline ? (
-              <p className="text-[1.02rem] tracking-[-0.04em] text-white/86">{renderRivalryHeadline(rivalryCopy)}</p>
-            ) : null}
-            {rivalryCopy.detail ? (
-              <p className="text-sm leading-6 text-white/52">{rivalryCopy.detail}</p>
-            ) : null}
-            {rivalryCopy.stealDetail ? (
-              <p className="text-[12px] leading-5 text-white/40">{rivalryCopy.stealDetail}</p>
-            ) : null}
-            {rivalryCopy.weddingGoalDetail ? (
-              <>
-                <div className="h-px bg-white/8" />
-                <div className="space-y-1.5">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/34">Wedding goal</p>
-                  <p className="text-[12px] leading-5 text-white/48">{rivalryCopy.weddingGoalDetail}</p>
-                </div>
-              </>
-            ) : null}
-
-          <WeeklyTrainingCalendar rows={calendarRows} />
+            <p className="mt-1 text-[12px] text-white/38">
+              {weeklyCount === 1 ? "session" : "sessions"}
+            </p>
           </Card>
-        </ScrollReveal>
+          <Card className="px-4 py-4">
+            <p className="label-eyebrow">Streak</p>
+            <p className="mt-2 text-[36px] font-bold tracking-[-0.05em] text-white leading-none">
+              {streak}
+            </p>
+            <p className="mt-1 text-[12px] text-white/38">
+              {streak === 1 ? "day" : "days"}
+            </p>
+          </Card>
+        </div>
+      </ScrollReveal>
 
-        <ScrollReveal delay={55}>
-          <Card className="tab-fade-enter space-y-3 px-4 py-4">
-          <button
-            type="button"
-            onClick={() => setShowDetails((value) => !value)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <div className="space-y-1">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">
-                More
+      {/* ── Rivalry card ──────────────────────────────── */}
+      <ScrollReveal delay={60}>
+        <Card className="space-y-3 px-5 py-5">
+          <p className="label-eyebrow">Rivalry</p>
+          <h3 className="text-[1.1rem] font-medium tracking-[-0.02em] text-white/88 leading-snug">
+            <RivalryHeadline copy={rivalryCopy} />
+          </h3>
+          {rivalryCopy.stealDetail ? (
+            <p className="text-[13px] leading-5 text-white/40">{rivalryCopy.stealDetail}</p>
+          ) : null}
+          {rivalSessions.length > 0 ? (
+            <div className="space-y-2 rounded-[12px] border border-white/[0.07] bg-white/[0.02] px-3 py-3">
+              <p className="label-eyebrow">
+                {profile.id === "joshua" ? "Natasha" : "Joshua"} this week
               </p>
-              <p className="text-sm leading-6 text-white/54">{moreSummary}</p>
-            </div>
-            <ChevronDown
-              className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
-                showDetails ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {showDetails ? (
-            <div className="space-y-4">
-              <Card className="home-quiet-card space-y-2 px-4 py-4">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Today&apos;s note</p>
-                <p className="text-sm font-medium text-white/88">{sessionPresentation.noteLines[0]}</p>
-                <p className="text-sm leading-6 text-white/54">{sessionPresentation.noteLines[1]}</p>
-              </Card>
-
-              {dailyMobilityPrompt && !showRestDayHero ? (
-                <DailyMobilityPromptCard
-                  prompt={dailyMobilityPrompt}
-                  completed={stretchCompletedToday}
-                  onToggle={onToggleStretch}
-                />
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => setShowExtras((value) => !value)}
-                className="flex w-full items-center justify-between rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.03]"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Extras</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Stats, then deeper utility.</p>
+              {rivalSessions.slice(0, 3).map((session) => (
+                <div key={session.id} className="flex items-center justify-between gap-3">
+                  <span className="truncate text-[13px] text-white/56">{session.workoutName}</span>
+                  <span className="flex-shrink-0 text-[11px] text-white/30">
+                    {shortDate(session.performedAt)}
+                  </span>
                 </div>
-                <ChevronDown
-                  className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
-                    showExtras ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {recentUpdateBadge ? (
-                <p className="text-[13px] leading-6 text-white/44">{recentUpdateBadge.detail}</p>
-              ) : null}
-
-              {showExtras ? (
-              <>
-              <div className="grid grid-cols-1 gap-3">
-                  <MiniMetric label="Sessions" value={String(weeklyCount)} />
-                  <MiniMetric label="Streak" value={`${streak}d`} />
-                  <MiniMetric label="PRs" value={String(pbCount)} />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowUtilityStack((value) => !value)}
-                className="flex w-full items-center justify-between rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.03]"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">Utility stack</p>
-                  <p className="mt-1 text-sm leading-6 text-white/54">Recent, shared, strength, and verse.</p>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 text-white/46 transition-transform duration-300 ${
-                    showUtilityStack ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {showUtilityStack ? (
-                <Card className="space-y-3 border border-white/6 bg-white/[0.02]">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                      Recent
-                    </p>
-                    <span className="text-xs text-white/40">One look</span>
-                  </div>
-                  {recentWorkouts.length ? (
-                    <div className="space-y-2">
-                      {recentWorkouts.slice(0, 1).map((workout) => (
-                        <button
-                          key={workout.id}
-                          type="button"
-                          onClick={() =>
-                            onOpenRecentWorkout(workout.workoutDayId, workout.exercises[0]?.exerciseId)
-                          }
-                          className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-white/6"
-                        >
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-white/86">
-                              {workout.workoutName}
-                            </p>
-                            <p className="text-xs leading-5 text-white/48">
-                              {formatDate(workout.performedAt)} {"\u2022"}{" "}
-                              {workout.exercises.reduce(
-                                (total, exercise) =>
-                                  total +
-                                  (exercise.sets ?? []).filter((set) => set.completed).length,
-                                0,
-                              )}{" "}
-                              sets
-                            </p>
-                          </div>
-                          <span className="text-xs text-white/38">Reopen</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm leading-6 text-white/52">
-                      No sessions yet. Your first workout will show here.
-                    </p>
-                  )}
-                  <div className="rounded-[12px] border border-white/6 bg-white/[0.02] px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Shared</p>
-                      <p className="text-[11px] text-white/42">
-                        {sharedSummary.teamStreak}w • {sharedSummary.combinedWorkouts} this week
-                      </p>
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-white/82">
-                      {sharedSummary.weeklyHighlight}
-                    </p>
-                  </div>
-                  <div className="space-y-2 pt-1">
-                    {sharedSummary.recentMilestones.slice(0, 2).map((milestone) => (
-                      <div
-                        key={milestone}
-                        className="rounded-[12px] border border-white/6 bg-white/[0.02] px-3 py-3 text-sm leading-6 text-white/64"
-                      >
-                        {milestone}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 pt-1">
-                    <StrengthPredictionCard predictions={strengthPredictions} />
-                    <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
-                  </div>
-                </Card>
-              ) : null}
-              </>
-              ) : null}
+              ))}
             </div>
           ) : null}
+        </Card>
+      </ScrollReveal>
+
+      {/* ── Weekly calendar ───────────────────────────── */}
+      {calendarRows.length > 0 ? (
+        <ScrollReveal delay={80}>
+          <Card className="px-4 py-4">
+            <WeeklyTrainingCalendar rows={calendarRows} />
           </Card>
         </ScrollReveal>
-      </div>
+      ) : null}
+
+      {/* ── Recent sessions ───────────────────────────── */}
+      {recentWorkouts.length > 0 ? (
+        <ScrollReveal delay={100}>
+          <Card className="space-y-3 px-5 py-5">
+            <p className="label-eyebrow">Recent</p>
+            <div className="divide-y divide-white/[0.05]">
+              {recentWorkouts.slice(0, 4).map((session) => (
+                <button
+                  key={session.id}
+                  type="button"
+                  className="flex w-full items-start justify-between gap-4 py-3 text-left first:pt-0 last:pb-0"
+                  onClick={() => onOpenRecentWorkout(session.workoutDayId)}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-white/80">
+                      {session.workoutName}
+                      {session.partial ? (
+                        <span className="ml-2 text-[11px] font-normal text-white/32">Partial</span>
+                      ) : null}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-white/34">
+                      {session.exercises.length} exercises · {session.durationMinutes} min
+                    </p>
+                  </div>
+                  <span className="flex-shrink-0 pt-0.5 text-[12px] text-white/28">
+                    {timeAgo(session.performedAt)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        </ScrollReveal>
+      ) : null}
+
+      {/* ── Bible verse ───────────────────────────────── */}
+      <ScrollReveal delay={120}>
+        <DailyBibleCard verse={dailyVerse} onOpen={onOpenDailyVerse} />
+      </ScrollReveal>
+
+      {/* ── Mobility prompt ───────────────────────────── */}
+      {dailyMobilityPrompt ? (
+        <ScrollReveal delay={140}>
+          <DailyMobilityPromptCard
+            prompt={dailyMobilityPrompt}
+            completed={stretchCompletedToday}
+            onToggle={onToggleStretch}
+          />
+        </ScrollReveal>
+      ) : null}
+
     </div>
   );
 }

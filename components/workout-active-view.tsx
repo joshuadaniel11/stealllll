@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, List } from "lucide-react";
 
-import { CardHelpButton } from "@/components/card-help-button";
 import { ExerciseMusclePills } from "@/components/exercise-muscle-pills";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { selectDailyCardioPrompt } from "@/lib/daily-cardio";
@@ -14,48 +13,137 @@ import {
   getSuggestedLoadStep,
   getSuggestedStartingWeight,
 } from "@/lib/progression";
-import { buildSessionAutoregulationRead } from "@/lib/session-autoregulation";
 import type { SignatureLiftsState } from "@/lib/profile-training-state";
 import type { CoachReadModel } from "@/lib/view-models";
-import type { ActiveWorkout, ExerciseLibraryItem, LiveSessionSignal, Profile, WorkoutPlanDay, WorkoutSession } from "@/lib/types";
+import type {
+  ActiveWorkout,
+  ExerciseLibraryItem,
+  LiveSessionSignal,
+  Profile,
+  WorkoutPlanDay,
+  WorkoutSession,
+} from "@/lib/types";
 
-function getFirstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
-  const index = sets.findIndex((set) => !set.completed);
-  return index === -1 ? sets.length - 1 : index;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function firstIncompleteSetIndex(sets: ActiveWorkout["exercises"][number]["sets"]) {
+  const i = sets.findIndex((s) => !s.completed);
+  return i === -1 ? sets.length - 1 : i;
 }
 
-function getFirstPendingExerciseIndex(exercises: ActiveWorkout["exercises"]) {
-  const index = exercises.findIndex((exercise) => exercise.sets.some((set) => !set.completed));
-  return index === -1 ? 0 : index;
+function firstPendingExercise(exercises: ActiveWorkout["exercises"]) {
+  const i = exercises.findIndex((ex) => ex.sets.some((s) => !s.completed));
+  return i === -1 ? 0 : i;
 }
 
-function getNextExerciseIndex(exercises: ActiveWorkout["exercises"], currentIndex: number) {
-  for (let index = currentIndex + 1; index < exercises.length; index += 1) {
-    if (exercises[index].sets.some((set) => !set.completed)) {
-      return index;
-    }
+function nextPendingExercise(exercises: ActiveWorkout["exercises"], from: number) {
+  for (let i = from + 1; i < exercises.length; i++) {
+    if (exercises[i].sets.some((s) => !s.completed)) return i;
   }
-  return Math.min(currentIndex + 1, exercises.length - 1);
+  return Math.min(from + 1, exercises.length - 1);
 }
 
-function isExerciseComplete(exercise: ActiveWorkout["exercises"][number]) {
-  return exercise.sets.every((set) => set.completed);
+function isExerciseDone(exercise: ActiveWorkout["exercises"][number]) {
+  return exercise.sets.every((s) => s.completed);
 }
 
-function getTargetRepSuggestion(repRange?: string) {
-  if (!repRange) {
-    return null;
-  }
-  const match = repRange.match(/(\d+)\s*[-–]\s*(\d+)/);
-  if (!match) {
-    return Number.parseInt(repRange, 10) || null;
-  }
-  return Number.parseInt(match[1], 10);
-}
-
-function formatWeightKg(value: number) {
+function formatKg(value: number) {
   return `${value} kg`;
 }
+
+function getRepHint(repRange?: string) {
+  if (!repRange) return null;
+  const m = repRange.match(/(\d+)\s*[-–]\s*(\d+)/);
+  return m ? parseInt(m[1], 10) : parseInt(repRange, 10) || null;
+}
+
+// ── Exercise picker overlay ───────────────────────────────────────────────────
+
+function ExercisePicker({
+  workout,
+  signatureLifts,
+  cardioPrompt,
+  onSelect,
+  onClose,
+}: {
+  workout: ActiveWorkout;
+  signatureLifts: SignatureLiftsState;
+  cardioPrompt: ReturnType<typeof selectDailyCardioPrompt>;
+  onSelect: (index: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <ScrollReveal>
+        <div className="flex items-center justify-between px-1">
+          <div>
+            <p className="label-eyebrow">Workout</p>
+            <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em] text-white/92">
+              {workout.workoutName}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/[0.10] px-4 py-2 text-[13px] text-white/54"
+          >
+            Back
+          </button>
+        </div>
+      </ScrollReveal>
+
+      <ScrollReveal delay={30}>
+        <section className="rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)] overflow-hidden">
+          {workout.exercises.map((exercise, index) => {
+            const done = isExerciseDone(exercise);
+            const isSig =
+              signatureLifts.ready &&
+              signatureLifts.signatures.some((s) => s.exerciseName === exercise.exerciseName);
+            return (
+              <button
+                key={`${exercise.exerciseId}-${index}`}
+                type="button"
+                onClick={() => { onSelect(index); onClose(); }}
+                className={`flex w-full items-center justify-between px-5 py-4 text-left ${
+                  index !== workout.exercises.length - 1 ? "border-b border-white/[0.04]" : ""
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className={`truncate text-[15px] ${done ? "text-white/40" : "text-white/82"}`}>
+                      {exercise.exerciseName}
+                    </p>
+                    {isSig ? (
+                      <span className="text-[10px] uppercase tracking-[0.08em] text-white/22">Key</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-[0.08em] text-white/28">
+                    {done
+                      ? `${exercise.sets.length} sets · done`
+                      : `${exercise.sets.filter((s) => s.completed).length}/${exercise.sets.length} sets`}
+                  </p>
+                </div>
+                {done ? (
+                  <Check className="h-4 w-4 flex-shrink-0 text-white/35" strokeWidth={1.5} />
+                ) : (
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-white/20" strokeWidth={1.5} />
+                )}
+              </button>
+            );
+          })}
+          {cardioPrompt ? (
+            <div className="border-t border-white/[0.04] px-5 py-4">
+              <p className="text-[15px] text-white/70">Cardio</p>
+              <p className="mt-0.5 text-[13px] text-white/46">{cardioPrompt.title} · {cardioPrompt.duration} · {cardioPrompt.intensity}</p>
+            </div>
+          ) : null}
+        </section>
+      </ScrollReveal>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function WorkoutActiveView({
   profile,
@@ -73,6 +161,7 @@ export function WorkoutActiveView({
   onCompleteWorkout,
   onSaveAndExitWorkout,
   onDismissLiveSignal,
+  onCancelWorkout,
 }: {
   profile: Profile;
   activeWorkout: ActiveWorkout;
@@ -91,420 +180,326 @@ export function WorkoutActiveView({
   onDismissLiveSignal: () => void;
   onCancelWorkout: () => void;
 }) {
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(() =>
-    getFirstPendingExerciseIndex(activeWorkout.exercises),
-  );
-  const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const [showSwapOptions, setShowSwapOptions] = useState(false);
-  const weightInputRef = useRef<HTMLInputElement | null>(null);
+  const [exIndex, setExIndex] = useState(() => firstPendingExercise(activeWorkout.exercises));
+  const [showPicker, setShowPicker] = useState(false);
+  const [showSwaps, setShowSwaps] = useState(false);
+  const weightRef = useRef<HTMLInputElement | null>(null);
 
-  const currentExercise = activeWorkout.exercises[currentExerciseIndex];
-  const currentTemplate = activeWorkoutTemplate?.exercises[currentExerciseIndex];
-  const currentSetIndex = getFirstIncompleteSetIndex(currentExercise.sets);
-  const currentSet = currentExercise.sets[currentSetIndex];
-  const previousSet = currentSetIndex > 0 ? currentExercise.sets[currentSetIndex - 1] : null;
-  const progressionExercise = currentTemplate
-    ? {
-        ...currentTemplate,
-        name: currentExercise.exerciseName,
-        muscleGroup: currentExercise.muscleGroup,
-        primaryMuscles: currentExercise.primaryMuscles,
-        secondaryMuscles: currentExercise.secondaryMuscles,
-        note: currentTemplate.note ?? currentExercise.note,
-      }
-    : {
-        id: currentExercise.exerciseId,
-        name: currentExercise.exerciseName,
-        muscleGroup: currentExercise.muscleGroup,
-        primaryMuscles: currentExercise.primaryMuscles,
-        secondaryMuscles: currentExercise.secondaryMuscles,
-        sets: currentExercise.sets.length,
-        repRange: "8-12",
-        note: currentExercise.note,
-      };
-  const progressionRead = getExerciseProgressionRead(progressionExercise, userSessions);
+  const exercise = activeWorkout.exercises[exIndex];
+  const template = activeWorkoutTemplate?.exercises[exIndex];
+  const activeSetIndex = firstIncompleteSetIndex(exercise.sets);
+  const activeSet = exercise.sets[activeSetIndex];
+  const prevSet = activeSetIndex > 0 ? exercise.sets[activeSetIndex - 1] : null;
+
+  const progressionExercise = template
+    ? { ...template, name: exercise.exerciseName, muscleGroup: exercise.muscleGroup, primaryMuscles: exercise.primaryMuscles, secondaryMuscles: exercise.secondaryMuscles }
+    : { id: exercise.exerciseId, name: exercise.exerciseName, muscleGroup: exercise.muscleGroup, primaryMuscles: exercise.primaryMuscles, secondaryMuscles: exercise.secondaryMuscles, sets: exercise.sets.length, repRange: "8-12", note: exercise.note };
+
+  const progression = getExerciseProgressionRead(progressionExercise, userSessions);
+  const lastSets = getLastExerciseSets(exercise.exerciseName, userSessions);
+  const matchingLastSet = lastSets[activeSetIndex] ?? lastSets.at(-1) ?? null;
   const suggestedStart = getSuggestedStartingWeight(progressionExercise, userSessions);
-  const lastLoggedSets = getLastExerciseSets(currentExercise.exerciseName, userSessions);
-  const matchingLastLoggedSet = lastLoggedSets[currentSetIndex] ?? lastLoggedSets.at(-1) ?? null;
-  const targetRepSuggestion = progressionRead.recommendedRepTarget ?? currentTemplate?.suggestedRepTarget ?? getTargetRepSuggestion(currentTemplate?.repRange);
-  const substitutions = getExerciseSwapOptions(profile.id, currentExercise.exerciseName, currentExercise.muscleGroup, exerciseLibrary);
-  const completedExerciseCount = activeWorkout.exercises.filter(isExerciseComplete).length;
-  const totalExercises = activeWorkout.exercises.length;
-  const canLogSet = Boolean(currentSet && !currentSet.completed && (currentSet.weight > 0 || currentSet.reps > 0));
-  const workoutComplete = activeWorkout.exercises.every(isExerciseComplete);
-  const autoregulationRead = buildSessionAutoregulationRead({
-    activeWorkout,
-    activeWorkoutTemplate,
-    currentExerciseIndex,
-    sessions: userSessions,
-    liveSignal,
-  });
-  const loadStep = getSuggestedLoadStep(
-    currentSet?.weight || progressionRead.recommendedWeight || matchingLastLoggedSet?.weight || 0,
-  );
+  const repHint = progression.recommendedRepTarget ?? template?.suggestedRepTarget ?? getRepHint(template?.repRange);
+  const loadStep = getSuggestedLoadStep((activeSet?.weight || progression.recommendedWeight || matchingLastSet?.weight || 0));
+  const swapOptions = getExerciseSwapOptions(profile.id, exercise.exerciseName, exercise.muscleGroup, exerciseLibrary);
   const cardioPrompt = selectDailyCardioPrompt(profile.id, activeWorkout.workoutDayId);
 
+  const completedCount = activeWorkout.exercises.filter(isExerciseDone).length;
+  const totalCount = activeWorkout.exercises.length;
+  const workoutDone = activeWorkout.exercises.every(isExerciseDone);
+  const canLog = Boolean(activeSet && !activeSet.completed && (activeSet.weight > 0 || activeSet.reps > 0));
+
+  const isJoshua = profile.id === "joshua";
+  const accentLogBtn = isJoshua
+    ? "bg-emerald-500 text-white"
+    : "bg-sky-500 text-white";
+
+  // Auto-focus weight input when exercise / set changes
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      weightInputRef.current?.focus();
-    }, 120);
+    const t = window.setTimeout(() => weightRef.current?.focus(), 100);
+    return () => window.clearTimeout(t);
+  }, [exIndex, activeSet?.id]);
 
-    return () => window.clearTimeout(timeout);
-  }, [currentExerciseIndex, currentSet?.id, showExercisePicker]);
-
+  // Auto-dismiss live signal after 5s
   useEffect(() => {
-    if (!liveSignal || liveSignal.dismissedAt) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      onDismissLiveSignal();
-    }, 5000);
-
-    return () => window.clearTimeout(timeout);
+    if (!liveSignal || liveSignal.dismissedAt) return;
+    const t = window.setTimeout(onDismissLiveSignal, 5000);
+    return () => window.clearTimeout(t);
   }, [liveSignal, onDismissLiveSignal]);
 
-  const handleCompleteSet = () => {
-    if (!currentSet || !canLogSet) {
-      return;
-    }
-
-    const nextSetIndex = currentExercise.sets.findIndex((set, index) => index > currentSetIndex && !set.completed);
-    const nextExerciseIndex = getNextExerciseIndex(activeWorkout.exercises, currentExerciseIndex);
-    const exerciseWillComplete = nextSetIndex === -1;
-    onCompleteSet(currentExerciseIndex, currentSetIndex);
-
-    if (exerciseWillComplete && nextExerciseIndex !== currentExerciseIndex) {
-      setCurrentExerciseIndex(nextExerciseIndex);
+  const handleLogSet = () => {
+    if (!activeSet || !canLog) return;
+    const nextSet = exercise.sets.findIndex((s, i) => i > activeSetIndex && !s.completed);
+    const nextEx = nextPendingExercise(activeWorkout.exercises, exIndex);
+    onCompleteSet(exIndex, activeSetIndex);
+    if (nextSet === -1 && nextEx !== exIndex) {
+      setExIndex(nextEx);
     }
   };
 
-  const applyTargetToCurrentSet = () => {
-    if (!currentSet) {
-      return;
-    }
-
-    if (progressionRead.recommendedWeight !== null) {
-      onUpdateSet(currentExerciseIndex, currentSetIndex, "weight", progressionRead.recommendedWeight);
-    }
-
-    if (targetRepSuggestion !== null) {
-      onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", targetRepSuggestion);
-    }
+  const nudgeWeight = (dir: -1 | 1) => {
+    if (!activeSet) return;
+    const next = Math.max(0, Math.round((activeSet.weight + loadStep * dir) * 2) / 2);
+    onUpdateSet(exIndex, activeSetIndex, "weight", next);
   };
 
-  const applyPreviousSessionSet = () => {
-    if (!currentSet || !matchingLastLoggedSet) {
-      return;
-    }
-
-    onUpdateSet(currentExerciseIndex, currentSetIndex, "weight", matchingLastLoggedSet.weight);
-    onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", matchingLastLoggedSet.reps);
+  const nudgeReps = (dir: -1 | 1) => {
+    if (!activeSet) return;
+    onUpdateSet(exIndex, activeSetIndex, "reps", Math.max(0, activeSet.reps + dir));
   };
 
-  const nudgeWeight = (direction: -1 | 1) => {
-    if (!currentSet) {
-      return;
-    }
-
-    const nextWeight = Math.max(0, Math.round((currentSet.weight + loadStep * direction) * 2) / 2);
-    onUpdateSet(currentExerciseIndex, currentSetIndex, "weight", nextWeight);
+  const applyTarget = () => {
+    if (!activeSet) return;
+    if (progression.recommendedWeight !== null) onUpdateSet(exIndex, activeSetIndex, "weight", progression.recommendedWeight);
+    if (repHint !== null) onUpdateSet(exIndex, activeSetIndex, "reps", repHint);
   };
 
-  const nudgeReps = (direction: -1 | 1) => {
-    if (!currentSet) {
-      return;
-    }
-
-    onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", Math.max(0, currentSet.reps + direction));
+  const applyLastSession = () => {
+    if (!activeSet || !matchingLastSet) return;
+    onUpdateSet(exIndex, activeSetIndex, "weight", matchingLastSet.weight);
+    onUpdateSet(exIndex, activeSetIndex, "reps", matchingLastSet.reps);
   };
 
-  if (showExercisePicker) {
+  if (showPicker) {
     return (
-      <div className="space-y-3">
-        <ScrollReveal delay={0}>
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <p className="label-eyebrow">Workout</p>
-              <h2 className="card-title mt-2 text-white/92">{activeWorkout.workoutName}</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowExercisePicker(false)}
-              className="rounded-full border border-white/[0.12] px-4 py-2 text-[13px] text-white/60"
-            >
-              Back to current set
-            </button>
-          </div>
-        </ScrollReveal>
-
-        <ScrollReveal delay={40}>
-          <section className="rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)]">
-            {activeWorkout.exercises.map((exercise, index) => {
-              const complete = isExerciseComplete(exercise);
-              const isSignature = signatureLifts.ready
-                ? signatureLifts.signatures.some((signature) => signature.exerciseName === exercise.exerciseName)
-                : false;
-
-              return (
-                <button
-                  key={`${exercise.exerciseId}-${index}`}
-                  type="button"
-                  onClick={() => {
-                    setCurrentExerciseIndex(index);
-                    setShowExercisePicker(false);
-                  }}
-                  className={`flex h-[60px] w-full items-center justify-between px-5 text-left ${
-                    index !== activeWorkout.exercises.length - 1 ? "border-b border-white/[0.04]" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-[15px] text-white/80">{exercise.exerciseName}</p>
-                      {isSignature ? <span className="text-[10px] uppercase tracking-[0.08em] text-white/24">Key</span> : null}
-                    </div>
-                    <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-white/30">
-                      {complete ? "Complete" : `${exercise.sets.length} sets`}
-                    </p>
-                  </div>
-                  {complete ? (
-                    <Check className="h-4 w-4 text-white/40" strokeWidth={1.5} />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-white/20" strokeWidth={1.5} />
-                  )}
-                </button>
-              );
-            })}
-            {cardioPrompt ? (
-              <div className="px-5 py-3">
-                <p className="text-[15px] text-white/80">Cardio</p>
-                <p className="mt-1 text-[13px] text-white/55">{cardioPrompt.title}</p>
-                <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-white/30">
-                  {cardioPrompt.duration}  {"\u00b7"}  {cardioPrompt.intensity}
-                </p>
-              </div>
-            ) : null}
-          </section>
-        </ScrollReveal>
-      </div>
+      <ExercisePicker
+        workout={activeWorkout}
+        signatureLifts={signatureLifts}
+        cardioPrompt={cardioPrompt}
+        onSelect={setExIndex}
+        onClose={() => setShowPicker(false)}
+      />
     );
   }
 
   return (
     <div className="space-y-3">
-      <ScrollReveal delay={0}>
-        <div className="flex items-start justify-between gap-3 px-1">
+      {/* ── Live signal banner ─────────────────────────── */}
+      {liveSignal && !liveSignal.dismissedAt ? (
+        <ScrollReveal>
+          <div className="rounded-[14px] border border-white/[0.10] bg-white/[0.04] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[13px] leading-5 text-white/78">{liveSignal.message}</p>
+              <button
+                type="button"
+                onClick={onDismissLiveSignal}
+                className="flex-shrink-0 text-[12px] text-white/36"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </ScrollReveal>
+      ) : null}
+
+      {/* ── Workout header ─────────────────────────────── */}
+      <ScrollReveal>
+        <div className="flex items-center justify-between px-1">
           <div>
-            <p className="label-eyebrow">Workout</p>
-            <p className="mt-2 text-[15px] leading-6 text-white/78">
-              {autoregulationRead?.detail ?? coach.progressionTargetRead ?? `Log the next clean set for ${currentExercise.exerciseName}.`}
+            <p className="label-eyebrow">{activeWorkout.workoutName}</p>
+            <p className="mt-1 text-[12px] text-white/36">
+              {completedCount}/{totalCount} exercises done
             </p>
           </div>
-          <CardHelpButton
-            title="Workout autopilot"
-            summary="This is the app's short read on the next clean move for the set in front of you."
-            points={[
-              "It reacts to the current exercise and any live signal already fired.",
-              "It stays short on purpose so you can keep logging.",
-            ]}
-          />
+          <div className="flex items-center gap-2">
+            {/* Progress ring */}
+            <div className="relative h-9 w-9">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" className="-rotate-90">
+                <circle cx="18" cy="18" r="14" stroke="rgba(255,255,255,0.07)" strokeWidth="2.5" fill="none" />
+                <circle
+                  cx="18" cy="18" r="14"
+                  stroke="var(--accent)"
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 14 * (totalCount > 0 ? completedCount / totalCount : 0)} ${2 * Math.PI * 14}`}
+                  strokeLinecap="round"
+                  style={{ transition: "stroke-dasharray 400ms cubic-bezier(0.34,1.56,0.64,1)" }}
+                />
+              </svg>
+            </div>
+          </div>
         </div>
       </ScrollReveal>
 
-      <ScrollReveal delay={40}>
-        <section className="rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)] px-5 py-5">
-          {/* Progress arc */}
-          {(() => {
-            const r = 18;
-            const circumference = 2 * Math.PI * r;
-            const progress = totalExercises > 0 ? completedExerciseCount / totalExercises : 0;
-            const dash = circumference * progress;
-            return (
-              <div className="flex items-center gap-3">
-                <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center">
-                  <svg width="44" height="44" viewBox="0 0 44 44" fill="none" className="-rotate-90">
-                    <circle cx="22" cy="22" r={r} stroke="rgba(255,255,255,0.07)" strokeWidth="2.5" fill="none" />
-                    <circle
-                      cx="22" cy="22" r={r}
-                      stroke="var(--accent)"
-                      strokeWidth="2.5"
-                      fill="none"
-                      strokeDasharray={`${dash} ${circumference}`}
-                      strokeLinecap="round"
-                      style={{ transition: "stroke-dasharray 400ms cubic-bezier(0.34,1.56,0.64,1)" }}
-                    />
-                  </svg>
-                  <span className="absolute text-[10px] font-semibold text-white/60">{completedExerciseCount}/{totalExercises}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="label-eyebrow">{activeWorkout.workoutName}</p>
-                  <p className="mt-1 text-[11px] text-white/36">
-                    Set {Math.min(currentSetIndex + 1, currentExercise.sets.length)} of {currentExercise.sets.length}
-                  </p>
-                </div>
-              </div>
-            );
-          })()}
-          <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-white/95">{currentExercise.exerciseName}</h2>
-          <ExerciseMusclePills
-            profileId={profile.id}
-            primaryMuscles={currentExercise.primaryMuscles}
-            secondaryMuscles={currentExercise.secondaryMuscles}
-            className="mt-4"
-          />
-          <div className="mt-4 rounded-[16px] border border-white/[0.07] bg-[var(--bg-elevated)] px-4 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="label-eyebrow">Progression read</p>
-                <p className="mt-2 text-[15px] leading-6 text-white/80">
-                  {progressionRead.actionLabel}. {progressionRead.reason}
-                </p>
-              </div>
-              <span className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[11px] uppercase tracking-[0.08em] text-white/38">
-                {progressionRead.confidenceLabel}
+      {/* ── Exercise card ──────────────────────────────── */}
+      <ScrollReveal delay={30}>
+        <section className="rounded-[20px] border border-white/[0.07] bg-[var(--bg-surface)] px-5 py-5 space-y-4">
+
+          {/* Exercise name + muscles */}
+          <div className="space-y-2">
+            <h2 className="text-[24px] font-semibold tracking-[-0.02em] text-white/96">
+              {exercise.exerciseName}
+            </h2>
+            <ExerciseMusclePills
+              profileId={profile.id}
+              primaryMuscles={exercise.primaryMuscles}
+              secondaryMuscles={exercise.secondaryMuscles}
+            />
+          </div>
+
+          {/* Progression hint */}
+          <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+            <p className="text-[13px] leading-5 text-white/62">
+              {progression.actionLabel}. {progression.reason}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="rounded-full border border-white/[0.07] px-2.5 py-0.5 text-[11px] text-white/40">
+                Last {progression.lastSession}
               </span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[12px] text-white/52">
-                Last {progressionRead.lastSession}
-              </span>
-              <span className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[12px] text-white/52">
-                Best {progressionRead.currentBest}
-              </span>
-              <span className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[12px] text-white/42">
-                {progressionRead.evidenceLabel}
+              <span className="rounded-full border border-white/[0.07] px-2.5 py-0.5 text-[11px] text-white/40">
+                Best {progression.currentBest}
               </span>
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-[8%]">
-            <label className="flex h-[100px] w-[46%] flex-col items-center justify-center rounded-[16px] border border-white/[0.08] bg-[#111111]">
+          {/* All sets — show each one */}
+          <div className="space-y-2">
+            <p className="label-eyebrow">Sets</p>
+            {exercise.sets.map((set, si) => {
+              const isActive = si === activeSetIndex && !set.completed;
+              const isDone = set.completed;
+              return (
+                <div
+                  key={set.id}
+                  className={`flex items-center gap-3 rounded-[12px] px-3 py-2.5 transition-colors ${
+                    isActive
+                      ? "border border-white/[0.12] bg-white/[0.04]"
+                      : isDone
+                        ? "border border-white/[0.05] bg-white/[0.01]"
+                        : "border border-transparent"
+                  }`}
+                >
+                  <span className={`w-5 text-center text-[12px] font-medium ${isDone ? "text-white/30" : isActive ? "text-white/70" : "text-white/24"}`}>
+                    {si + 1}
+                  </span>
+                  <span className={`flex-1 text-[14px] ${isDone ? "text-white/40 line-through decoration-white/20" : isActive ? "text-white/88" : "text-white/30"}`}>
+                    {isDone || (!isActive && set.weight > 0)
+                      ? `${set.weight} kg × ${set.reps}`
+                      : isActive
+                        ? "Active"
+                        : "—"}
+                  </span>
+                  {isDone ? <Check className="h-3.5 w-3.5 text-white/35" strokeWidth={2} /> : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Weight + Reps inputs */}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col items-center justify-center rounded-[16px] border border-white/[0.08] bg-[#111] py-5">
               <input
-                ref={weightInputRef}
-                className="w-full border-0 bg-transparent p-0 text-center text-[44px] font-bold leading-none tracking-[-0.03em] text-white focus:border-0 focus:bg-transparent"
+                ref={weightRef}
+                type="number"
                 inputMode="decimal"
-                type="number"
-                value={currentSet?.weight || ""}
+                value={activeSet?.weight || ""}
                 placeholder="0"
-                onChange={(event) => onUpdateSet(currentExerciseIndex, currentSetIndex, "weight", Number(event.target.value))}
+                onChange={(e) => onUpdateSet(exIndex, activeSetIndex, "weight", Number(e.target.value))}
+                className="w-full border-0 bg-transparent p-0 text-center text-[44px] font-bold leading-none tracking-[-0.03em] text-white focus:outline-none"
               />
-              <span className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/25">Weight</span>
+              <span className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/24">kg</span>
             </label>
-
-            <label className="flex h-[100px] w-[46%] flex-col items-center justify-center rounded-[16px] border border-white/[0.08] bg-[#111111]">
+            <label className="flex flex-col items-center justify-center rounded-[16px] border border-white/[0.08] bg-[#111] py-5">
               <input
-                className="w-full border-0 bg-transparent p-0 text-center text-[44px] font-bold leading-none tracking-[-0.03em] text-white focus:border-0 focus:bg-transparent"
-                inputMode="numeric"
                 type="number"
-                value={currentSet?.reps || ""}
-                placeholder={targetRepSuggestion ? String(targetRepSuggestion) : "0"}
-                onChange={(event) => onUpdateSet(currentExerciseIndex, currentSetIndex, "reps", Number(event.target.value))}
+                inputMode="numeric"
+                value={activeSet?.reps || ""}
+                placeholder={repHint ? String(repHint) : "0"}
+                onChange={(e) => onUpdateSet(exIndex, activeSetIndex, "reps", Number(e.target.value))}
+                className="w-full border-0 bg-transparent p-0 text-center text-[44px] font-bold leading-none tracking-[-0.03em] text-white focus:outline-none"
               />
-              <span className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/25">Reps</span>
+              <span className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/24">reps</span>
             </label>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          {/* Nudge controls */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center justify-between rounded-full border border-white/[0.08] px-3 py-2">
-              <button
-                type="button"
-                onClick={() => nudgeWeight(-1)}
-                className="text-[13px] text-white/55"
-              >
-                -{formatWeightKg(loadStep)}
+              <button type="button" onClick={() => nudgeWeight(-1)} className="text-[13px] text-white/52">
+                −{formatKg(loadStep)}
               </button>
-              <span className="text-[11px] uppercase tracking-[0.08em] text-white/24">Weight</span>
-              <button
-                type="button"
-                onClick={() => nudgeWeight(1)}
-                className="text-[13px] text-white/55"
-              >
-                +{formatWeightKg(loadStep)}
+              <span className="text-[10px] uppercase tracking-[0.08em] text-white/22">Weight</span>
+              <button type="button" onClick={() => nudgeWeight(1)} className="text-[13px] text-white/52">
+                +{formatKg(loadStep)}
               </button>
             </div>
             <div className="flex items-center justify-between rounded-full border border-white/[0.08] px-3 py-2">
-              <button
-                type="button"
-                onClick={() => nudgeReps(-1)}
-                className="text-[13px] text-white/55"
-              >
-                -1 rep
+              <button type="button" onClick={() => nudgeReps(-1)} className="text-[13px] text-white/52">
+                −1
               </button>
-              <span className="text-[11px] uppercase tracking-[0.08em] text-white/24">Reps</span>
-              <button
-                type="button"
-                onClick={() => nudgeReps(1)}
-                className="text-[13px] text-white/55"
-              >
-                +1 rep
+              <span className="text-[10px] uppercase tracking-[0.08em] text-white/22">Reps</span>
+              <button type="button" onClick={() => nudgeReps(1)} className="text-[13px] text-white/52">
+                +1
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          {/* Quick-fill chips */}
+          <div className="flex flex-wrap gap-2">
             {suggestedStart ? (
               <button
                 type="button"
-                onClick={applyTargetToCurrentSet}
-                className="rounded-full border border-white/[0.12] px-3 py-2 text-[13px] text-white/60"
+                onClick={applyTarget}
+                className="rounded-full border border-white/[0.10] px-3 py-1.5 text-[12px] text-white/56"
               >
-                {progressionRead.projectedPerformance ? `Target ${progressionRead.projectedPerformance}` : "Use target"}
+                {progression.projectedPerformance ? `Target ${progression.projectedPerformance}` : "Use target"}
               </button>
             ) : null}
-            {matchingLastLoggedSet ? (
+            {matchingLastSet ? (
               <button
                 type="button"
-                onClick={applyPreviousSessionSet}
-                className="rounded-full border border-white/[0.12] px-3 py-2 text-[13px] text-white/60"
+                onClick={applyLastSession}
+                className="rounded-full border border-white/[0.10] px-3 py-1.5 text-[12px] text-white/56"
               >
-                Last session {formatWeightKg(matchingLastLoggedSet.weight)} x {matchingLastLoggedSet.reps}
+                Last: {matchingLastSet.weight} kg × {matchingLastSet.reps}
               </button>
             ) : null}
-            {previousSet && currentSetIndex > 0 ? (
+            {prevSet && activeSetIndex > 0 ? (
               <button
                 type="button"
-                onClick={() => onCopyPreviousSet(currentExerciseIndex, currentSetIndex)}
-                className="rounded-full border border-white/[0.12] px-3 py-2 text-[13px] text-white/60"
+                onClick={() => onCopyPreviousSet(exIndex, activeSetIndex)}
+                className="rounded-full border border-white/[0.10] px-3 py-1.5 text-[12px] text-white/56"
               >
-                Repeat last set
+                Repeat set {activeSetIndex}
               </button>
             ) : null}
-            {substitutions.length ? (
+            {swapOptions.length > 0 ? (
               <button
                 type="button"
-                onClick={() => setShowSwapOptions((value) => !value)}
-                className="rounded-full border border-white/[0.12] px-3 py-2 text-[13px] text-white/60"
+                onClick={() => setShowSwaps((v) => !v)}
+                className="rounded-full border border-white/[0.10] px-3 py-1.5 text-[12px] text-white/44"
               >
                 Swap exercise
               </button>
             ) : null}
           </div>
 
-          {showSwapOptions && substitutions.length ? (
-            <div className="mt-4 space-y-2">
-              {substitutions.slice(0, 4).map((option) => (
+          {/* Swap options */}
+          {showSwaps && swapOptions.length > 0 ? (
+            <div className="space-y-2">
+              {swapOptions.slice(0, 5).map((opt) => (
                 <button
-                  key={option.id}
+                  key={opt.id}
                   type="button"
-                  onClick={() => {
-                    onSwapExercise(currentExerciseIndex, option.id);
-                    setShowSwapOptions(false);
-                  }}
-                  className="flex w-full items-center justify-between rounded-[16px] border border-white/[0.07] bg-[var(--bg-elevated)] px-4 py-3 text-left"
+                  onClick={() => { onSwapExercise(exIndex, opt.id); setShowSwaps(false); }}
+                  className="flex w-full items-center justify-between rounded-[14px] border border-white/[0.07] bg-[var(--bg-elevated)] px-4 py-3 text-left"
                 >
-                  <span className="text-[15px] text-white/80">{option.name}</span>
-                  <ChevronRight className="h-4 w-4 text-white/20" strokeWidth={1.5} />
+                  <span className="text-[14px] text-white/78">{opt.name}</span>
+                  <ChevronRight className="h-4 w-4 text-white/22" strokeWidth={1.5} />
                 </button>
               ))}
             </div>
           ) : null}
 
+          {/* Log Set CTA */}
           <button
             type="button"
-            disabled={!canLogSet}
-            onClick={handleCompleteSet}
-            className={`mt-5 flex h-[58px] w-full items-center justify-center rounded-full text-[17px] font-semibold ${
-              canLogSet ? "bg-[color:var(--accent)] text-black" : "border border-white/[0.12] bg-transparent text-white/35"
+            disabled={!canLog}
+            onClick={handleLogSet}
+            className={`h-[56px] w-full rounded-full text-[17px] font-semibold transition-all ${
+              canLog
+                ? `${accentLogBtn} active:scale-[0.97]`
+                : "border border-white/[0.10] text-white/30"
             }`}
           >
             Log Set
@@ -512,36 +507,59 @@ export function WorkoutActiveView({
         </section>
       </ScrollReveal>
 
-      <ScrollReveal delay={80}>
-        <div className="grid gap-3">
+      {/* ── Exercise navigation ────────────────────────── */}
+      <ScrollReveal delay={60}>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowExercisePicker(true)}
-            className="flex h-[54px] w-full items-center justify-center rounded-full border border-white/[0.12] bg-transparent text-[15px] font-medium text-white/60"
+            disabled={exIndex === 0}
+            onClick={() => setExIndex((i) => Math.max(0, i - 1))}
+            className="flex h-[50px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-[13px] text-white/52 disabled:opacity-30"
           >
-            All exercises
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+            Prev
           </button>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={onSaveAndExitWorkout}
-              className="flex h-[54px] items-center justify-center rounded-full border border-white/[0.12] bg-transparent text-[15px] font-medium text-white/60"
-            >
-              Save and exit
-            </button>
-            <button
-              type="button"
-              onClick={onCompleteWorkout}
-              disabled={!workoutComplete && completedExerciseCount === 0}
-              className={`flex h-[54px] items-center justify-center rounded-full text-[15px] font-medium ${
-                workoutComplete || completedExerciseCount > 0
-                  ? "border border-white/[0.12] bg-transparent text-white/72"
-                  : "border border-white/[0.08] bg-transparent text-white/30"
-              }`}
-            >
-              Finish workout
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            className="flex h-[50px] flex-shrink-0 items-center justify-center rounded-full border border-white/[0.10] px-4"
+          >
+            <List className="h-5 w-5 text-white/50" strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            disabled={exIndex >= activeWorkout.exercises.length - 1}
+            onClick={() => setExIndex((i) => Math.min(activeWorkout.exercises.length - 1, i + 1))}
+            className="flex h-[50px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-[13px] text-white/52 disabled:opacity-30"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+        </div>
+      </ScrollReveal>
+
+      {/* ── Session controls ───────────────────────────── */}
+      <ScrollReveal delay={80}>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onSaveAndExitWorkout}
+            className="flex h-[52px] items-center justify-center rounded-full border border-white/[0.10] text-[14px] font-medium text-white/54"
+          >
+            Save &amp; exit
+          </button>
+          <button
+            type="button"
+            onClick={onCompleteWorkout}
+            disabled={completedCount === 0}
+            className={`flex h-[52px] items-center justify-center rounded-full text-[14px] font-medium ${
+              completedCount > 0
+                ? "border border-white/[0.12] text-white/72"
+                : "border border-white/[0.07] text-white/25"
+            }`}
+          >
+            Finish workout
+          </button>
         </div>
       </ScrollReveal>
     </div>
