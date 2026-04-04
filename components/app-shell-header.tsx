@@ -25,7 +25,7 @@ export function AppShellHeader({
         }}
       >
         <p
-          className="label-eyebrow transition-all duration-300"
+          className="label-eyebrow flex items-center gap-1.5 transition-all duration-300"
           style={{
             opacity: compact ? 0 : 1,
             maxHeight: compact ? 0 : "1.5rem",
@@ -34,6 +34,25 @@ export function AppShellHeader({
           }}
         >
           STEAL
+          {/* Claude logo mark */}
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 46 46"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="Claude"
+            style={{ opacity: 0.55, flexShrink: 0 }}
+          >
+            <path
+              d="M31.24 8.882c-.498-1.318-1.992-1.981-3.31-1.483L11.3 13.856a2.496 2.496 0 0 0-1.483 3.31l6.457 17.23a2.496 2.496 0 0 0 3.31 1.483l16.63-6.457a2.496 2.496 0 0 0 1.483-3.31L31.24 8.882Z"
+              fill="currentColor"
+            />
+            <path
+              d="M22.961 38.614c-.498-1.317-1.992-1.98-3.31-1.483l-4.643 1.804a2.496 2.496 0 0 0-1.483 3.31l.332.855a2.496 2.496 0 0 0 3.31 1.483l4.643-1.804a2.496 2.496 0 0 0 1.483-3.31l-.332-.855Z"
+              fill="currentColor"
+            />
+          </svg>
         </p>
         <h1
           className="screen-title text-white/96 transition-all duration-300"
