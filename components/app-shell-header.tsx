@@ -20,47 +20,46 @@ export function AppShellHeader({
     >
       <div
         className="overflow-hidden transition-all duration-300"
-        style={{
-          transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
-        }}
+        style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}
       >
-        <p
-          className="label-eyebrow flex items-center gap-1.5 transition-all duration-300"
+        {/* Eyebrow: STEAL + Claude logo */}
+        <div
+          className="flex items-center gap-2 transition-all duration-300"
           style={{
             opacity: compact ? 0 : 1,
-            maxHeight: compact ? 0 : "1.5rem",
-            marginBottom: compact ? 0 : undefined,
+            maxHeight: compact ? 0 : "2rem",
             overflow: "hidden",
           }}
         >
-          STEAL
-          {/* Claude logo mark */}
+          <span className="label-eyebrow">STEAL</span>
+          {/* Claude logo mark — hardcoded fill so it's always visible */}
           <svg
-            width="13"
-            height="13"
+            width="14"
+            height="14"
             viewBox="0 0 46 46"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-label="Claude"
-            style={{ color: "rgba(255,255,255,0.62)", flexShrink: 0 }}
+            style={{ flexShrink: 0, display: "block" }}
           >
             <path
               d="M31.24 8.882c-.498-1.318-1.992-1.981-3.31-1.483L11.3 13.856a2.496 2.496 0 0 0-1.483 3.31l6.457 17.23a2.496 2.496 0 0 0 3.31 1.483l16.63-6.457a2.496 2.496 0 0 0 1.483-3.31L31.24 8.882Z"
-              fill="currentColor"
+              fill="rgba(255,255,255,0.75)"
             />
             <path
               d="M22.961 38.614c-.498-1.317-1.992-1.98-3.31-1.483l-4.643 1.804a2.496 2.496 0 0 0-1.483 3.31l.332.855a2.496 2.496 0 0 0 3.31 1.483l4.643-1.804a2.496 2.496 0 0 0 1.483-3.31l-.332-.855Z"
-              fill="currentColor"
+              fill="rgba(255,255,255,0.75)"
             />
           </svg>
-        </p>
+        </div>
+
+        {/* Profile name */}
         <h1
-          className="screen-title text-white/96 transition-all duration-300"
+          className="screen-title text-white transition-all duration-300"
           style={{
             fontSize: compact ? "17px" : undefined,
             fontWeight: compact ? 500 : undefined,
             letterSpacing: compact ? "-0.01em" : undefined,
-            marginTop: compact ? 0 : undefined,
             opacity: compact ? 0.7 : 1,
             transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
           }}
@@ -68,6 +67,7 @@ export function AppShellHeader({
           {profile.name}
         </h1>
       </div>
+
       <button
         type="button"
         aria-label="Settings"

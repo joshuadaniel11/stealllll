@@ -138,27 +138,32 @@ export function HomeScreen({
   const isRestDay = restDayState.isRest && !isLive;
 
   const isJoshua = profile.id === "joshua";
-  const accentText = isJoshua ? "text-emerald-400" : "text-sky-400";
-  const accentTextSoft = isJoshua ? "text-emerald-300/75" : "text-sky-300/75";
-  const accentBtn = isJoshua
+
+  // Accent primitives
+  const accentText   = isJoshua ? "text-emerald-400"       : "text-sky-400";
+  const accentMuted  = isJoshua ? "text-emerald-300/70"    : "text-sky-300/70";
+  const accentBtn    = isJoshua
     ? "bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600"
-    : "bg-sky-500 hover:bg-sky-400 active:bg-sky-600";
-  const accentBg = isJoshua ? "bg-emerald-500/10" : "bg-sky-500/10";
-  const accentBorder = isJoshua ? "border-emerald-500/20" : "border-sky-500/20";
+    : "bg-sky-500    hover:bg-sky-400    active:bg-sky-600";
+  const accentRing   = isJoshua ? "border-emerald-500/25"  : "border-sky-500/25";
+  const accentTint   = isJoshua ? "bg-emerald-500/[0.07]"  : "bg-sky-500/[0.07]";
+  const accentDot    = isJoshua ? "bg-emerald-400"         : "bg-sky-400";
 
   return (
     <div className="space-y-3 pb-28">
 
-      {/* ── Phase transition notice ──────────────────── */}
+      {/* ── Phase transition ─────────────────────────── */}
       {phaseTransitionLine ? (
         <ScrollReveal>
-          <div className={`rounded-[16px] border px-5 py-4 ${accentBg} ${accentBorder}`}>
-            <p className={`text-[13px] leading-[1.6] font-medium ${accentTextSoft}`}>{phaseTransitionLine}</p>
+          <div className={`rounded-[18px] border px-5 py-4 ${accentTint} ${accentRing}`}>
+            <p className={`text-[13px] font-medium leading-[1.6] ${accentMuted}`}>
+              {phaseTransitionLine}
+            </p>
           </div>
         </ScrollReveal>
       ) : null}
 
-      {/* ── Monthly report ──────────────────────────── */}
+      {/* ── Monthly report ───────────────────────────── */}
       {monthlyReport ? (
         <ScrollReveal>
           <Card className="home-hero-card space-y-6 px-6 py-7">
@@ -173,42 +178,42 @@ export function HomeScreen({
               <div className="space-y-2.5">
                 <p className="text-[13px] font-semibold text-emerald-400">Joshua</p>
                 <div className="space-y-1.5">
-                  <p className="text-[13px] text-white/60">{monthlyReport.joshua.sessions} sessions</p>
-                  <p className="text-[13px] text-white/60">{monthlyReport.joshua.totalSets} sets</p>
-                  <p className="text-[13px] text-white/60">{monthlyReport.joshua.topMuscleGroup}</p>
-                  {monthlyReport.joshua.newPRs > 0 ? (
+                  <p className="text-[13px] text-white/58">{monthlyReport.joshua.sessions} sessions</p>
+                  <p className="text-[13px] text-white/58">{monthlyReport.joshua.totalSets} sets</p>
+                  <p className="text-[13px] text-white/58">{monthlyReport.joshua.topMuscleGroup}</p>
+                  {monthlyReport.joshua.newPRs > 0 && (
                     <p className="text-[13px] text-emerald-400/80">{monthlyReport.joshua.newPRs} PRs</p>
-                  ) : null}
+                  )}
                 </div>
               </div>
               <div className="self-stretch bg-white/[0.07]" />
               <div className="space-y-2.5 text-right">
                 <p className="text-[13px] font-semibold text-sky-400">Natasha</p>
                 <div className="space-y-1.5">
-                  <p className="text-[13px] text-white/60">{monthlyReport.natasha.sessions} sessions</p>
-                  <p className="text-[13px] text-white/60">{monthlyReport.natasha.totalSets} sets</p>
-                  <p className="text-[13px] text-white/60">{monthlyReport.natasha.topMuscleGroup}</p>
-                  {monthlyReport.natasha.newPRs > 0 ? (
+                  <p className="text-[13px] text-white/58">{monthlyReport.natasha.sessions} sessions</p>
+                  <p className="text-[13px] text-white/58">{monthlyReport.natasha.totalSets} sets</p>
+                  <p className="text-[13px] text-white/58">{monthlyReport.natasha.topMuscleGroup}</p>
+                  {monthlyReport.natasha.newPRs > 0 && (
                     <p className="text-[13px] text-sky-400/80">{monthlyReport.natasha.newPRs} PRs</p>
-                  ) : null}
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-5 py-4 space-y-2">
               <p className="label-eyebrow">Rivalry</p>
-              <p className="text-[13px] text-white/55">
+              <p className="text-[13px] text-white/52">
                 Week wins — Joshua {monthlyReport.rivalry.weekWins.joshua} · Natasha {monthlyReport.rivalry.weekWins.natasha}
                 {monthlyReport.rivalry.weekWins.tied > 0 ? ` · Tied ${monthlyReport.rivalry.weekWins.tied}` : ""}
               </p>
-              <p className="text-[13px] text-white/55">
+              <p className="text-[13px] text-white/52">
                 Steals — Joshua {monthlyReport.rivalry.totalSteals.joshua} · Natasha {monthlyReport.rivalry.totalSteals.natasha}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <p className="text-[13px] italic leading-[1.5] text-emerald-300/65">{monthlyReport.closingLine.joshua}</p>
-              <p className="text-[13px] italic leading-[1.5] text-right text-sky-300/65">{monthlyReport.closingLine.natasha}</p>
+              <p className="text-[13px] italic leading-[1.55] text-emerald-300/60">{monthlyReport.closingLine.joshua}</p>
+              <p className="text-[13px] italic leading-[1.55] text-right text-sky-300/60">{monthlyReport.closingLine.natasha}</p>
             </div>
           </Card>
         </ScrollReveal>
@@ -217,17 +222,17 @@ export function HomeScreen({
       {/* ── Active session banner ────────────────────── */}
       {isLive ? (
         <ScrollReveal>
-          <Card className="home-hero-card px-6 py-7">
+          <Card className={`home-hero-card px-6 py-7 ${accentTint}`}>
             <div className="space-y-5">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${isJoshua ? "bg-emerald-400" : "bg-sky-400"} animate-pulse`} />
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${accentDot}`} />
                   <p className="label-eyebrow">In progress</p>
                 </div>
-                <h2 className={`text-[2.1rem] font-semibold tracking-[-0.05em] leading-[1.05] ${accentText}`}>
+                <h2 className={`text-[2.2rem] font-semibold tracking-[-0.05em] leading-[1.03] ${accentText}`}>
                   {activeWorkoutName}
                 </h2>
-                <p className="text-[14px] text-white/42">{activeSessionSetCount} sets logged</p>
+                <p className="text-[14px] text-white/40">{activeSessionSetCount} sets logged</p>
               </div>
               <button
                 type="button"
@@ -246,23 +251,21 @@ export function HomeScreen({
         <ScrollReveal>
           <Card className="px-6 py-7">
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <p className="label-eyebrow">Rest day</p>
-                <h2 className="text-[1.75rem] font-semibold tracking-[-0.04em] text-white leading-[1.1]">
-                  {restDayRead}
-                </h2>
-              </div>
-              <p className="text-[14px] leading-[1.6] text-white/48">{restRecoveryLabel}</p>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="label-eyebrow">Next</span>
-                <span className="text-[13px] text-white/58">
+              <p className="label-eyebrow">Rest day</p>
+              <h2 className="text-[2rem] font-semibold tracking-[-0.045em] text-white leading-[1.06]">
+                {restDayRead}
+              </h2>
+              <p className="text-[14px] leading-[1.65] text-white/45">{restRecoveryLabel}</p>
+              <div className="flex items-center gap-2.5 pt-1 border-t border-white/[0.06]">
+                <p className="label-eyebrow">Next up</p>
+                <p className="text-[13px] text-white/55">
                   {restDayState.nextBestSession}
                   {restDayState.nextBestSessionDaysOut === 0
                     ? " · today"
                     : restDayState.nextBestSessionDaysOut === 1
                       ? " · tomorrow"
                       : ` · in ${restDayState.nextBestSessionDaysOut} days`}
-                </span>
+                </p>
               </div>
             </div>
           </Card>
@@ -274,23 +277,20 @@ export function HomeScreen({
         <ScrollReveal>
           <Card className="home-hero-card px-6 py-7">
             <div className="space-y-5">
-              {/* Header */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <p className="label-eyebrow">{sessionPresentation.splitLabel}</p>
-                <h2 className="text-[2.25rem] font-semibold tracking-[-0.05em] text-white leading-[1.04]">
+                <h2 className="text-[2.3rem] font-semibold tracking-[-0.055em] text-white leading-[1.03]">
                   {sessionPresentation.title}
                 </h2>
-                <p className="text-[14px] leading-[1.65] text-white/50">{trainingInsight}</p>
+                <p className="text-[14px] leading-[1.65] text-white/48">{trainingInsight}</p>
               </div>
 
-              {/* Momentum pill */}
               {momentumPillText ? (
-                <span className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-[12px] font-medium ${accentBg} ${accentBorder} ${accentTextSoft}`}>
+                <span className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-[12px] font-medium ${accentTint} ${accentRing} ${accentMuted}`}>
                   {momentumPillText}
                 </span>
               ) : null}
 
-              {/* CTA */}
               <button
                 type="button"
                 onClick={() => onStartWorkout()}
@@ -299,34 +299,32 @@ export function HomeScreen({
                 Start Session
               </button>
 
-              {/* Secondary actions */}
-              <div className="flex items-center justify-center gap-6 pt-0.5">
+              <div className="flex items-center justify-center gap-7">
                 <button
                   type="button"
                   onClick={() => onPreviewWorkout(todaysWorkout.id)}
-                  className="text-[13px] text-white/34 transition-colors hover:text-white/60"
+                  className="text-[13px] text-white/32 transition-colors hover:text-white/60"
                 >
                   Preview
                 </button>
-                <span className="text-white/14">·</span>
+                <span className="text-white/12">·</span>
                 <button
                   type="button"
                   onClick={() => setShowSchedulePicker((v) => !v)}
-                  className="text-[13px] text-white/34 transition-colors hover:text-white/60"
+                  className="text-[13px] text-white/32 transition-colors hover:text-white/60"
                 >
                   Rearrange
                 </button>
-                <span className="text-white/14">·</span>
+                <span className="text-white/12">·</span>
                 <button
                   type="button"
                   onClick={onSkipWorkout}
-                  className="text-[13px] text-white/34 transition-colors hover:text-white/60"
+                  className="text-[13px] text-white/32 transition-colors hover:text-white/60"
                 >
                   Skip
                 </button>
               </div>
 
-              {/* Schedule picker */}
               {showSchedulePicker ? (
                 <div className="rounded-[14px] border border-white/[0.07] bg-white/[0.02] p-1.5">
                   {profile.workoutPlan.map((workout) => (
@@ -338,11 +336,11 @@ export function HomeScreen({
                         setShowSchedulePicker(false);
                       }}
                       className={`flex w-full items-center justify-between rounded-[10px] px-4 py-3 text-left transition-colors hover:bg-white/[0.05] ${
-                        workout.id === todaysWorkout.id ? "text-white/88" : "text-white/40"
+                        workout.id === todaysWorkout.id ? "text-white/88" : "text-white/38"
                       }`}
                     >
                       <span className="text-[14px]">{workout.name}</span>
-                      <span className="text-[11px] text-white/26">{workout.dayLabel}</span>
+                      <span className="text-[11px] text-white/24">{workout.dayLabel}</span>
                     </button>
                   ))}
                 </div>
@@ -355,31 +353,19 @@ export function HomeScreen({
       {/* ── Stats row ───────────────────────────────── */}
       <ScrollReveal delay={40}>
         <div className="grid grid-cols-3 gap-2.5">
-          <Card className="px-4 py-5">
-            <p className="label-eyebrow">Week</p>
-            <p className="mt-3 text-[38px] font-bold tracking-[-0.055em] text-white leading-none">
-              {weeklyCount}
-            </p>
-            <p className="mt-1.5 text-[11px] text-white/36">
-              {weeklyCount === 1 ? "session" : "sessions"}
-            </p>
-          </Card>
-          <Card className="px-4 py-5">
-            <p className="label-eyebrow">Streak</p>
-            <p className="mt-3 text-[38px] font-bold tracking-[-0.055em] text-white leading-none">
-              {streak}
-            </p>
-            <p className="mt-1.5 text-[11px] text-white/36">
-              {streak === 1 ? "day" : "days"}
-            </p>
-          </Card>
-          <Card className="px-4 py-5">
-            <p className="label-eyebrow">PRs</p>
-            <p className={`mt-3 text-[38px] font-bold tracking-[-0.055em] leading-none ${pbCount > 0 ? accentText : "text-white"}`}>
-              {pbCount}
-            </p>
-            <p className="mt-1.5 text-[11px] text-white/36">all time</p>
-          </Card>
+          {[
+            { label: "Week", value: weeklyCount, unit: weeklyCount === 1 ? "session" : "sessions", accent: false },
+            { label: "Streak", value: streak, unit: streak === 1 ? "day" : "days", accent: false },
+            { label: "PRs", value: pbCount, unit: "all time", accent: pbCount > 0 },
+          ].map(({ label, value, unit, accent }) => (
+            <Card key={label} className="px-4 py-5">
+              <p className="label-eyebrow">{label}</p>
+              <p className={`mt-3 text-[40px] font-bold tracking-[-0.06em] leading-none ${accent ? accentText : "text-white"}`}>
+                {value}
+              </p>
+              <p className="mt-1.5 text-[11px] text-white/34">{unit}</p>
+            </Card>
+          ))}
         </div>
       </ScrollReveal>
 
@@ -388,27 +374,25 @@ export function HomeScreen({
         <Card className="px-6 py-6">
           <div className="space-y-3.5">
             <p className="label-eyebrow">Rivalry</p>
-            <h3 className="text-[1.2rem] font-semibold tracking-[-0.025em] text-white/90 leading-[1.3]">
+            <h3 className="text-[1.25rem] font-semibold tracking-[-0.03em] text-white/92 leading-[1.3]">
               <RivalryHeadline copy={rivalryCopy} />
             </h3>
             {rivalryCopy.stealDetail ? (
-              <p className="text-[13px] leading-[1.55] text-white/38">{rivalryCopy.stealDetail}</p>
+              <p className="text-[13px] leading-[1.6] text-white/36">{rivalryCopy.stealDetail}</p>
             ) : null}
             {rivalSessions.length > 0 ? (
-              <div className="mt-1 rounded-[14px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 space-y-3">
+              <div className="mt-1 rounded-[14px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 space-y-2.5">
                 <p className="label-eyebrow">
                   {profile.id === "joshua" ? "Natasha" : "Joshua"} this week
                 </p>
-                <div className="space-y-2.5">
-                  {rivalSessions.slice(0, 3).map((session) => (
-                    <div key={session.id} className="flex items-center justify-between gap-3">
-                      <span className="truncate text-[13px] text-white/55">{session.workoutName}</span>
-                      <span className="flex-shrink-0 text-[11px] text-white/28">
-                        {shortDate(session.performedAt)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {rivalSessions.slice(0, 3).map((session) => (
+                  <div key={session.id} className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[13px] text-white/52">{session.workoutName}</span>
+                    <span className="flex-shrink-0 text-[11px] text-white/28 tabular-nums">
+                      {shortDate(session.performedAt)}
+                    </span>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -430,28 +414,26 @@ export function HomeScreen({
           <Card className="px-6 py-6">
             <div className="space-y-4">
               <p className="label-eyebrow">Recent</p>
-              <div className="space-y-1">
-                {recentWorkouts.slice(0, 4).map((session, i) => (
+              <div className="divide-y divide-white/[0.05]">
+                {recentWorkouts.slice(0, 4).map((session) => (
                   <button
                     key={session.id}
                     type="button"
-                    className={`flex w-full items-center justify-between gap-4 rounded-[12px] px-0 py-3 text-left transition-colors hover:bg-white/[0.03] ${
-                      i < recentWorkouts.slice(0, 4).length - 1 ? "border-b border-white/[0.05]" : ""
-                    }`}
+                    className="flex w-full items-center justify-between gap-4 py-3.5 text-left first:pt-0 last:pb-0"
                     onClick={() => onOpenRecentWorkout(session.workoutDayId)}
                   >
                     <div className="min-w-0 space-y-0.5">
-                      <p className="truncate text-[14px] font-medium text-white/82">
+                      <p className="truncate text-[14px] font-medium text-white/84">
                         {session.workoutName}
                         {session.partial ? (
                           <span className="ml-2 text-[11px] font-normal text-white/30">Partial</span>
                         ) : null}
                       </p>
-                      <p className="text-[12px] text-white/32">
+                      <p className="text-[12px] text-white/30">
                         {session.exercises.length} exercises · {session.durationMinutes} min
                       </p>
                     </div>
-                    <span className="flex-shrink-0 text-[12px] text-white/26 tabular-nums">
+                    <span className="flex-shrink-0 text-[12px] text-white/24 tabular-nums">
                       {timeAgo(session.performedAt)}
                     </span>
                   </button>
