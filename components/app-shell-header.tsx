@@ -42,7 +42,7 @@ export function AppShellHeader({
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-label="Claude"
-            style={{ opacity: 0.55, flexShrink: 0 }}
+            style={{ color: "rgba(255,255,255,0.62)", flexShrink: 0 }}
           >
             <path
               d="M31.24 8.882c-.498-1.318-1.992-1.981-3.31-1.483L11.3 13.856a2.496 2.496 0 0 0-1.483 3.31l6.457 17.23a2.496 2.496 0 0 0 3.31 1.483l16.63-6.457a2.496 2.496 0 0 0 1.483-3.31L31.24 8.882Z"
